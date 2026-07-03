@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Portfolio website for Jaloliddin Satimov, a second-year Waterloo Mathematics student."
+    />
+    <title>Jaloliddin Satimov | Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="Jalol home">
+          <span class="brand-mark">J</span>
+          <span>Jalol</span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#about">About</a>
+          <a href="#work">Work</a>
+          <a href="#skills">Skills</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero section-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Waterloo Mathematics · Second Year</p>
+            <h1>Hi, I’m Jaloliddin Satimov.</h1>
+            <p class="hero-name">Most people call me <span>Jalol</span>.</p>
+            <p class="hero-text">
+              I’m a math student who enjoys clean logic, thoughtful problem solving,
+              and building digital things that feel calm, useful, and intentional.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#work">View Projects</a>
+              <a class="button secondary" href="#contact">Get in Touch</a>
+            </div>
+          </div>
+
+          <div class="hero-card" aria-label="Profile highlight card">
+            <div class="orb orb-one"></div>
+            <div class="orb orb-two"></div>
+            <div class="portrait">
+              <span>JS</span>
+            </div>
+            <div class="stat-card">
+              <p>Currently</p>
+              <strong>Exploring mathematics, programming, and design.</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section" id="about">
+          <div>
+            <p class="eyebrow">About</p>
+            <h2>Curious, analytical, and always learning.</h2>
+          </div>
+          <p>
+            I’m Jalol, a second-year student in Mathematics at the University of
+            Waterloo. My academic interests sit around problem solving, structure,
+            and systems thinking. Outside the classroom, I’m growing my programming
+            skills and building projects that help me connect abstract ideas with
+            practical tools.
+          </p>
+        </section>
+
+        <section class="section-heading" id="work">
+          <p class="eyebrow">Selected Work</p>
+          <h2>Projects I can shape as I grow.</h2>
+        </section>
+
+        <section class="project-grid" aria-label="Project cards">
+          <article class="project-card">
+            <div class="project-number">01</div>
+            <h3>Math Notes Hub</h3>
+            <p>
+              A clean study dashboard concept for organizing formulas, proof ideas,
+              and course notes into searchable collections.
+            </p>
+            <span>Study Tools</span>
+          </article>
+
+          <article class="project-card featured">
+            <div class="project-number">02</div>
+            <h3>Portfolio Website</h3>
+            <p>
+              A modern personal site with smooth sections, responsive design, and a
+              visual identity that feels minimal and polished.
+            </p>
+            <span>Web Design</span>
+          </article>
+
+          <article class="project-card">
+            <div class="project-number">03</div>
+            <h3>Problem Solver</h3>
+            <p>
+              A future project space for small programming experiments, algorithms,
+              and math-inspired utilities.
+            </p>
+            <span>Programming</span>
+          </article>
+        </section>
+
+        <section class="skills-section" id="skills">
+          <div>
+            <p class="eyebrow">Skills</p>
+            <h2>What I’m building toward.</h2>
+          </div>
+
+          <div class="skills-list">
+            <span>Mathematical Reasoning</span>
+            <span>Problem Solving</span>
+            <span>Programming Fundamentals</span>
+            <span>Web Development</span>
+            <span>Clean Design</span>
+            <span>Continuous Learning</span>
+          </div>
+        </section>
+
+        <section class="contact-section" id="contact">
+          <div class="contact-card">
+            <p class="eyebrow">Contact</p>
+            <h2>Let’s connect.</h2>
+            <p>
+              I’m open to learning opportunities, collaboration, and conversations
+              around mathematics, software, and creative problem solving.
+            </p>
+            <a class="button primary" href="mailto:jalol@example.com">
+              jalol@example.com
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>© <span id="year"></span> Jaloliddin Satimov. Built with care.</p>
+        <a href="#top">Back to top</a>
+      </footer>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
