@@ -92,8 +92,8 @@ const initSplat = async () => {
 
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
-      cameraUp: [0, 1, 0],
-      initialCameraPosition: [0, 0.15, isMobile ? 4.8 : 4.1],
+      cameraUp: [0, -1, 0],
+      initialCameraPosition: [0, 0.15, isMobile ? 3.2 : 2.6],
       initialCameraLookAt: [0, 0, 0],
       useBuiltInControls: false,
       sharedMemoryForWorkers: false,
@@ -126,7 +126,7 @@ const initSplat = async () => {
     viewer.start();
     setStatus("ready");
 
-    const cameraRadius = isMobile ? 4.8 : 4.1;
+    const cameraRadius = isMobile ? 3.2 : 2.6;
 
     const animate = () => {
       const progress = getScrollProgress();
