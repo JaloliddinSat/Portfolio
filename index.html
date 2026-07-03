@@ -15,6 +15,13 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
   </head>
   <body>
     <div class="page-shell">
@@ -51,8 +58,20 @@
           <div class="hero-card" aria-label="Profile highlight card">
             <div class="orb orb-one"></div>
             <div class="orb orb-two"></div>
-            <div class="portrait">
-              <span>JS</span>
+            <div class="splat-stage" aria-label="Interactive Gaussian splat">
+              <div
+                id="splat-viewer"
+                class="splat-viewer"
+                data-splat-src="https://static.jalolsatimov.com/University%20District%202.ply"
+                data-local-splat-src="splats/University%20District%202.ply"
+              ></div>
+              <div id="splat-loader" class="splat-status">
+                <span class="loader-dot"></span>
+                Loading Gaussian splat
+              </div>
+              <p id="splat-error" class="splat-error" hidden>
+                The splat could not be loaded.
+              </p>
             </div>
             <div class="stat-card">
               <p>Currently</p>
@@ -149,6 +168,6 @@
       </footer>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>
