@@ -1,5 +1,5 @@
 const R2_SPLAT_URL =
-  "https://pub-d916d22154a943f291079592fbe25397.r2.dev/University%20District%202.ply";
+  "https://pub-d916d22154a943f291079592fbe25397.r2.dev/University%20District%202.ksplat";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +42,10 @@ export async function onRequest(context) {
   responseHeaders.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   responseHeaders.set("Access-Control-Allow-Headers", "Range, Content-Type");
   responseHeaders.set("Content-Type", "application/octet-stream");
-  responseHeaders.set("Cache-Control", "public, max-age=86400");
+  responseHeaders.set(
+    "Cache-Control",
+    "public, max-age=31536000, immutable",
+  );
 
   return new Response(
     request.method === "HEAD" ? null : upstreamResponse.body,

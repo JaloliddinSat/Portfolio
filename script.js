@@ -115,7 +115,9 @@ const initSplat = async () => {
       rotation: [0, 0, 0, 1],
     };
 
-    if (GaussianSplats3D.SceneFormat?.Ply) {
+    if (splatUrl.toLowerCase().includes(".ksplat")) {
+      sceneOptions.format = GaussianSplats3D.SceneFormat.KSplat;
+    } else if (splatUrl.toLowerCase().includes(".ply")) {
       sceneOptions.format = GaussianSplats3D.SceneFormat.Ply;
     }
 
