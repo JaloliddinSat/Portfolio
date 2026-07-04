@@ -41,7 +41,7 @@ const SPLAT_CONFIG = {
   splatScale: 0.75,
   alphaThreshold: 5,
   lookAtTiming: 0.1,
-  scrollEndAt: 0.1,
+  scrollEndAt: 0.18,
 };
 
 const lerpVec3 = (a, b, t) => [
@@ -143,6 +143,15 @@ const mapScrollProgress = (rawProgress, scrollEndAt = 1) => {
   return Math.min(1, Math.max(0, rawProgress / endAt));
 };
 
+const easeOutCubic = (progress) => {
+  const t = Math.min(1, Math.max(0, progress));
+
+  return 1 - (1 - t) ** 3;
+};
+
+const getAnimationProgress = (rawScrollProgress, scrollEndAt = 1) =>
+  easeOutCubic(mapScrollProgress(rawScrollProgress, scrollEndAt));
+
 const initSplat = async () => {
   if (!splatContainer) {
     return;
@@ -219,7 +228,7 @@ const initSplat = async () => {
     setStatus("ready");
 
     const animate = () => {
-      const progress = mapScrollProgress(
+      const progress = getAnimationProgress(
         getScrollProgress(),
         SPLAT_CONFIG.scrollEndAt ?? 1,
       );
@@ -896,7 +905,7 @@ const initDebugMode = async (viewer, isMobile) => {
     }
 
     const { position, lookAt, lookAtProgress } = computeScrollPosition(
-      previewProgress,
+      easeOutCubic(previewProgress),
       keyframes.start,
       keyframes.end,
       config.lookAtTiming ?? 1,
