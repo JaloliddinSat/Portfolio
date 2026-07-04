@@ -144,7 +144,7 @@ const initSplat = async () => {
       cameraUp: [0, -1, 0],
       initialCameraPosition,
       initialCameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
-      useBuiltInControls: DEBUG_SPLAT ? true : false,
+      useBuiltInControls: false,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
       dynamicScene: true,
@@ -433,7 +433,8 @@ const injectDebugPanelStyles = () => {
 const buildDebugPanel = ({
   config,
   viewer,
-  onApplyPlacement,
+  onApplyPosition,
+  onApplyLookAt,
   onApplyOrbit,
   onCopy,
   onReset,
@@ -468,7 +469,7 @@ const buildDebugPanel = ({
   const orbitSection = panel.querySelector('[data-section="orbit"]');
 
   placementSection.innerHTML =
-    '<p class="splat-debug-section-title">Placement</p><p class="splat-debug-caption">Set the starting camera position and look direction at scroll 0. Drag to orbit freely.</p>';
+    '<p class="splat-debug-section-title">Placement</p><p class="splat-debug-caption">px/py/pz pan the camera without changing aim. lx/ly/lz adjust where it looks.</p>';
   orbitSection.innerHTML =
     '<p class="splat-debug-section-title">Orbit</p><p class="splat-debug-caption">Pivot point and direction the camera rotates while scrolling.</p>';
 
@@ -563,7 +564,7 @@ const buildDebugPanel = ({
     -20,
     20,
     0.01,
-    onApplyPlacement,
+    onApplyPosition,
   );
   addVectorFields(
     placementSection,
@@ -573,7 +574,7 @@ const buildDebugPanel = ({
     -10,
     10,
     0.01,
-    onApplyPlacement,
+    onApplyLookAt,
   );
   addVectorFields(
     orbitSection,
@@ -678,36 +679,20 @@ const buildDebugPanel = ({
     refreshDirectionButtons();
   };
 
+  const refreshLookAtInputs = () => {
+    ["camLook0", "camLook1", "camLook2"].forEach((key) => {
+      const field = fields[key];
+      if (!field) {
+        return;
+      }
+      const value = field.getValue();
+      field.slider.value = String(value);
+      field.number.value = String(value);
+    });
+  };
+
   const syncCameraFromViewer = () => {
-    if (!viewer.camera || getPreviewProgress() !== 0) {
-      return;
-    }
-
-    config.cameraPosition[0] = viewer.camera.position.x;
-    config.cameraPosition[1] = viewer.camera.position.y;
-    config.cameraPosition[2] = viewer.camera.position.z;
-
-    fields.camPos0.slider.value = String(config.cameraPosition[0]);
-    fields.camPos0.number.value = String(config.cameraPosition[0]);
-    fields.camPos1.slider.value = String(config.cameraPosition[1]);
-    fields.camPos1.number.value = String(config.cameraPosition[1]);
-    fields.camPos2.slider.value = String(config.cameraPosition[2]);
-    fields.camPos2.number.value = String(config.cameraPosition[2]);
-
-    if (viewer.controls) {
-      config.cameraLookAt[0] = viewer.controls.target.x;
-      config.cameraLookAt[1] = viewer.controls.target.y;
-      config.cameraLookAt[2] = viewer.controls.target.z;
-
-      fields.camLook0.slider.value = String(config.cameraLookAt[0]);
-      fields.camLook0.number.value = String(config.cameraLookAt[0]);
-      fields.camLook1.slider.value = String(config.cameraLookAt[1]);
-      fields.camLook1.number.value = String(config.cameraLookAt[1]);
-      fields.camLook2.slider.value = String(config.cameraLookAt[2]);
-      fields.camLook2.number.value = String(config.cameraLookAt[2]);
-    }
-
-    window.__splatConfig = config;
+    // No OrbitControls in debug — placement is slider-driven only.
   };
 
   const updatePreviewReadout = (pos, progress) => {
@@ -725,6 +710,7 @@ const buildDebugPanel = ({
 
   return {
     refreshInputs,
+    refreshLookAtInputs,
     syncCameraFromViewer,
     updatePreviewReadout,
     resetPreviewControls,
@@ -761,6 +747,25 @@ const initDebugMode = async (viewer, isMobile) => {
 
   let config = cloneDefaultConfig(defaults);
   let previewProgress = 0;
+  let viewOffset = [
+    config.cameraLookAt[0] - config.cameraPosition[0],
+    config.cameraLookAt[1] - config.cameraPosition[1],
+    config.cameraLookAt[2] - config.cameraPosition[2],
+  ];
+
+  const syncViewOffsetFromConfig = () => {
+    viewOffset = [
+      config.cameraLookAt[0] - config.cameraPosition[0],
+      config.cameraLookAt[1] - config.cameraPosition[1],
+      config.cameraLookAt[2] - config.cameraPosition[2],
+    ];
+  };
+
+  const panLookAtWithCamera = () => {
+    config.cameraLookAt[0] = config.cameraPosition[0] + viewOffset[0];
+    config.cameraLookAt[1] = config.cameraPosition[1] + viewOffset[1];
+    config.cameraLookAt[2] = config.cameraPosition[2] + viewOffset[2];
+  };
 
   try {
     const saved = localStorage.getItem(SPLAT_DEBUG_STORAGE_KEY);
@@ -791,6 +796,8 @@ const initDebugMode = async (viewer, isMobile) => {
   if (!config.rotationOrigin) {
     config.rotationOrigin = [...config.cameraLookAt];
   }
+
+  syncViewOffsetFromConfig();
 
   window.__splatConfig = config;
   console.log("[SPLAT] Debug mode enabled. Current config:", config);
@@ -829,21 +836,11 @@ const initDebugMode = async (viewer, isMobile) => {
       config.cameraPosition[1],
       config.cameraPosition[2],
     );
-
-    if (viewer.controls) {
-      viewer.controls.target.set(
-        config.cameraLookAt[0],
-        config.cameraLookAt[1],
-        config.cameraLookAt[2],
-      );
-      viewer.controls.update();
-    } else {
-      viewer.camera.lookAt(
-        config.cameraLookAt[0],
-        config.cameraLookAt[1],
-        config.cameraLookAt[2],
-      );
-    }
+    viewer.camera.lookAt(
+      config.cameraLookAt[0],
+      config.cameraLookAt[1],
+      config.cameraLookAt[2],
+    );
 
     viewer.forceRenderNextFrame?.();
     window.__splatConfig = config;
@@ -863,7 +860,14 @@ const initDebugMode = async (viewer, isMobile) => {
     }
   };
 
-  const handleApplyPlacement = () => {
+  const handleApplyPosition = () => {
+    panLookAtWithCamera();
+    panelApi?.refreshLookAtInputs();
+    applyPlacement();
+  };
+
+  const handleApplyLookAt = () => {
+    syncViewOffsetFromConfig();
     applyPlacement();
   };
 
@@ -878,6 +882,7 @@ const initDebugMode = async (viewer, isMobile) => {
   const handleReset = () => {
     previewProgress = 0;
     Object.assign(config, cloneDefaultConfig(defaults));
+    syncViewOffsetFromConfig();
     applyPlacement();
     panelApi?.resetPreviewControls();
     panelApi?.refreshInputs();
@@ -911,7 +916,8 @@ const initDebugMode = async (viewer, isMobile) => {
   panelApi = buildDebugPanel({
     config,
     viewer,
-    onApplyPlacement: handleApplyPlacement,
+    onApplyPosition: handleApplyPosition,
+    onApplyLookAt: handleApplyLookAt,
     onApplyOrbit: handleApplyOrbit,
     onCopy: handleCopy,
     onReset: handleReset,
@@ -940,7 +946,6 @@ const initDebugMode = async (viewer, isMobile) => {
   });
 
   const syncLoop = () => {
-    panelApi.syncCameraFromViewer();
     viewer.forceRenderNextFrame?.();
     requestAnimationFrame(syncLoop);
   };
