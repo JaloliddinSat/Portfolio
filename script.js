@@ -29,12 +29,12 @@ const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
 
 const SPLAT_CONFIG = {
   cameraStart: {
-    position: [-0.95, 0.15, -0.48],
-    lookAt: [0, 0, 0],
+    position: [-0.62, 0.29, -0.51],
+    lookAt: [0.96, 0.45, 0.35],
   },
   cameraEnd: {
-    position: [-0.95, 0.15, -0.48],
-    lookAt: [0, 0, 0],
+    position: [-0.53, 0.29, -0.07],
+    lookAt: [6.44, 1.09, -2.8],
   },
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
