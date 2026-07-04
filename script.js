@@ -241,10 +241,7 @@ const initSplat = async () => {
     setStatus("ready");
 
     const animate = () => {
-      const progress = getAnimationProgress(
-        getScrollProgress(),
-        SPLAT_CONFIG.scrollEndAt ?? 1,
-      );
+      const progress = easeScrollProgress(getScrollProgress());
       const { position, lookAt } = computeScrollPosition(
         progress,
         SPLAT_CONFIG.cameraStart,
