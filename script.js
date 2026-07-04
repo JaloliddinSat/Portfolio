@@ -103,11 +103,21 @@ const initSplat = async () => {
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
+    const [lookAtX, lookAtY, lookAtZ] = SPLAT_CONFIG.cameraLookAt;
+    const [baseX, baseY, baseZ] = SPLAT_CONFIG.cameraPosition;
+    const cameraRadius = Math.hypot(baseX - lookAtX, baseZ - lookAtZ);
+    const baseAngle = Math.atan2(baseX - lookAtX, baseZ - lookAtZ);
+    const startAngle = baseAngle + Math.PI;
+    const initialCameraPosition = [
+      lookAtX + Math.sin(startAngle) * cameraRadius,
+      baseY,
+      lookAtZ + Math.cos(startAngle) * cameraRadius,
+    ];
 
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
       cameraUp: [0, -1, 0],
-      initialCameraPosition: [...SPLAT_CONFIG.cameraPosition],
+      initialCameraPosition,
       initialCameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
       useBuiltInControls: DEBUG_SPLAT ? true : false,
       sharedMemoryForWorkers: false,
@@ -142,13 +152,9 @@ const initSplat = async () => {
     viewer.start();
     setStatus("ready");
 
-    const [lookAtX, lookAtY, lookAtZ] = SPLAT_CONFIG.cameraLookAt;
-    const [baseX, baseY, baseZ] = SPLAT_CONFIG.cameraPosition;
-    const cameraRadius = Math.hypot(baseX - lookAtX, baseZ - lookAtZ);
-
     const animate = () => {
       const progress = getScrollProgress();
-      const angle = progress * Math.PI * 2;
+      const angle = startAngle + progress * Math.PI * 2;
 
       if (viewer.camera) {
         viewer.camera.position.x = lookAtX + Math.sin(angle) * cameraRadius;
