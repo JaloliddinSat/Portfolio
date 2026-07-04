@@ -41,7 +41,7 @@ const SPLAT_CONFIG = {
   splatScale: 0.75,
   alphaThreshold: 5,
   lookAtTiming: 1,
-  scrollEndAt: 0.25,
+  scrollEndAt: 0.15,
 };
 
 const lerpVec3 = (a, b, t) => [
