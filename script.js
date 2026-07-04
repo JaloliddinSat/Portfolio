@@ -30,18 +30,18 @@ const SPLAT_ASSET_VERSION = 2;
 
 const SPLAT_CONFIG = {
   cameraStart: {
-    position: [-1.71, 0.28, -1.88],
-    lookAt: [-1.87, 0.56, -1.24],
+    position: [-1.66, 0.3, -1.91],
+    lookAt: [-1.82, 0.58, -1.27],
   },
   cameraEnd: {
-    position: [-2.36, 0.57, -1.45],
-    lookAt: [-1.67, 0.77, -0.81],
+    position: [-2.26, 0.75, -0.8],
+    lookAt: [8.01, 2.05, -5.34],
   },
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
   alphaThreshold: 5,
-  lookAtTiming: 1,
-  scrollEndAt: 0.15,
+  lookAtTiming: 0.1,
+  scrollEndAt: 0.7,
 };
 
 const lerpVec3 = (a, b, t) => [
