@@ -39,6 +39,7 @@ const SPLAT_CONFIG = {
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
   alphaThreshold: 5,
+  lookAtTiming: 1,
 };
 
 const lerpVec3 = (a, b, t) => [
@@ -61,15 +62,21 @@ const cubicBezierVec3 = (p0, p1, p2, p3, t) => {
   ];
 };
 
-const computeScrollPosition = (progress, cameraStart, cameraEnd) => {
+const computeScrollPosition = (
+  progress,
+  cameraStart,
+  cameraEnd,
+  lookAtTiming = 1,
+) => {
   const p0 = cameraStart.position;
   const p3 = cameraEnd.position;
   const p1 = lerpVec3(p0, p3, 0.33);
   const p2 = lerpVec3(p0, p3, 0.67);
   const position = cubicBezierVec3(p0, p1, p2, p3, progress);
-  const lookAt = lerpVec3(cameraStart.lookAt, cameraEnd.lookAt, progress);
+  const lookAtProgress = Math.min(1, Math.max(0, progress * lookAtTiming));
+  const lookAt = lerpVec3(cameraStart.lookAt, cameraEnd.lookAt, lookAtProgress);
 
-  return { position, lookAt };
+  return { position, lookAt, lookAtProgress };
 };
 
 const cloneKeyframe = (keyframe) => ({
@@ -197,6 +204,7 @@ const initSplat = async () => {
         progress,
         SPLAT_CONFIG.cameraStart,
         SPLAT_CONFIG.cameraEnd,
+        SPLAT_CONFIG.lookAtTiming ?? 1,
       );
 
       if (viewer.camera) {
@@ -271,6 +279,7 @@ const formatSplatConfigSnippet = (keyframes, splatConfig) =>
   splatPosition: [${splatConfig.splatPosition.join(", ")}],
   splatScale: ${splatConfig.splatScale},
   alphaThreshold: ${splatConfig.alphaThreshold},
+  lookAtTiming: ${splatConfig.lookAtTiming ?? 1},
 };`;
 
 const copyConfig = async (keyframes, splatConfig) => {
@@ -427,6 +436,7 @@ const buildDebugPanel = ({
   onApplyLookAt,
   onSetStart,
   onSetEnd,
+  onApplyLookAtTiming,
   onCopy,
   onReset,
   onSave,
@@ -461,7 +471,7 @@ const buildDebugPanel = ({
   cameraSection.innerHTML =
     '<p class="splat-debug-section-title">Camera</p><p class="splat-debug-caption">px/py/pz pan the camera without changing aim. lx/ly/lz adjust where it looks.</p>';
   keyframesSection.innerHTML =
-    '<p class="splat-debug-section-title">Keyframes</p><p class="splat-debug-caption">Capture scroll start and end poses, then preview the path between them.</p>';
+    '<p class="splat-debug-section-title">Keyframes</p><p class="splat-debug-caption">Capture scroll start and end poses, then preview the path between them. Lower look speed slows aim shift vs movement.</p>';
 
   const addField = (
     section,
@@ -596,6 +606,20 @@ const buildDebugPanel = ({
 
   keyframesSection.append(startStatus, endStatus);
 
+  addField(
+    keyframesSection,
+    "lookAtTiming",
+    "look",
+    0.1,
+    3,
+    0.05,
+    () => config.lookAtTiming ?? 1,
+    (value) => {
+      config.lookAtTiming = value;
+    },
+    onApplyLookAtTiming,
+  );
+
   const previewReadout = document.createElement("pre");
   previewReadout.className = "splat-debug-readout";
   previewReadout.textContent = "scroll 0%";
@@ -674,9 +698,10 @@ const buildDebugPanel = ({
     setEndButton.classList.toggle("is-active", endSet);
   };
 
-  const updatePreviewReadout = ({ position, lookAt }, progress) => {
+  const updatePreviewReadout = ({ position, lookAt, lookAtProgress }, progress) => {
     previewReadout.textContent =
       `scroll ${(progress * 100).toFixed(0)}%\n` +
+      `aim ${((lookAtProgress ?? progress) * 100).toFixed(0)}%\n` +
       `pos ${formatVec3(position)}\n` +
       `look ${formatVec3(lookAt)}`;
   };
@@ -702,6 +727,7 @@ const cloneDefaultConfig = (defaults) => ({
   splatPosition: [...defaults.splatPosition],
   splatScale: defaults.splatScale,
   alphaThreshold: defaults.alphaThreshold,
+  lookAtTiming: defaults.lookAtTiming ?? 1,
 });
 
 const captureCameraPose = (viewer, config) => ({
@@ -727,6 +753,7 @@ const initDebugMode = async (viewer, isMobile) => {
     splatPosition: [...SPLAT_CONFIG.splatPosition],
     splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
     alphaThreshold: SPLAT_CONFIG.alphaThreshold,
+    lookAtTiming: SPLAT_CONFIG.lookAtTiming ?? 1,
   };
 
   let config = cloneDefaultConfig(defaults);
@@ -827,14 +854,15 @@ const initDebugMode = async (viewer, isMobile) => {
       return;
     }
 
-    const { position, lookAt } = computeScrollPosition(
+    const { position, lookAt, lookAtProgress } = computeScrollPosition(
       previewProgress,
       keyframes.start,
       keyframes.end,
+      config.lookAtTiming ?? 1,
     );
 
     applyCameraPose({ position, lookAt });
-    panelApi?.updatePreviewReadout({ position, lookAt }, previewProgress);
+    panelApi?.updatePreviewReadout({ position, lookAt, lookAtProgress }, previewProgress);
     window.__splatConfig = { keyframes, ...config };
   };
 
@@ -867,6 +895,13 @@ const initDebugMode = async (viewer, isMobile) => {
   const handleApplyLookAt = () => {
     syncViewOffsetFromConfig();
     applyPlacement();
+  };
+
+  const handleApplyLookAtTiming = () => {
+    if (previewProgress > 0) {
+      updateScrollPreview();
+    }
+    window.__splatConfig = { keyframes, ...config };
   };
 
   const handleSetStart = () => {
@@ -952,6 +987,7 @@ const initDebugMode = async (viewer, isMobile) => {
     onApplyLookAt: handleApplyLookAt,
     onSetStart: handleSetStart,
     onSetEnd: handleSetEnd,
+    onApplyLookAtTiming: handleApplyLookAtTiming,
     onCopy: handleCopy,
     onReset: handleReset,
     onSave: handleSave,
