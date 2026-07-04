@@ -40,6 +40,7 @@ const SPLAT_CONFIG = {
   splatScale: 0.75,
   alphaThreshold: 5,
   lookAtTiming: 1,
+  scrollEndAt: 0.55,
 };
 
 const lerpVec3 = (a, b, t) => [
@@ -123,6 +124,12 @@ const getScrollProgress = () => {
   return Math.min(Math.max(progress, 0), 1);
 };
 
+const mapScrollProgress = (rawProgress, scrollEndAt = 1) => {
+  const endAt = Math.max(0.05, Math.min(1, scrollEndAt));
+
+  return Math.min(1, Math.max(0, rawProgress / endAt));
+};
+
 const initSplat = async () => {
   if (!splatContainer) {
     return;
@@ -199,7 +206,10 @@ const initSplat = async () => {
     setStatus("ready");
 
     const animate = () => {
-      const progress = getScrollProgress();
+      const progress = mapScrollProgress(
+        getScrollProgress(),
+        SPLAT_CONFIG.scrollEndAt ?? 1,
+      );
       const { position, lookAt } = computeScrollPosition(
         progress,
         SPLAT_CONFIG.cameraStart,
@@ -280,6 +290,7 @@ const formatSplatConfigSnippet = (keyframes, splatConfig) =>
   splatScale: ${splatConfig.splatScale},
   alphaThreshold: ${splatConfig.alphaThreshold},
   lookAtTiming: ${splatConfig.lookAtTiming ?? 1},
+  scrollEndAt: ${splatConfig.scrollEndAt ?? 1},
 };`;
 
 const copyConfig = async (keyframes, splatConfig) => {
@@ -437,6 +448,7 @@ const buildDebugPanel = ({
   onSetStart,
   onSetEnd,
   onApplyLookAtTiming,
+  onApplyScrollEndAt,
   onCopy,
   onReset,
   onSave,
@@ -471,7 +483,7 @@ const buildDebugPanel = ({
   cameraSection.innerHTML =
     '<p class="splat-debug-section-title">Camera</p><p class="splat-debug-caption">px/py/pz pan the camera without changing aim. lx/ly/lz adjust where it looks.</p>';
   keyframesSection.innerHTML =
-    '<p class="splat-debug-section-title">Keyframes</p><p class="splat-debug-caption">Capture scroll start and end poses, then preview the path between them. Lower look speed slows aim shift vs movement.</p>';
+    '<p class="splat-debug-section-title">Keyframes</p><p class="splat-debug-caption">Capture scroll start and end poses, then preview the path between them. Lower look speed slows aim shift vs movement. Lower end-at finishes the path sooner while scrolling.</p>';
 
   const addField = (
     section,
@@ -620,6 +632,20 @@ const buildDebugPanel = ({
     onApplyLookAtTiming,
   );
 
+  addField(
+    keyframesSection,
+    "scrollEndAt",
+    "end",
+    0.1,
+    1,
+    0.05,
+    () => config.scrollEndAt ?? 1,
+    (value) => {
+      config.scrollEndAt = value;
+    },
+    onApplyScrollEndAt,
+  );
+
   const previewReadout = document.createElement("pre");
   previewReadout.className = "splat-debug-readout";
   previewReadout.textContent = "scroll 0%";
@@ -728,6 +754,7 @@ const cloneDefaultConfig = (defaults) => ({
   splatScale: defaults.splatScale,
   alphaThreshold: defaults.alphaThreshold,
   lookAtTiming: defaults.lookAtTiming ?? 1,
+  scrollEndAt: defaults.scrollEndAt ?? 1,
 });
 
 const captureCameraPose = (viewer, config) => ({
@@ -754,6 +781,7 @@ const initDebugMode = async (viewer, isMobile) => {
     splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
     alphaThreshold: SPLAT_CONFIG.alphaThreshold,
     lookAtTiming: SPLAT_CONFIG.lookAtTiming ?? 1,
+    scrollEndAt: SPLAT_CONFIG.scrollEndAt ?? 1,
   };
 
   let config = cloneDefaultConfig(defaults);
@@ -904,6 +932,10 @@ const initDebugMode = async (viewer, isMobile) => {
     window.__splatConfig = { keyframes, ...config };
   };
 
+  const handleApplyScrollEndAt = () => {
+    window.__splatConfig = { keyframes, ...config };
+  };
+
   const handleSetStart = () => {
     const pose = captureCameraPose(viewer, config);
     keyframes.start = cloneKeyframe(pose);
@@ -988,6 +1020,7 @@ const initDebugMode = async (viewer, isMobile) => {
     onSetStart: handleSetStart,
     onSetEnd: handleSetEnd,
     onApplyLookAtTiming: handleApplyLookAtTiming,
+    onApplyScrollEndAt: handleApplyScrollEndAt,
     onCopy: handleCopy,
     onReset: handleReset,
     onSave: handleSave,
