@@ -143,14 +143,15 @@ const mapScrollProgress = (rawProgress, scrollEndAt = 1) => {
   return Math.min(1, Math.max(0, rawProgress / endAt));
 };
 
-const easeOutCubic = (progress) => {
+const easeScrollProgress = (progress) => {
   const t = Math.min(1, Math.max(0, progress));
+  const smooth = t * t * (3 - 2 * t);
 
-  return 1 - (1 - t) ** 3;
+  return t * 0.6 + smooth * 0.4;
 };
 
 const getAnimationProgress = (rawScrollProgress, scrollEndAt = 1) =>
-  easeOutCubic(mapScrollProgress(rawScrollProgress, scrollEndAt));
+  easeScrollProgress(mapScrollProgress(rawScrollProgress, scrollEndAt));
 
 const initSplat = async () => {
   if (!splatContainer) {
@@ -905,7 +906,7 @@ const initDebugMode = async (viewer, isMobile) => {
     }
 
     const { position, lookAt, lookAtProgress } = computeScrollPosition(
-      easeOutCubic(previewProgress),
+      easeScrollProgress(previewProgress),
       keyframes.start,
       keyframes.end,
       config.lookAtTiming ?? 1,
