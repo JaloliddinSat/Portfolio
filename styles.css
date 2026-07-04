@@ -132,12 +132,12 @@ a {
 .hero {
   position: relative;
   width: 100vw;
-  min-height: 100svh;
+  min-height: 200svh;
   margin-top: 0;
   margin-left: calc(50% - 50vw);
   overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .eyebrow {
@@ -244,7 +244,83 @@ h3 {
   z-index: 2;
   width: min(100% - 80px, var(--max-width));
   margin: 0 auto;
-  padding: 100px 0 60px;
+  padding: 100px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-lower {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100svh;
+  padding: 60px 0;
+}
+
+.hero-toc {
+  width: min(540px, 100%);
+  padding: 40px 44px;
+  border: 1px solid rgba(141, 216, 255, 0.2);
+  border-radius: 28px;
+  background: rgba(4, 8, 20, 0.72);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+}
+
+.hero-toc-label {
+  margin: 0 0 24px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hero-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-toc-list li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hero-toc-list li:last-child {
+  border-bottom: none;
+}
+
+.hero-toc-list a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: color 180ms ease, gap 180ms ease;
+}
+
+.hero-toc-list a:hover {
+  color: var(--accent);
+  gap: 22px;
+}
+
+.hero-toc-num {
+  min-width: 28px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.hero-toc-desc {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .hero-copy {
@@ -483,7 +559,11 @@ h3 {
   }
 
   .hero-content {
-    padding: 120px 0 60px;
+    padding: 120px 0 0;
+  }
+
+  .hero-toc {
+    padding: 28px 24px;
   }
 }
 
