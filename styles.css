@@ -13,6 +13,7 @@
   --radius-large: 32px;
   --radius-medium: 22px;
   --max-width: 1120px;
+  --hero-header-overlap: 88px;
 }
 
 * {
@@ -69,7 +70,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin: 18px 0 72px;
+  margin: 18px 0 0;
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -130,7 +131,8 @@ a {
 .hero {
   position: relative;
   width: 100vw;
-  min-height: calc(100svh - 160px);
+  min-height: calc(100svh + var(--hero-header-overlap));
+  margin-top: calc(-1 * var(--hero-header-overlap));
   margin-left: calc(50% - 50vw);
   overflow: hidden;
   display: flex;
@@ -241,7 +243,7 @@ h3 {
   z-index: 2;
   width: min(100% - 80px, var(--max-width));
   margin: 0 auto;
-  padding: 60px 0;
+  padding: calc(var(--hero-header-overlap) + 20px) 0 60px;
 }
 
 .hero-copy {
@@ -460,6 +462,10 @@ h3 {
 }
 
 @media (max-width: 860px) {
+  :root {
+    --hero-header-overlap: 148px;
+  }
+
   .site-header {
     align-items: flex-start;
     border-radius: 28px;
@@ -479,11 +485,11 @@ h3 {
   }
 
   .hero {
-    min-height: 100svh;
+    min-height: calc(100svh + var(--hero-header-overlap));
   }
 
   .hero-content {
-    padding: 40px 0 60px;
+    padding: calc(var(--hero-header-overlap) + 12px) 0 60px;
   }
 }
 
