@@ -30,9 +30,34 @@ const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
 const SPLAT_CONFIG = {
   cameraPosition: [-0.95, 0.15, -0.48],
   cameraLookAt: [0, 0, 0],
+  rotationOrigin: [0, 0, 0],
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
   alphaThreshold: 5,
+};
+
+const ROTATION_VERTICAL_DRIFT = 0.35;
+
+const computeOrbitPosition = (progress, cameraPosition, rotationOrigin) => {
+  const [originX, , originZ] = rotationOrigin;
+  const [baseX, baseY] = cameraPosition;
+  const radius = Math.hypot(
+    cameraPosition[0] - originX,
+    cameraPosition[2] - originZ,
+  );
+  const startAngle = Math.atan2(
+    cameraPosition[0] - originX,
+    cameraPosition[2] - originZ,
+  );
+  const angle = startAngle + progress * Math.PI * 2;
+
+  return {
+    x: originX + Math.sin(angle) * radius,
+    y: baseY + progress * ROTATION_VERTICAL_DRIFT,
+    z: originZ + Math.cos(angle) * radius,
+    angle,
+    radius,
+  };
 };
 
 const splatContainer = document.querySelector("#splat-viewer");
@@ -104,10 +129,8 @@ const initSplat = async () => {
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
     const [lookAtX, lookAtY, lookAtZ] = SPLAT_CONFIG.cameraLookAt;
-    const [baseX, baseY, baseZ] = SPLAT_CONFIG.cameraPosition;
-    const cameraRadius = Math.hypot(baseX - lookAtX, baseZ - lookAtZ);
-    const baseAngle = Math.atan2(baseX - lookAtX, baseZ - lookAtZ);
-    const startAngle = baseAngle + Math.PI * 2;
+    const rotationOrigin =
+      SPLAT_CONFIG.rotationOrigin ?? SPLAT_CONFIG.cameraLookAt;
     const initialCameraPosition = [...SPLAT_CONFIG.cameraPosition];
 
     const viewer = new GaussianSplats3D.Viewer({
@@ -150,12 +173,14 @@ const initSplat = async () => {
 
     const animate = () => {
       const progress = getScrollProgress();
-      const angle = startAngle + progress * Math.PI * 2;
+      const pos = computeOrbitPosition(
+        progress,
+        SPLAT_CONFIG.cameraPosition,
+        rotationOrigin,
+      );
 
       if (viewer.camera) {
-        viewer.camera.position.x = lookAtX + Math.sin(angle) * cameraRadius;
-        viewer.camera.position.z = lookAtZ + Math.cos(angle) * cameraRadius;
-        viewer.camera.position.y = baseY + progress * 0.35;
+        viewer.camera.position.set(pos.x, pos.y, pos.z);
         viewer.camera.lookAt(lookAtX, lookAtY, lookAtZ);
       }
 
@@ -213,6 +238,7 @@ const formatSplatConfigSnippet = (config) =>
   `const SPLAT_CONFIG = {
   cameraPosition: [${config.cameraPosition.join(", ")}],
   cameraLookAt: [${config.cameraLookAt.join(", ")}],
+  rotationOrigin: [${(config.rotationOrigin ?? config.cameraLookAt).join(", ")}],
   splatPosition: [${config.splatPosition.join(", ")}],
   splatScale: ${config.splatScale},
   alphaThreshold: ${config.alphaThreshold},
@@ -360,6 +386,22 @@ const injectDebugPanelStyles = () => {
     #splat-debug-panel button:hover {
       background: rgba(141, 216, 255, 0.22);
     }
+    #splat-debug-panel .splat-debug-caption {
+      margin: 0 0 8px;
+      color: #64748b;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+    #splat-debug-panel .splat-debug-readout {
+      margin: 6px 0 0;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+      font: 600 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
     #splat-debug-panel .splat-debug-hint {
       margin: 8px 0 0;
       color: #64748b;
@@ -373,14 +415,13 @@ const injectDebugPanelStyles = () => {
 const buildDebugPanel = ({
   config,
   viewer,
-  splatScene,
-  defaults,
-  THREE,
   onApply,
   onCopy,
   onReset,
   onSave,
   onClear,
+  getPreviewProgress,
+  onPreviewChange,
 }) => {
   injectDebugPanelStyles();
 
@@ -392,6 +433,7 @@ const buildDebugPanel = ({
   panel.innerHTML = `
     <h2>Splat Debug</h2>
     <div class="splat-debug-section" data-section="camera"></div>
+    <div class="splat-debug-section" data-section="rotation"></div>
     <div class="splat-debug-section" data-section="splat"></div>
     <div class="splat-debug-actions">
       <button type="button" data-action="copy">Copy Config (C)</button>
@@ -399,16 +441,19 @@ const buildDebugPanel = ({
       <button type="button" data-action="save">Save to Local Storage</button>
       <button type="button" data-action="clear">Clear Saved Config</button>
     </div>
-    <p class="splat-debug-hint">Drag with mouse to orbit. Press C to copy, R to reset. Config is on window.__splatConfig</p>
+    <p class="splat-debug-hint">Drag with mouse to orbit. Scrub scroll % to preview rotation. Press C to copy, R to reset. Config is on window.__splatConfig</p>
   `;
   document.body.appendChild(panel);
 
   const fields = {};
   const cameraSection = panel.querySelector('[data-section="camera"]');
+  const rotationSection = panel.querySelector('[data-section="rotation"]');
   const splatSection = panel.querySelector('[data-section="splat"]');
 
   cameraSection.innerHTML =
-    '<p class="splat-debug-section-title">Camera</p>';
+    '<p class="splat-debug-section-title">Camera</p><p class="splat-debug-caption">Position (rotation start at scroll 0%)</p>';
+  rotationSection.innerHTML =
+    '<p class="splat-debug-section-title">Rotation</p><p class="splat-debug-caption">Origin (pivot) — orbit center while scrolling</p>';
   splatSection.innerHTML = '<p class="splat-debug-section-title">Splat</p>';
 
   const addField = (section, key, label, min, max, step, getValue, setValue) => {
@@ -484,6 +529,59 @@ const buildDebugPanel = ({
     10,
     0.01,
   );
+  addVectorFields(
+    rotationSection,
+    "rotOrigin",
+    ["ox", "oy", "oz"],
+    "rotationOrigin",
+    -20,
+    20,
+    0.01,
+  );
+
+  const previewReadout = document.createElement("pre");
+  previewReadout.className = "splat-debug-readout";
+  previewReadout.textContent = "scroll 0%";
+  rotationSection.appendChild(previewReadout);
+
+  const previewRow = document.createElement("div");
+  previewRow.className = "splat-debug-row";
+  previewRow.style.marginTop = "8px";
+
+  const previewLabel = document.createElement("label");
+  previewLabel.textContent = "scroll";
+  previewLabel.setAttribute("for", "splat-debug-preview");
+
+  const previewSlider = document.createElement("input");
+  previewSlider.type = "range";
+  previewSlider.id = "splat-debug-preview";
+  previewSlider.min = "0";
+  previewSlider.max = "100";
+  previewSlider.step = "1";
+  previewSlider.value = "0";
+
+  const previewNumber = document.createElement("input");
+  previewNumber.type = "number";
+  previewNumber.min = "0";
+  previewNumber.max = "100";
+  previewNumber.step = "1";
+  previewNumber.value = "0";
+
+  const handlePreviewInput = () => {
+    const percent = Number(previewSlider.value);
+    previewNumber.value = String(percent);
+    onPreviewChange(percent);
+  };
+
+  previewSlider.addEventListener("input", handlePreviewInput);
+  previewNumber.addEventListener("change", () => {
+    previewSlider.value = String(previewNumber.value);
+    handlePreviewInput();
+  });
+
+  previewRow.append(previewLabel, previewSlider, previewNumber);
+  rotationSection.appendChild(previewRow);
+
   addVectorFields(splatSection, "splatPos", ["px", "py", "pz"], "splatPosition", -10, 10, 0.01);
 
   addField(
@@ -562,7 +660,7 @@ const buildDebugPanel = ({
   };
 
   const syncCameraFromViewer = () => {
-    if (!viewer.camera) {
+    if (!viewer.camera || getPreviewProgress() !== 0) {
       return;
     }
 
@@ -580,12 +678,32 @@ const buildDebugPanel = ({
     window.__splatConfig = config;
   };
 
-  return { refreshInputs, syncCameraFromViewer, fields };
+  const updatePreviewReadout = (pos, progress) => {
+    const angleDeg = ((pos.angle / Math.PI) * 180).toFixed(1);
+    previewReadout.textContent =
+      `scroll ${(progress * 100).toFixed(0)}%\n` +
+      `angle ${angleDeg}°  r ${pos.radius.toFixed(3)}\n` +
+      `x ${pos.x.toFixed(3)}  y ${pos.y.toFixed(3)}  z ${pos.z.toFixed(3)}`;
+  };
+
+  const resetPreviewControls = () => {
+    previewSlider.value = "0";
+    previewNumber.value = "0";
+  };
+
+  return {
+    refreshInputs,
+    syncCameraFromViewer,
+    updatePreviewReadout,
+    resetPreviewControls,
+    fields,
+  };
 };
 
 const cloneDefaultConfig = (defaults) => ({
   cameraPosition: [...defaults.cameraPosition],
   cameraLookAt: [...defaults.cameraLookAt],
+  rotationOrigin: [...defaults.rotationOrigin],
   splatPosition: [...defaults.splatPosition],
   splatScale: defaults.splatScale,
   splatRotationX: defaults.splatRotationX,
@@ -601,6 +719,7 @@ const initDebugMode = async (viewer, isMobile) => {
   const defaults = {
     cameraPosition: [...SPLAT_CONFIG.cameraPosition],
     cameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
+    rotationOrigin: [...(SPLAT_CONFIG.rotationOrigin ?? SPLAT_CONFIG.cameraLookAt)],
     splatPosition: [...SPLAT_CONFIG.splatPosition],
     splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
     splatRotationX: 0,
@@ -610,6 +729,7 @@ const initDebugMode = async (viewer, isMobile) => {
   };
 
   let config = cloneDefaultConfig(defaults);
+  let previewProgress = 0;
 
   try {
     const saved = localStorage.getItem(SPLAT_DEBUG_STORAGE_KEY);
@@ -624,6 +744,9 @@ const initDebugMode = async (viewer, isMobile) => {
         cameraLookAt: parsed.cameraLookAt
           ? [...parsed.cameraLookAt]
           : [...defaults.cameraLookAt],
+        rotationOrigin: parsed.rotationOrigin
+          ? [...parsed.rotationOrigin]
+          : [...defaults.rotationOrigin],
         splatPosition: parsed.splatPosition
           ? [...parsed.splatPosition]
           : [...defaults.splatPosition],
@@ -633,6 +756,10 @@ const initDebugMode = async (viewer, isMobile) => {
     // Ignore invalid saved config.
   }
 
+  if (!config.rotationOrigin) {
+    config.rotationOrigin = [...config.cameraLookAt];
+  }
+
   window.__splatConfig = config;
   console.log("[SPLAT] Debug mode enabled. Current config:", config);
 
@@ -640,8 +767,30 @@ const initDebugMode = async (viewer, isMobile) => {
 
   let panelApi = null;
 
+  const getRotationOrigin = () =>
+    config.rotationOrigin ?? config.cameraLookAt;
+
+  const updateRotationPreview = () => {
+    const pos = computeOrbitPosition(
+      previewProgress,
+      config.cameraPosition,
+      getRotationOrigin(),
+    );
+
+    viewer.camera.position.set(pos.x, pos.y, pos.z);
+    viewer.camera.lookAt(
+      config.cameraLookAt[0],
+      config.cameraLookAt[1],
+      config.cameraLookAt[2],
+    );
+    viewer.forceRenderNextFrame?.();
+    panelApi?.updatePreviewReadout(pos, previewProgress);
+    window.__splatConfig = config;
+  };
+
   const handleApply = () => {
     applyConfig(config, viewer, splatScene, THREE);
+    updateRotationPreview();
   };
 
   const handleCopy = () => {
@@ -649,9 +798,12 @@ const initDebugMode = async (viewer, isMobile) => {
   };
 
   const handleReset = () => {
+    previewProgress = 0;
     Object.assign(config, cloneDefaultConfig(defaults));
     applyConfig(config, viewer, splatScene, THREE);
+    panelApi?.resetPreviewControls();
     panelApi?.refreshInputs();
+    updateRotationPreview();
     showToast("Config reset.");
     console.log("[SPLAT] Config reset:", config);
   };
@@ -668,20 +820,30 @@ const initDebugMode = async (viewer, isMobile) => {
     console.log("[SPLAT] Saved config cleared.");
   };
 
+  const handlePreviewChange = (percent) => {
+    previewProgress = percent / 100;
+
+    if (previewProgress === 0) {
+      applyConfig(config, viewer, splatScene, THREE);
+    }
+
+    updateRotationPreview();
+  };
+
   panelApi = buildDebugPanel({
     config,
     viewer,
-    splatScene,
-    defaults,
-    THREE,
     onApply: handleApply,
     onCopy: handleCopy,
     onReset: handleReset,
     onSave: handleSave,
     onClear: handleClear,
+    getPreviewProgress: () => previewProgress,
+    onPreviewChange: handlePreviewChange,
   });
 
   panelApi.refreshInputs();
+  updateRotationPreview();
 
   document.addEventListener("keydown", (event) => {
     if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
