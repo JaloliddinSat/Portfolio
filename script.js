@@ -94,6 +94,7 @@ const cloneKeyframes = (keyframes) => ({
 const splatContainer = document.querySelector("#splat-viewer");
 const splatLoader = document.querySelector("#splat-loader");
 const splatError = document.querySelector("#splat-error");
+const heroScrollTrack = document.querySelector("#hero-scroll-track");
 
 const setStatus = (state, message = "") => {
   if (splatLoader) {
@@ -131,10 +132,21 @@ const getSplatUrl = () => {
 };
 
 const getScrollProgress = () => {
-  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-  const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+  if (!heroScrollTrack) {
+    return 0;
+  }
 
-  return Math.min(Math.max(progress, 0), 1);
+  const scrollRange = heroScrollTrack.offsetHeight - window.innerHeight;
+
+  if (scrollRange <= 0) {
+    return 1;
+  }
+
+  const trackTop =
+    heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+  const scrolled = window.scrollY - trackTop;
+
+  return Math.min(Math.max(scrolled / scrollRange, 0), 1);
 };
 
 const mapScrollProgress = (rawProgress, scrollEndAt = 1) => {
