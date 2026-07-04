@@ -64,6 +64,13 @@ const cubicBezierVec3 = (p0, p1, p2, p3, t) => {
   ];
 };
 
+const easeInLookAt = (progress) => {
+  const t = Math.min(1, Math.max(0, progress));
+  const ease = t * t * t;
+
+  return t * 0.3 + ease * 0.7;
+};
+
 const computeScrollPosition = (
   progress,
   cameraStart,
@@ -75,7 +82,8 @@ const computeScrollPosition = (
   const p1 = lerpVec3(p0, p3, 0.33);
   const p2 = lerpVec3(p0, p3, 0.67);
   const position = cubicBezierVec3(p0, p1, p2, p3, progress);
-  const lookAtProgress = Math.min(1, Math.max(0, progress * lookAtTiming));
+  const rawLookAt = Math.min(1, Math.max(0, progress * lookAtTiming));
+  const lookAtProgress = easeInLookAt(rawLookAt);
   const lookAt = lerpVec3(cameraStart.lookAt, cameraEnd.lookAt, lookAtProgress);
 
   return { position, lookAt, lookAtProgress };
