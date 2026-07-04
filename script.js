@@ -107,12 +107,8 @@ const initSplat = async () => {
     const [baseX, baseY, baseZ] = SPLAT_CONFIG.cameraPosition;
     const cameraRadius = Math.hypot(baseX - lookAtX, baseZ - lookAtZ);
     const baseAngle = Math.atan2(baseX - lookAtX, baseZ - lookAtZ);
-    const startAngle = baseAngle + Math.PI;
-    const initialCameraPosition = [
-      lookAtX + Math.sin(startAngle) * cameraRadius,
-      baseY,
-      lookAtZ + Math.cos(startAngle) * cameraRadius,
-    ];
+    const startAngle = baseAngle + Math.PI * 2;
+    const initialCameraPosition = [...SPLAT_CONFIG.cameraPosition];
 
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
