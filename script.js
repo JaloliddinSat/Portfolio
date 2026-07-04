@@ -28,43 +28,59 @@ const SPLAT_RENDERER_URL =
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
 
 const SPLAT_CONFIG = {
-  cameraPosition: [-0.95, 0.15, -0.48],
-  cameraLookAt: [0, 0, 0],
-  rotationOrigin: [0, 0, 0],
-  rotationDirection: 1,
+  cameraStart: {
+    position: [-0.95, 0.15, -0.48],
+    lookAt: [0, 0, 0],
+  },
+  cameraEnd: {
+    position: [-0.95, 0.15, -0.48],
+    lookAt: [0, 0, 0],
+  },
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
   alphaThreshold: 5,
 };
 
-const ROTATION_VERTICAL_DRIFT = 0.35;
+const lerpVec3 = (a, b, t) => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
 
-const computeOrbitPosition = (
-  progress,
-  cameraPosition,
-  rotationOrigin,
-  direction = 1,
-) => {
-  const [originX, , originZ] = rotationOrigin;
-  const [baseX, baseY] = cameraPosition;
-  const radius = Math.hypot(
-    cameraPosition[0] - originX,
-    cameraPosition[2] - originZ,
-  );
-  const startAngle = Math.atan2(
-    cameraPosition[0] - originX,
-    cameraPosition[2] - originZ,
-  );
-  const angle = startAngle + direction * progress * Math.PI * 2;
+const cubicBezierVec3 = (p0, p1, p2, p3, t) => {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
 
-  return {
-    x: originX + Math.sin(angle) * radius,
-    y: baseY + progress * ROTATION_VERTICAL_DRIFT,
-    z: originZ + Math.cos(angle) * radius,
-    angle,
-    radius,
-  };
+  return [
+    uuu * p0[0] + 3 * uu * t * p1[0] + 3 * u * tt * p2[0] + ttt * p3[0],
+    uuu * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + ttt * p3[1],
+    uuu * p0[2] + 3 * uu * t * p1[2] + 3 * u * tt * p2[2] + ttt * p3[2],
+  ];
 };
+
+const computeScrollPosition = (progress, cameraStart, cameraEnd) => {
+  const p0 = cameraStart.position;
+  const p3 = cameraEnd.position;
+  const p1 = lerpVec3(p0, p3, 0.33);
+  const p2 = lerpVec3(p0, p3, 0.67);
+  const position = cubicBezierVec3(p0, p1, p2, p3, progress);
+  const lookAt = lerpVec3(cameraStart.lookAt, cameraEnd.lookAt, progress);
+
+  return { position, lookAt };
+};
+
+const cloneKeyframe = (keyframe) => ({
+  position: [...keyframe.position],
+  lookAt: [...keyframe.lookAt],
+});
+
+const cloneKeyframes = (keyframes) => ({
+  start: cloneKeyframe(keyframes.start),
+  end: cloneKeyframe(keyframes.end),
+});
 
 const splatContainer = document.querySelector("#splat-viewer");
 const splatLoader = document.querySelector("#splat-loader");
@@ -134,16 +150,14 @@ const initSplat = async () => {
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
-    const [lookAtX, lookAtY, lookAtZ] = SPLAT_CONFIG.cameraLookAt;
-    const rotationOrigin =
-      SPLAT_CONFIG.rotationOrigin ?? SPLAT_CONFIG.cameraLookAt;
-    const initialCameraPosition = [...SPLAT_CONFIG.cameraPosition];
+    const initialCameraPosition = [...SPLAT_CONFIG.cameraStart.position];
+    const initialCameraLookAt = [...SPLAT_CONFIG.cameraStart.lookAt];
 
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
       cameraUp: [0, -1, 0],
       initialCameraPosition,
-      initialCameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
+      initialCameraLookAt,
       useBuiltInControls: false,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
@@ -179,16 +193,19 @@ const initSplat = async () => {
 
     const animate = () => {
       const progress = getScrollProgress();
-      const pos = computeOrbitPosition(
+      const { position, lookAt } = computeScrollPosition(
         progress,
-        SPLAT_CONFIG.cameraPosition,
-        rotationOrigin,
-        SPLAT_CONFIG.rotationDirection ?? 1,
+        SPLAT_CONFIG.cameraStart,
+        SPLAT_CONFIG.cameraEnd,
       );
 
       if (viewer.camera) {
-        viewer.camera.position.set(pos.x, pos.y, pos.z);
-        viewer.camera.lookAt(lookAtX, lookAtY, lookAtZ);
+        viewer.camera.position.set(
+          position[0],
+          position[1],
+          position[2],
+        );
+        viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
       }
 
       viewer.forceRenderNextFrame?.();
@@ -241,19 +258,23 @@ const showToast = (message) => {
   }, 2000);
 };
 
-const formatSplatConfigSnippet = (config) =>
+const formatSplatConfigSnippet = (keyframes, splatConfig) =>
   `const SPLAT_CONFIG = {
-  cameraPosition: [${config.cameraPosition.join(", ")}],
-  cameraLookAt: [${config.cameraLookAt.join(", ")}],
-  rotationOrigin: [${(config.rotationOrigin ?? config.cameraLookAt).join(", ")}],
-  rotationDirection: ${config.rotationDirection ?? 1},
-  splatPosition: [${config.splatPosition.join(", ")}],
-  splatScale: ${config.splatScale},
-  alphaThreshold: ${config.alphaThreshold},
+  cameraStart: {
+    position: [${keyframes.start.position.join(", ")}],
+    lookAt:    [${keyframes.start.lookAt.join(", ")}],
+  },
+  cameraEnd: {
+    position: [${keyframes.end.position.join(", ")}],
+    lookAt:    [${keyframes.end.lookAt.join(", ")}],
+  },
+  splatPosition: [${splatConfig.splatPosition.join(", ")}],
+  splatScale: ${splatConfig.splatScale},
+  alphaThreshold: ${splatConfig.alphaThreshold},
 };`;
 
-const copyConfig = async (config) => {
-  const snippet = formatSplatConfigSnippet(config);
+const copyConfig = async (keyframes, splatConfig) => {
+  const snippet = formatSplatConfigSnippet(keyframes, splatConfig);
 
   try {
     await navigator.clipboard.writeText(snippet);
@@ -263,48 +284,9 @@ const copyConfig = async (config) => {
     console.log("[SPLAT] Config:\n", snippet);
   }
 
-  console.log("[SPLAT] Current config:", config);
-  window.__splatConfig = config;
-};
-
-const applyConfig = (config, viewer, splatScene, THREE) => {
-  if (viewer.camera) {
-    viewer.camera.position.set(
-      config.cameraPosition[0],
-      config.cameraPosition[1],
-      config.cameraPosition[2],
-    );
-    viewer.camera.lookAt(
-      config.cameraLookAt[0],
-      config.cameraLookAt[1],
-      config.cameraLookAt[2],
-    );
-  }
-
-  if (splatScene) {
-    splatScene.position.set(
-      config.splatPosition[0],
-      config.splatPosition[1],
-      config.splatPosition[2],
-    );
-    splatScene.scale.setScalar(config.splatScale);
-
-    const euler = new THREE.Euler(
-      config.splatRotationX,
-      config.splatRotationY,
-      config.splatRotationZ,
-    );
-    splatScene.quaternion.setFromEuler(euler);
-  }
-
-  if (viewer.splatMesh) {
-    viewer.splatMesh.splatAlphaRemovalThreshold = config.alphaThreshold;
-    viewer.splatMesh.updateTransforms?.();
-  }
-
-  viewer.forceRenderNextFrame?.();
-  window.__splatConfig = config;
-  console.log("[SPLAT] Config applied:", config);
+  console.log("[SPLAT] Current keyframes:", keyframes);
+  console.log("[SPLAT] Current splat config:", splatConfig);
+  window.__splatConfig = { keyframes, ...splatConfig };
 };
 
 const injectDebugPanelStyles = () => {
@@ -410,11 +392,16 @@ const injectDebugPanelStyles = () => {
       white-space: pre-wrap;
       word-break: break-all;
     }
-    #splat-debug-panel .splat-debug-direction {
+    #splat-debug-panel .splat-debug-keyframe-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       margin: 8px 0;
+    }
+    #splat-debug-panel .splat-debug-keyframe-status {
+      margin: 0 0 6px;
+      color: #94a3b8;
+      font: 600 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     #splat-debug-panel button.is-active {
       background: rgba(141, 216, 255, 0.35);
@@ -430,17 +417,20 @@ const injectDebugPanelStyles = () => {
   document.head.appendChild(style);
 };
 
+const formatVec3 = (values) =>
+  `[${values.map((value) => value.toFixed(3)).join(", ")}]`;
+
 const buildDebugPanel = ({
   config,
-  viewer,
+  keyframes,
   onApplyPosition,
   onApplyLookAt,
-  onApplyOrbit,
+  onSetStart,
+  onSetEnd,
   onCopy,
   onReset,
   onSave,
   onClear,
-  getPreviewProgress,
   onPreviewChange,
 }) => {
   injectDebugPanelStyles();
@@ -452,26 +442,26 @@ const buildDebugPanel = ({
   panel.id = "splat-debug-panel";
   panel.innerHTML = `
     <h2>Splat Debug</h2>
-    <div class="splat-debug-section" data-section="placement"></div>
-    <div class="splat-debug-section" data-section="orbit"></div>
+    <div class="splat-debug-section" data-section="camera"></div>
+    <div class="splat-debug-section" data-section="keyframes"></div>
     <div class="splat-debug-actions">
       <button type="button" data-action="copy">Copy Config (C)</button>
       <button type="button" data-action="reset">Reset (R)</button>
       <button type="button" data-action="save">Save to Local Storage</button>
       <button type="button" data-action="clear">Clear Saved Config</button>
     </div>
-    <p class="splat-debug-hint">Placement and orbit are independent. Scrub scroll % to preview orbit. Press C to copy, R to reset.</p>
+    <p class="splat-debug-hint">Position the camera, press Set Start / Set End, then scrub scroll % to preview the bezier path. Press C to copy, R to reset.</p>
   `;
   document.body.appendChild(panel);
 
   const fields = {};
-  const placementSection = panel.querySelector('[data-section="placement"]');
-  const orbitSection = panel.querySelector('[data-section="orbit"]');
+  const cameraSection = panel.querySelector('[data-section="camera"]');
+  const keyframesSection = panel.querySelector('[data-section="keyframes"]');
 
-  placementSection.innerHTML =
-    '<p class="splat-debug-section-title">Placement</p><p class="splat-debug-caption">px/py/pz pan the camera without changing aim. lx/ly/lz adjust where it looks.</p>';
-  orbitSection.innerHTML =
-    '<p class="splat-debug-section-title">Orbit</p><p class="splat-debug-caption">Pivot point and direction the camera rotates while scrolling.</p>';
+  cameraSection.innerHTML =
+    '<p class="splat-debug-section-title">Camera</p><p class="splat-debug-caption">px/py/pz pan the camera without changing aim. lx/ly/lz adjust where it looks.</p>';
+  keyframesSection.innerHTML =
+    '<p class="splat-debug-section-title">Keyframes</p><p class="splat-debug-caption">Capture scroll start and end poses, then preview the path between them.</p>';
 
   const addField = (
     section,
@@ -557,7 +547,7 @@ const buildDebugPanel = ({
   };
 
   addVectorFields(
-    placementSection,
+    cameraSection,
     "camPos",
     ["px", "py", "pz"],
     "cameraPosition",
@@ -567,7 +557,7 @@ const buildDebugPanel = ({
     onApplyPosition,
   );
   addVectorFields(
-    placementSection,
+    cameraSection,
     "camLook",
     ["lx", "ly", "lz"],
     "cameraLookAt",
@@ -576,56 +566,39 @@ const buildDebugPanel = ({
     0.01,
     onApplyLookAt,
   );
-  addVectorFields(
-    orbitSection,
-    "rotOrigin",
-    ["ox", "oy", "oz"],
-    "rotationOrigin",
-    -20,
-    20,
-    0.01,
-    onApplyOrbit,
-  );
 
-  const directionRow = document.createElement("div");
-  directionRow.className = "splat-debug-direction";
+  const keyframeActions = document.createElement("div");
+  keyframeActions.className = "splat-debug-keyframe-actions";
 
-  const ccwButton = document.createElement("button");
-  ccwButton.type = "button";
-  ccwButton.textContent = "CCW";
-  ccwButton.dataset.direction = "1";
+  const setStartButton = document.createElement("button");
+  setStartButton.type = "button";
+  setStartButton.textContent = "Set Start";
+  setStartButton.dataset.keyframe = "start";
 
-  const cwButton = document.createElement("button");
-  cwButton.type = "button";
-  cwButton.textContent = "CW";
-  cwButton.dataset.direction = "-1";
+  const setEndButton = document.createElement("button");
+  setEndButton.type = "button";
+  setEndButton.textContent = "Set End";
+  setEndButton.dataset.keyframe = "end";
 
-  const refreshDirectionButtons = () => {
-    const direction = config.rotationDirection ?? 1;
-    ccwButton.classList.toggle("is-active", direction === 1);
-    cwButton.classList.toggle("is-active", direction === -1);
-  };
+  setStartButton.addEventListener("click", onSetStart);
+  setEndButton.addEventListener("click", onSetEnd);
 
-  ccwButton.addEventListener("click", () => {
-    config.rotationDirection = 1;
-    refreshDirectionButtons();
-    onApplyOrbit();
-  });
+  keyframeActions.append(setStartButton, setEndButton);
+  keyframesSection.appendChild(keyframeActions);
 
-  cwButton.addEventListener("click", () => {
-    config.rotationDirection = -1;
-    refreshDirectionButtons();
-    onApplyOrbit();
-  });
+  const startStatus = document.createElement("p");
+  startStatus.className = "splat-debug-keyframe-status";
+  startStatus.dataset.keyframeStatus = "start";
 
-  directionRow.append(ccwButton, cwButton);
-  orbitSection.appendChild(directionRow);
-  refreshDirectionButtons();
+  const endStatus = document.createElement("p");
+  endStatus.className = "splat-debug-keyframe-status";
+  endStatus.dataset.keyframeStatus = "end";
+
+  keyframesSection.append(startStatus, endStatus);
 
   const previewReadout = document.createElement("pre");
   previewReadout.className = "splat-debug-readout";
   previewReadout.textContent = "scroll 0%";
-  orbitSection.appendChild(previewReadout);
 
   const previewRow = document.createElement("div");
   previewRow.className = "splat-debug-row";
@@ -663,7 +636,7 @@ const buildDebugPanel = ({
   });
 
   previewRow.append(previewLabel, previewSlider, previewNumber);
-  orbitSection.appendChild(previewRow);
+  keyframesSection.append(previewRow, previewReadout);
 
   panel.querySelector('[data-action="copy"]').addEventListener("click", onCopy);
   panel.querySelector('[data-action="reset"]').addEventListener("click", onReset);
@@ -676,7 +649,6 @@ const buildDebugPanel = ({
       slider.value = String(value);
       number.value = String(value);
     });
-    refreshDirectionButtons();
   };
 
   const refreshLookAtInputs = () => {
@@ -691,16 +663,22 @@ const buildDebugPanel = ({
     });
   };
 
-  const syncCameraFromViewer = () => {
-    // No OrbitControls in debug — placement is slider-driven only.
+  const refreshKeyframeReadouts = ({ startSet, endSet }) => {
+    startStatus.textContent = startSet
+      ? `Start: set\npos ${formatVec3(keyframes.start.position)}\nlook ${formatVec3(keyframes.start.lookAt)}`
+      : "Start: not set";
+    endStatus.textContent = endSet
+      ? `End: set\npos ${formatVec3(keyframes.end.position)}\nlook ${formatVec3(keyframes.end.lookAt)}`
+      : "End: not set";
+    setStartButton.classList.toggle("is-active", startSet);
+    setEndButton.classList.toggle("is-active", endSet);
   };
 
-  const updatePreviewReadout = (pos, progress) => {
-    const angleDeg = ((pos.angle / Math.PI) * 180).toFixed(1);
+  const updatePreviewReadout = ({ position, lookAt }, progress) => {
     previewReadout.textContent =
       `scroll ${(progress * 100).toFixed(0)}%\n` +
-      `angle ${angleDeg}°  r ${pos.radius.toFixed(3)}\n` +
-      `x ${pos.x.toFixed(3)}  y ${pos.y.toFixed(3)}  z ${pos.z.toFixed(3)}`;
+      `pos ${formatVec3(position)}\n` +
+      `look ${formatVec3(lookAt)}`;
   };
 
   const resetPreviewControls = () => {
@@ -711,7 +689,7 @@ const buildDebugPanel = ({
   return {
     refreshInputs,
     refreshLookAtInputs,
-    syncCameraFromViewer,
+    refreshKeyframeReadouts,
     updatePreviewReadout,
     resetPreviewControls,
     fields,
@@ -721,32 +699,41 @@ const buildDebugPanel = ({
 const cloneDefaultConfig = (defaults) => ({
   cameraPosition: [...defaults.cameraPosition],
   cameraLookAt: [...defaults.cameraLookAt],
-  rotationOrigin: [...defaults.rotationOrigin],
-  rotationDirection: defaults.rotationDirection,
   splatPosition: [...defaults.splatPosition],
   splatScale: defaults.splatScale,
-  splatRotationX: defaults.splatRotationX,
-  splatRotationY: defaults.splatRotationY,
-  splatRotationZ: defaults.splatRotationZ,
   alphaThreshold: defaults.alphaThreshold,
 });
 
+const captureCameraPose = (viewer, config) => ({
+  position: viewer.camera
+    ? [
+        viewer.camera.position.x,
+        viewer.camera.position.y,
+        viewer.camera.position.z,
+      ]
+    : [...config.cameraPosition],
+  lookAt: [...config.cameraLookAt],
+});
+
 const initDebugMode = async (viewer, isMobile) => {
+  const defaultKeyframes = cloneKeyframes({
+    start: SPLAT_CONFIG.cameraStart,
+    end: SPLAT_CONFIG.cameraEnd,
+  });
+
   const defaults = {
-    cameraPosition: [...SPLAT_CONFIG.cameraPosition],
-    cameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
-    rotationOrigin: [...(SPLAT_CONFIG.rotationOrigin ?? SPLAT_CONFIG.cameraLookAt)],
-    rotationDirection: SPLAT_CONFIG.rotationDirection ?? 1,
+    cameraPosition: [...SPLAT_CONFIG.cameraStart.position],
+    cameraLookAt: [...SPLAT_CONFIG.cameraStart.lookAt],
     splatPosition: [...SPLAT_CONFIG.splatPosition],
     splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
-    splatRotationX: 0,
-    splatRotationY: 0,
-    splatRotationZ: 0,
     alphaThreshold: SPLAT_CONFIG.alphaThreshold,
   };
 
   let config = cloneDefaultConfig(defaults);
+  let keyframes = cloneKeyframes(defaultKeyframes);
   let previewProgress = 0;
+  let startSet = false;
+  let endSet = false;
   let viewOffset = [
     config.cameraLookAt[0] - config.cameraPosition[0],
     config.cameraLookAt[1] - config.cameraPosition[1],
@@ -767,96 +754,107 @@ const initDebugMode = async (viewer, isMobile) => {
     config.cameraLookAt[2] = config.cameraPosition[2] + viewOffset[2];
   };
 
+  const refreshKeyframeUi = () => {
+    panelApi?.refreshKeyframeReadouts({ startSet, endSet });
+  };
+
   try {
     const saved = localStorage.getItem(SPLAT_DEBUG_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      config = {
-        ...cloneDefaultConfig(defaults),
-        ...parsed,
-        cameraPosition: parsed.cameraPosition
-          ? [...parsed.cameraPosition]
-          : [...defaults.cameraPosition],
-        cameraLookAt: parsed.cameraLookAt
-          ? [...parsed.cameraLookAt]
-          : [...defaults.cameraLookAt],
-        rotationOrigin: parsed.rotationOrigin
-          ? [...parsed.rotationOrigin]
-          : [...defaults.rotationOrigin],
-        rotationDirection: parsed.rotationDirection ?? defaults.rotationDirection,
-        splatPosition: parsed.splatPosition
-          ? [...parsed.splatPosition]
-          : [...defaults.splatPosition],
-      };
+
+      if (parsed.config) {
+        config = {
+          ...cloneDefaultConfig(defaults),
+          ...parsed.config,
+          cameraPosition: parsed.config.cameraPosition
+            ? [...parsed.config.cameraPosition]
+            : [...defaults.cameraPosition],
+          cameraLookAt: parsed.config.cameraLookAt
+            ? [...parsed.config.cameraLookAt]
+            : [...defaults.cameraLookAt],
+          splatPosition: parsed.config.splatPosition
+            ? [...parsed.config.splatPosition]
+            : [...defaults.splatPosition],
+        };
+      } else {
+        config = {
+          ...cloneDefaultConfig(defaults),
+          ...parsed,
+          cameraPosition: parsed.cameraPosition
+            ? [...parsed.cameraPosition]
+            : [...defaults.cameraPosition],
+          cameraLookAt: parsed.cameraLookAt
+            ? [...parsed.cameraLookAt]
+            : [...defaults.cameraLookAt],
+          splatPosition: parsed.splatPosition
+            ? [...parsed.splatPosition]
+            : [...defaults.splatPosition],
+        };
+      }
+
+      if (parsed.keyframes) {
+        keyframes = cloneKeyframes(parsed.keyframes);
+        startSet = Boolean(parsed.startSet);
+        endSet = Boolean(parsed.endSet);
+      }
     }
   } catch {
     // Ignore invalid saved config.
   }
 
-  if (!config.rotationOrigin) {
-    config.rotationOrigin = [...config.cameraLookAt];
-  }
-
   syncViewOffsetFromConfig();
 
-  window.__splatConfig = config;
+  window.__splatConfig = { keyframes, ...config };
   console.log("[SPLAT] Debug mode enabled. Current config:", config);
+  console.log("[SPLAT] Debug keyframes:", keyframes);
 
   let panelApi = null;
 
-  const getRotationOrigin = () =>
-    config.rotationOrigin ?? config.cameraLookAt;
-
-  const updateRotationPreview = () => {
-    const pos = computeOrbitPosition(
-      previewProgress,
-      config.cameraPosition,
-      getRotationOrigin(),
-      config.rotationDirection ?? 1,
-    );
-
-    viewer.camera.position.set(pos.x, pos.y, pos.z);
-    viewer.camera.lookAt(
-      config.cameraLookAt[0],
-      config.cameraLookAt[1],
-      config.cameraLookAt[2],
-    );
-    viewer.forceRenderNextFrame?.();
-    panelApi?.updatePreviewReadout(pos, previewProgress);
-    window.__splatConfig = config;
-  };
-
-  const applyPlacement = () => {
+  const applyCameraPose = ({ position, lookAt }) => {
     if (!viewer.camera) {
       return;
     }
 
-    viewer.camera.position.set(
-      config.cameraPosition[0],
-      config.cameraPosition[1],
-      config.cameraPosition[2],
-    );
-    viewer.camera.lookAt(
-      config.cameraLookAt[0],
-      config.cameraLookAt[1],
-      config.cameraLookAt[2],
+    viewer.camera.position.set(position[0], position[1], position[2]);
+    viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+    viewer.forceRenderNextFrame?.();
+  };
+
+  const updateScrollPreview = () => {
+    if (previewProgress === 0) {
+      applyPlacement();
+      return;
+    }
+
+    const { position, lookAt } = computeScrollPosition(
+      previewProgress,
+      keyframes.start,
+      keyframes.end,
     );
 
-    viewer.forceRenderNextFrame?.();
-    window.__splatConfig = config;
+    applyCameraPose({ position, lookAt });
+    panelApi?.updatePreviewReadout({ position, lookAt }, previewProgress);
+    window.__splatConfig = { keyframes, ...config };
+  };
+
+  const applyPlacement = () => {
+    applyCameraPose({
+      position: config.cameraPosition,
+      lookAt: config.cameraLookAt,
+    });
+    window.__splatConfig = { keyframes, ...config };
 
     if (previewProgress === 0) {
       panelApi?.updatePreviewReadout(
-        computeOrbitPosition(
-          0,
-          config.cameraPosition,
-          getRotationOrigin(),
-          config.rotationDirection ?? 1,
-        ),
+        {
+          position: config.cameraPosition,
+          lookAt: config.cameraLookAt,
+        },
         0,
       );
     } else {
-      updateRotationPreview();
+      updateScrollPreview();
     }
   };
 
@@ -871,30 +869,64 @@ const initDebugMode = async (viewer, isMobile) => {
     applyPlacement();
   };
 
-  const handleApplyOrbit = () => {
-    updateRotationPreview();
+  const handleSetStart = () => {
+    const pose = captureCameraPose(viewer, config);
+    keyframes.start = cloneKeyframe(pose);
+    startSet = true;
+    refreshKeyframeUi();
+    showToast("Start keyframe set.");
+    window.__splatConfig = { keyframes, ...config };
+
+    if (previewProgress > 0) {
+      updateScrollPreview();
+    }
+  };
+
+  const handleSetEnd = () => {
+    const pose = captureCameraPose(viewer, config);
+    keyframes.end = cloneKeyframe(pose);
+    endSet = true;
+    refreshKeyframeUi();
+    showToast("End keyframe set.");
+    window.__splatConfig = { keyframes, ...config };
+
+    if (previewProgress > 0) {
+      updateScrollPreview();
+    }
   };
 
   const handleCopy = () => {
-    copyConfig(config);
+    copyConfig(keyframes, config);
   };
 
   const handleReset = () => {
     previewProgress = 0;
+    startSet = false;
+    endSet = false;
     Object.assign(config, cloneDefaultConfig(defaults));
+    keyframes = cloneKeyframes(defaultKeyframes);
     syncViewOffsetFromConfig();
     applyPlacement();
     panelApi?.resetPreviewControls();
     panelApi?.refreshInputs();
-    updateRotationPreview();
+    refreshKeyframeUi();
     showToast("Config reset.");
     console.log("[SPLAT] Config reset:", config);
+    console.log("[SPLAT] Keyframes reset:", keyframes);
   };
 
   const handleSave = () => {
-    localStorage.setItem(SPLAT_DEBUG_STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(
+      SPLAT_DEBUG_STORAGE_KEY,
+      JSON.stringify({
+        config,
+        keyframes,
+        startSet,
+        endSet,
+      }),
+    );
     showToast("Saved to localStorage.");
-    console.log("[SPLAT] Config saved:", config);
+    console.log("[SPLAT] Config saved:", { config, keyframes, startSet, endSet });
   };
 
   const handleClear = () => {
@@ -909,27 +941,27 @@ const initDebugMode = async (viewer, isMobile) => {
     if (previewProgress === 0) {
       applyPlacement();
     } else {
-      updateRotationPreview();
+      updateScrollPreview();
     }
   };
 
   panelApi = buildDebugPanel({
     config,
-    viewer,
+    keyframes,
     onApplyPosition: handleApplyPosition,
     onApplyLookAt: handleApplyLookAt,
-    onApplyOrbit: handleApplyOrbit,
+    onSetStart: handleSetStart,
+    onSetEnd: handleSetEnd,
     onCopy: handleCopy,
     onReset: handleReset,
     onSave: handleSave,
     onClear: handleClear,
-    getPreviewProgress: () => previewProgress,
     onPreviewChange: handlePreviewChange,
   });
 
   panelApi.refreshInputs();
+  refreshKeyframeUi();
   applyPlacement();
-  updateRotationPreview();
 
   document.addEventListener("keydown", (event) => {
     if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
