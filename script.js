@@ -4,7 +4,7 @@ if (year) {
   year.textContent = new Date().getFullYear();
 }
 
-const cards = document.querySelectorAll(".project-card, .hero-card");
+const cards = document.querySelectorAll(".project-card");
 
 cards.forEach((card) => {
   card.addEventListener("pointermove", (event) => {

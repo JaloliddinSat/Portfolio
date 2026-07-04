@@ -40,42 +40,36 @@
       </header>
 
       <main id="top">
-        <section class="hero section-grid">
-          <div class="hero-copy">
-            <p class="eyebrow">Waterloo Mathematics · Second Year</p>
-            <h1>Hi, I’m Jaloliddin Satimov.</h1>
-            <p class="hero-name">Most people call me <span>Jalol</span>.</p>
-            <p class="hero-text">
-              I’m a math student who enjoys clean logic, thoughtful problem solving,
-              and building digital things that feel calm, useful, and intentional.
-            </p>
-            <div class="hero-actions">
-              <a class="button primary" href="#work">View Projects</a>
-              <a class="button secondary" href="#contact">Get in Touch</a>
+        <section class="hero">
+          <div class="splat-stage" aria-label="Interactive Gaussian splat">
+            <div
+              id="splat-viewer"
+              class="splat-viewer"
+              data-splat-src="/api/splat.ksplat"
+              data-local-splat-src="splats/University%20District%202.ksplat"
+            ></div>
+            <div id="splat-loader" class="splat-status">
+              <span class="loader-dot"></span>
+              Loading Gaussian splat
             </div>
+            <p id="splat-error" class="splat-error" hidden>
+              The splat could not be loaded.
+            </p>
           </div>
 
-          <div class="hero-card" aria-label="Profile highlight card">
-            <div class="orb orb-one"></div>
-            <div class="orb orb-two"></div>
-            <div class="splat-stage" aria-label="Interactive Gaussian splat">
-              <div
-                id="splat-viewer"
-                class="splat-viewer"
-                data-splat-src="/api/splat.ksplat"
-                data-local-splat-src="splats/University%20District%202.ksplat"
-              ></div>
-              <div id="splat-loader" class="splat-status">
-                <span class="loader-dot"></span>
-                Loading Gaussian splat
-              </div>
-              <p id="splat-error" class="splat-error" hidden>
-                The splat could not be loaded.
+          <div class="hero-content">
+            <div class="hero-copy">
+              <p class="eyebrow">Waterloo Mathematics · Second Year</p>
+              <h1>Hi, I'm Jaloliddin Satimov.</h1>
+              <p class="hero-name">Most people call me <span>Jalol</span>.</p>
+              <p class="hero-text">
+                I'm a math student who enjoys clean logic, thoughtful problem solving,
+                and building digital things that feel calm, useful, and intentional.
               </p>
-            </div>
-            <div class="stat-card">
-              <p>Currently</p>
-              <strong>Exploring mathematics, programming, and design.</strong>
+              <div class="hero-actions">
+                <a class="button primary" href="#work">View Projects</a>
+                <a class="button secondary" href="#contact">Get in Touch</a>
+              </div>
             </div>
           </div>
         </section>
@@ -86,9 +80,9 @@
             <h2>Curious, analytical, and always learning.</h2>
           </div>
           <p>
-            I’m Jalol, a second-year student in Mathematics at the University of
+            I'm Jalol, a second-year student in Mathematics at the University of
             Waterloo. My academic interests sit around problem solving, structure,
-            and systems thinking. Outside the classroom, I’m growing my programming
+            and systems thinking. Outside the classroom, I'm growing my programming
             skills and building projects that help me connect abstract ideas with
             practical tools.
           </p>
@@ -134,7 +128,7 @@
         <section class="skills-section" id="skills">
           <div>
             <p class="eyebrow">Skills</p>
-            <h2>What I’m building toward.</h2>
+            <h2>What I'm building toward.</h2>
           </div>
 
           <div class="skills-list">
@@ -150,9 +144,9 @@
         <section class="contact-section" id="contact">
           <div class="contact-card">
             <p class="eyebrow">Contact</p>
-            <h2>Let’s connect.</h2>
+            <h2>Let's connect.</h2>
             <p>
-              I’m open to learning opportunities, collaboration, and conversations
+              I'm open to learning opportunities, collaboration, and conversations
               around mathematics, software, and creative problem solving.
             </p>
             <a class="button primary" href="mailto:jalol@example.com">

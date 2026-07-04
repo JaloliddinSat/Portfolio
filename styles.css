@@ -30,6 +30,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background:
@@ -127,8 +128,13 @@ a {
 }
 
 .hero {
-  min-height: calc(100vh - 160px);
-  padding-bottom: 90px;
+  position: relative;
+  width: 100vw;
+  min-height: calc(100svh - 160px);
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .eyebrow {
@@ -230,68 +236,53 @@ h3 {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.hero-card {
+.hero-content {
   position: relative;
-  min-height: 540px;
-  padding: 24px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-large);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.06);
-  box-shadow: var(--shadow);
+  z-index: 2;
+  width: min(100% - 80px, var(--max-width));
+  margin: 0 auto;
+  padding: 60px 0;
 }
 
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(6px);
-  opacity: 0.9;
-}
-
-.orb-one {
-  top: -90px;
-  right: -90px;
-  width: 240px;
-  height: 240px;
-  background: rgba(141, 216, 255, 0.65);
-}
-
-.orb-two {
-  bottom: 88px;
-  left: -74px;
-  width: 190px;
-  height: 190px;
-  background: rgba(167, 139, 250, 0.62);
+.hero-copy {
+  max-width: 560px;
 }
 
 .splat-stage {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   display: grid;
-  min-height: 360px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(141, 216, 255, 0.18), rgba(167, 139, 250, 0.18)),
-    rgba(10, 16, 32, 0.5);
+  background: var(--bg);
 }
 
 .splat-stage::after {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
   content: "";
   background:
-    radial-gradient(circle at center, transparent 28%, rgba(7, 12, 27, 0.1) 62%),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05), transparent 38%);
+    linear-gradient(
+      to right,
+      rgba(7, 10, 19, 0.85) 0%,
+      rgba(7, 10, 19, 0.55) 38%,
+      rgba(7, 10, 19, 0.12) 65%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(7, 10, 19, 0.6) 0%,
+      transparent 32%
+    );
 }
 
 .splat-viewer {
   position: absolute;
-  inset: -12%;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -304,7 +295,7 @@ h3 {
 .splat-status,
 .splat-error {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -345,30 +336,6 @@ h3 {
   }
 }
 
-.stat-card {
-  position: relative;
-  margin: -46px auto 0;
-  padding: 22px;
-  width: min(86%, 360px);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: rgba(7, 12, 27, 0.82);
-  backdrop-filter: blur(16px);
-}
-
-.stat-card p {
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-
-.stat-card strong {
-  font-size: 1.1rem;
-  line-height: 1.45;
-}
 
 .about-section,
 .skills-section,
@@ -512,11 +479,11 @@ h3 {
   }
 
   .hero {
-    min-height: auto;
+    min-height: 100svh;
   }
 
-  .hero-card {
-    min-height: 460px;
+  .hero-content {
+    padding: 40px 0 60px;
   }
 }
 
@@ -540,19 +507,6 @@ h3 {
   .hero-actions,
   .button {
     width: 100%;
-  }
-
-  .hero-card {
-    min-height: 400px;
-    padding: 18px;
-  }
-
-  .splat-stage {
-    min-height: 292px;
-  }
-
-  .splat-viewer {
-    inset: -4%;
   }
 
   .site-footer {
