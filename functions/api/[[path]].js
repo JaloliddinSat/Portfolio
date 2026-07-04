@@ -1,5 +1,5 @@
 const R2_SPLAT_URL =
-  "https://pub-d916d22154a943f291079592fbe25397.r2.dev/University%20District%202.ksplat";
+  "https://pub-d916d22154a943f291079592fbe25397.r2.dev/Fairview.ksplat";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
