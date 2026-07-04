@@ -694,6 +694,19 @@ const buildDebugPanel = ({
     fields.camPos2.slider.value = String(config.cameraPosition[2]);
     fields.camPos2.number.value = String(config.cameraPosition[2]);
 
+    if (viewer.controls) {
+      config.cameraLookAt[0] = viewer.controls.target.x;
+      config.cameraLookAt[1] = viewer.controls.target.y;
+      config.cameraLookAt[2] = viewer.controls.target.z;
+
+      fields.camLook0.slider.value = String(config.cameraLookAt[0]);
+      fields.camLook0.number.value = String(config.cameraLookAt[0]);
+      fields.camLook1.slider.value = String(config.cameraLookAt[1]);
+      fields.camLook1.number.value = String(config.cameraLookAt[1]);
+      fields.camLook2.slider.value = String(config.cameraLookAt[2]);
+      fields.camLook2.number.value = String(config.cameraLookAt[2]);
+    }
+
     window.__splatConfig = config;
   };
 
@@ -816,11 +829,22 @@ const initDebugMode = async (viewer, isMobile) => {
       config.cameraPosition[1],
       config.cameraPosition[2],
     );
-    viewer.camera.lookAt(
-      config.cameraLookAt[0],
-      config.cameraLookAt[1],
-      config.cameraLookAt[2],
-    );
+
+    if (viewer.controls) {
+      viewer.controls.target.set(
+        config.cameraLookAt[0],
+        config.cameraLookAt[1],
+        config.cameraLookAt[2],
+      );
+      viewer.controls.update();
+    } else {
+      viewer.camera.lookAt(
+        config.cameraLookAt[0],
+        config.cameraLookAt[1],
+        config.cameraLookAt[2],
+      );
+    }
+
     viewer.forceRenderNextFrame?.();
     window.__splatConfig = config;
 
