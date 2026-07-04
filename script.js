@@ -30,12 +30,12 @@ const SPLAT_ASSET_VERSION = 2;
 
 const SPLAT_CONFIG = {
   cameraStart: {
-    position: [-1.51, 0.22, -2.01],
-    lookAt: [-1.74, 0.5, -1.37],
+    position: [-1.52, 0.22, -2.01],
+    lookAt: [-1.9, 0.58, -1.3],
   },
   cameraEnd: {
-    position: [-2.03, 0.22, -2.01],
-    lookAt: [-2.02, 0.5, -1.37],
+    position: [-2.38, 0.4, -1.94],
+    lookAt: [-1.9, 0.68, -1.3],
   },
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
