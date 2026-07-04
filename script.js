@@ -31,6 +31,7 @@ const SPLAT_CONFIG = {
   cameraPosition: [-0.95, 0.15, -0.48],
   cameraLookAt: [0, 0, 0],
   rotationOrigin: [0, 0, 0],
+  rotationDirection: 1,
   splatPosition: [-1.65, 0.87, -0.71],
   splatScale: 0.75,
   alphaThreshold: 5,
@@ -38,7 +39,12 @@ const SPLAT_CONFIG = {
 
 const ROTATION_VERTICAL_DRIFT = 0.35;
 
-const computeOrbitPosition = (progress, cameraPosition, rotationOrigin) => {
+const computeOrbitPosition = (
+  progress,
+  cameraPosition,
+  rotationOrigin,
+  direction = 1,
+) => {
   const [originX, , originZ] = rotationOrigin;
   const [baseX, baseY] = cameraPosition;
   const radius = Math.hypot(
@@ -49,7 +55,7 @@ const computeOrbitPosition = (progress, cameraPosition, rotationOrigin) => {
     cameraPosition[0] - originX,
     cameraPosition[2] - originZ,
   );
-  const angle = startAngle + progress * Math.PI * 2;
+  const angle = startAngle + direction * progress * Math.PI * 2;
 
   return {
     x: originX + Math.sin(angle) * radius,
@@ -177,6 +183,7 @@ const initSplat = async () => {
         progress,
         SPLAT_CONFIG.cameraPosition,
         rotationOrigin,
+        SPLAT_CONFIG.rotationDirection ?? 1,
       );
 
       if (viewer.camera) {
@@ -239,6 +246,7 @@ const formatSplatConfigSnippet = (config) =>
   cameraPosition: [${config.cameraPosition.join(", ")}],
   cameraLookAt: [${config.cameraLookAt.join(", ")}],
   rotationOrigin: [${(config.rotationOrigin ?? config.cameraLookAt).join(", ")}],
+  rotationDirection: ${config.rotationDirection ?? 1},
   splatPosition: [${config.splatPosition.join(", ")}],
   splatScale: ${config.splatScale},
   alphaThreshold: ${config.alphaThreshold},
@@ -402,6 +410,16 @@ const injectDebugPanelStyles = () => {
       white-space: pre-wrap;
       word-break: break-all;
     }
+    #splat-debug-panel .splat-debug-direction {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    #splat-debug-panel button.is-active {
+      background: rgba(141, 216, 255, 0.35);
+      border-color: rgba(141, 216, 255, 0.7);
+    }
     #splat-debug-panel .splat-debug-hint {
       margin: 8px 0 0;
       color: #64748b;
@@ -415,7 +433,8 @@ const injectDebugPanelStyles = () => {
 const buildDebugPanel = ({
   config,
   viewer,
-  onApply,
+  onApplyPlacement,
+  onApplyOrbit,
   onCopy,
   onReset,
   onSave,
@@ -432,31 +451,38 @@ const buildDebugPanel = ({
   panel.id = "splat-debug-panel";
   panel.innerHTML = `
     <h2>Splat Debug</h2>
-    <div class="splat-debug-section" data-section="camera"></div>
-    <div class="splat-debug-section" data-section="rotation"></div>
-    <div class="splat-debug-section" data-section="splat"></div>
+    <div class="splat-debug-section" data-section="placement"></div>
+    <div class="splat-debug-section" data-section="orbit"></div>
     <div class="splat-debug-actions">
       <button type="button" data-action="copy">Copy Config (C)</button>
       <button type="button" data-action="reset">Reset (R)</button>
       <button type="button" data-action="save">Save to Local Storage</button>
       <button type="button" data-action="clear">Clear Saved Config</button>
     </div>
-    <p class="splat-debug-hint">Drag with mouse to orbit. Scrub scroll % to preview rotation. Press C to copy, R to reset. Config is on window.__splatConfig</p>
+    <p class="splat-debug-hint">Placement and orbit are independent. Scrub scroll % to preview orbit. Press C to copy, R to reset.</p>
   `;
   document.body.appendChild(panel);
 
   const fields = {};
-  const cameraSection = panel.querySelector('[data-section="camera"]');
-  const rotationSection = panel.querySelector('[data-section="rotation"]');
-  const splatSection = panel.querySelector('[data-section="splat"]');
+  const placementSection = panel.querySelector('[data-section="placement"]');
+  const orbitSection = panel.querySelector('[data-section="orbit"]');
 
-  cameraSection.innerHTML =
-    '<p class="splat-debug-section-title">Camera</p><p class="splat-debug-caption">Position (rotation start at scroll 0%)</p>';
-  rotationSection.innerHTML =
-    '<p class="splat-debug-section-title">Rotation</p><p class="splat-debug-caption">Origin (pivot) — orbit center while scrolling</p>';
-  splatSection.innerHTML = '<p class="splat-debug-section-title">Splat</p>';
+  placementSection.innerHTML =
+    '<p class="splat-debug-section-title">Placement</p><p class="splat-debug-caption">Set the starting camera position and look direction at scroll 0. Drag to orbit freely.</p>';
+  orbitSection.innerHTML =
+    '<p class="splat-debug-section-title">Orbit</p><p class="splat-debug-caption">Pivot point and direction the camera rotates while scrolling.</p>';
 
-  const addField = (section, key, label, min, max, step, getValue, setValue) => {
+  const addField = (
+    section,
+    key,
+    label,
+    min,
+    max,
+    step,
+    getValue,
+    setValue,
+    onApply,
+  ) => {
     const row = document.createElement("div");
     row.className = "splat-debug-row";
 
@@ -502,7 +528,16 @@ const buildDebugPanel = ({
     fields[key] = { slider, number, getValue, setValue };
   };
 
-  const addVectorFields = (section, prefix, labels, targetKey, min, max, step) => {
+  const addVectorFields = (
+    section,
+    prefix,
+    labels,
+    targetKey,
+    min,
+    max,
+    step,
+    onApply,
+  ) => {
     labels.forEach((label, index) => {
       addField(
         section,
@@ -515,34 +550,81 @@ const buildDebugPanel = ({
         (value) => {
           config[targetKey][index] = value;
         },
+        onApply,
       );
     });
   };
 
-  addVectorFields(cameraSection, "camPos", ["px", "py", "pz"], "cameraPosition", -20, 20, 0.01);
   addVectorFields(
-    cameraSection,
+    placementSection,
+    "camPos",
+    ["px", "py", "pz"],
+    "cameraPosition",
+    -20,
+    20,
+    0.01,
+    onApplyPlacement,
+  );
+  addVectorFields(
+    placementSection,
     "camLook",
     ["lx", "ly", "lz"],
     "cameraLookAt",
     -10,
     10,
     0.01,
+    onApplyPlacement,
   );
   addVectorFields(
-    rotationSection,
+    orbitSection,
     "rotOrigin",
     ["ox", "oy", "oz"],
     "rotationOrigin",
     -20,
     20,
     0.01,
+    onApplyOrbit,
   );
+
+  const directionRow = document.createElement("div");
+  directionRow.className = "splat-debug-direction";
+
+  const ccwButton = document.createElement("button");
+  ccwButton.type = "button";
+  ccwButton.textContent = "CCW";
+  ccwButton.dataset.direction = "1";
+
+  const cwButton = document.createElement("button");
+  cwButton.type = "button";
+  cwButton.textContent = "CW";
+  cwButton.dataset.direction = "-1";
+
+  const refreshDirectionButtons = () => {
+    const direction = config.rotationDirection ?? 1;
+    ccwButton.classList.toggle("is-active", direction === 1);
+    cwButton.classList.toggle("is-active", direction === -1);
+  };
+
+  ccwButton.addEventListener("click", () => {
+    config.rotationDirection = 1;
+    refreshDirectionButtons();
+    onApplyOrbit();
+  });
+
+  cwButton.addEventListener("click", () => {
+    config.rotationDirection = -1;
+    refreshDirectionButtons();
+    onApplyOrbit();
+  });
+
+  directionRow.append(ccwButton, cwButton);
+  orbitSection.appendChild(directionRow);
+  refreshDirectionButtons();
 
   const previewReadout = document.createElement("pre");
   previewReadout.className = "splat-debug-readout";
   previewReadout.textContent = "scroll 0%";
-  rotationSection.appendChild(previewReadout);
+  orbitSection.appendChild(previewReadout);
 
   const previewRow = document.createElement("div");
   previewRow.className = "splat-debug-row";
@@ -580,71 +662,7 @@ const buildDebugPanel = ({
   });
 
   previewRow.append(previewLabel, previewSlider, previewNumber);
-  rotationSection.appendChild(previewRow);
-
-  addVectorFields(splatSection, "splatPos", ["px", "py", "pz"], "splatPosition", -10, 10, 0.01);
-
-  addField(
-    splatSection,
-    "splatScale",
-    "scale",
-    0.01,
-    5,
-    0.01,
-    () => config.splatScale,
-    (value) => {
-      config.splatScale = value;
-    },
-  );
-
-  addField(
-    splatSection,
-    "rotX",
-    "rx",
-    -3.14,
-    3.14,
-    0.01,
-    () => config.splatRotationX,
-    (value) => {
-      config.splatRotationX = value;
-    },
-  );
-  addField(
-    splatSection,
-    "rotY",
-    "ry",
-    -3.14,
-    3.14,
-    0.01,
-    () => config.splatRotationY,
-    (value) => {
-      config.splatRotationY = value;
-    },
-  );
-  addField(
-    splatSection,
-    "rotZ",
-    "rz",
-    -3.14,
-    3.14,
-    0.01,
-    () => config.splatRotationZ,
-    (value) => {
-      config.splatRotationZ = value;
-    },
-  );
-  addField(
-    splatSection,
-    "alphaThreshold",
-    "alpha",
-    0,
-    50,
-    1,
-    () => config.alphaThreshold,
-    (value) => {
-      config.alphaThreshold = value;
-    },
-  );
+  orbitSection.appendChild(previewRow);
 
   panel.querySelector('[data-action="copy"]').addEventListener("click", onCopy);
   panel.querySelector('[data-action="reset"]').addEventListener("click", onReset);
@@ -657,6 +675,7 @@ const buildDebugPanel = ({
       slider.value = String(value);
       number.value = String(value);
     });
+    refreshDirectionButtons();
   };
 
   const syncCameraFromViewer = () => {
@@ -704,6 +723,7 @@ const cloneDefaultConfig = (defaults) => ({
   cameraPosition: [...defaults.cameraPosition],
   cameraLookAt: [...defaults.cameraLookAt],
   rotationOrigin: [...defaults.rotationOrigin],
+  rotationDirection: defaults.rotationDirection,
   splatPosition: [...defaults.splatPosition],
   splatScale: defaults.splatScale,
   splatRotationX: defaults.splatRotationX,
@@ -713,13 +733,11 @@ const cloneDefaultConfig = (defaults) => ({
 });
 
 const initDebugMode = async (viewer, isMobile) => {
-  const THREE = await import("three");
-
-  const splatScene = viewer.getSplatScene(0);
   const defaults = {
     cameraPosition: [...SPLAT_CONFIG.cameraPosition],
     cameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
     rotationOrigin: [...(SPLAT_CONFIG.rotationOrigin ?? SPLAT_CONFIG.cameraLookAt)],
+    rotationDirection: SPLAT_CONFIG.rotationDirection ?? 1,
     splatPosition: [...SPLAT_CONFIG.splatPosition],
     splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
     splatRotationX: 0,
@@ -747,6 +765,7 @@ const initDebugMode = async (viewer, isMobile) => {
         rotationOrigin: parsed.rotationOrigin
           ? [...parsed.rotationOrigin]
           : [...defaults.rotationOrigin],
+        rotationDirection: parsed.rotationDirection ?? defaults.rotationDirection,
         splatPosition: parsed.splatPosition
           ? [...parsed.splatPosition]
           : [...defaults.splatPosition],
@@ -763,8 +782,6 @@ const initDebugMode = async (viewer, isMobile) => {
   window.__splatConfig = config;
   console.log("[SPLAT] Debug mode enabled. Current config:", config);
 
-  applyConfig(config, viewer, splatScene, THREE);
-
   let panelApi = null;
 
   const getRotationOrigin = () =>
@@ -775,6 +792,7 @@ const initDebugMode = async (viewer, isMobile) => {
       previewProgress,
       config.cameraPosition,
       getRotationOrigin(),
+      config.rotationDirection ?? 1,
     );
 
     viewer.camera.position.set(pos.x, pos.y, pos.z);
@@ -788,8 +806,44 @@ const initDebugMode = async (viewer, isMobile) => {
     window.__splatConfig = config;
   };
 
-  const handleApply = () => {
-    applyConfig(config, viewer, splatScene, THREE);
+  const applyPlacement = () => {
+    if (!viewer.camera) {
+      return;
+    }
+
+    viewer.camera.position.set(
+      config.cameraPosition[0],
+      config.cameraPosition[1],
+      config.cameraPosition[2],
+    );
+    viewer.camera.lookAt(
+      config.cameraLookAt[0],
+      config.cameraLookAt[1],
+      config.cameraLookAt[2],
+    );
+    viewer.forceRenderNextFrame?.();
+    window.__splatConfig = config;
+
+    if (previewProgress === 0) {
+      panelApi?.updatePreviewReadout(
+        computeOrbitPosition(
+          0,
+          config.cameraPosition,
+          getRotationOrigin(),
+          config.rotationDirection ?? 1,
+        ),
+        0,
+      );
+    } else {
+      updateRotationPreview();
+    }
+  };
+
+  const handleApplyPlacement = () => {
+    applyPlacement();
+  };
+
+  const handleApplyOrbit = () => {
     updateRotationPreview();
   };
 
@@ -800,7 +854,7 @@ const initDebugMode = async (viewer, isMobile) => {
   const handleReset = () => {
     previewProgress = 0;
     Object.assign(config, cloneDefaultConfig(defaults));
-    applyConfig(config, viewer, splatScene, THREE);
+    applyPlacement();
     panelApi?.resetPreviewControls();
     panelApi?.refreshInputs();
     updateRotationPreview();
@@ -824,16 +878,17 @@ const initDebugMode = async (viewer, isMobile) => {
     previewProgress = percent / 100;
 
     if (previewProgress === 0) {
-      applyConfig(config, viewer, splatScene, THREE);
+      applyPlacement();
+    } else {
+      updateRotationPreview();
     }
-
-    updateRotationPreview();
   };
 
   panelApi = buildDebugPanel({
     config,
     viewer,
-    onApply: handleApply,
+    onApplyPlacement: handleApplyPlacement,
+    onApplyOrbit: handleApplyOrbit,
     onCopy: handleCopy,
     onReset: handleReset,
     onSave: handleSave,
@@ -843,6 +898,7 @@ const initDebugMode = async (viewer, isMobile) => {
   });
 
   panelApi.refreshInputs();
+  applyPlacement();
   updateRotationPreview();
 
   document.addEventListener("keydown", (event) => {
