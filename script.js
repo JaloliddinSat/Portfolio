@@ -27,6 +27,14 @@ const SPLAT_RENDERER_URL =
 
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
 
+const SPLAT_CONFIG = {
+  cameraPosition: [-0.95, 0.15, -0.48],
+  cameraLookAt: [0, 0, 0],
+  splatPosition: [-1.65, 0.87, -0.71],
+  splatScale: 0.75,
+  alphaThreshold: 5,
+};
+
 const splatContainer = document.querySelector("#splat-viewer");
 const splatLoader = document.querySelector("#splat-loader");
 const splatError = document.querySelector("#splat-error");
@@ -94,11 +102,13 @@ const initSplat = async () => {
 
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
+    const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
+
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
       cameraUp: [0, -1, 0],
-      initialCameraPosition: [0, 0.15, isMobile ? 3.2 : 2.6],
-      initialCameraLookAt: [0, 0, 0],
+      initialCameraPosition: [...SPLAT_CONFIG.cameraPosition],
+      initialCameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
       useBuiltInControls: DEBUG_SPLAT ? true : false,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
@@ -113,9 +123,9 @@ const initSplat = async () => {
     const sceneOptions = {
       progressiveLoad: false,
       showLoadingUI: false,
-      splatAlphaRemovalThreshold: isMobile ? 12 : 5,
-      scale: [isMobile ? 0.55 : 0.75, isMobile ? 0.55 : 0.75, isMobile ? 0.55 : 0.75],
-      position: [0, 0, 0],
+      splatAlphaRemovalThreshold: SPLAT_CONFIG.alphaThreshold,
+      scale: [splatScale, splatScale, splatScale],
+      position: [...SPLAT_CONFIG.splatPosition],
       rotation: [0, 0, 0, 1],
     };
 
@@ -132,17 +142,19 @@ const initSplat = async () => {
     viewer.start();
     setStatus("ready");
 
-    const cameraRadius = isMobile ? 3.2 : 2.6;
+    const [lookAtX, lookAtY, lookAtZ] = SPLAT_CONFIG.cameraLookAt;
+    const [baseX, baseY, baseZ] = SPLAT_CONFIG.cameraPosition;
+    const cameraRadius = Math.hypot(baseX - lookAtX, baseZ - lookAtZ);
 
     const animate = () => {
       const progress = getScrollProgress();
       const angle = progress * Math.PI * 2;
 
       if (viewer.camera) {
-        viewer.camera.position.x = Math.sin(angle) * cameraRadius;
-        viewer.camera.position.z = Math.cos(angle) * cameraRadius;
-        viewer.camera.position.y = 0.15 + progress * 0.35;
-        viewer.camera.lookAt(0, 0, 0);
+        viewer.camera.position.x = lookAtX + Math.sin(angle) * cameraRadius;
+        viewer.camera.position.z = lookAtZ + Math.cos(angle) * cameraRadius;
+        viewer.camera.position.y = baseY + progress * 0.35;
+        viewer.camera.lookAt(lookAtX, lookAtY, lookAtZ);
       }
 
       viewer.forceRenderNextFrame?.();
@@ -585,14 +597,14 @@ const initDebugMode = async (viewer, isMobile) => {
 
   const splatScene = viewer.getSplatScene(0);
   const defaults = {
-    cameraPosition: [0, 0.15, isMobile ? 3.2 : 2.6],
-    cameraLookAt: [0, 0, 0],
-    splatPosition: [0, 0, 0],
-    splatScale: isMobile ? 0.55 : 0.75,
+    cameraPosition: [...SPLAT_CONFIG.cameraPosition],
+    cameraLookAt: [...SPLAT_CONFIG.cameraLookAt],
+    splatPosition: [...SPLAT_CONFIG.splatPosition],
+    splatScale: isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale,
     splatRotationX: 0,
     splatRotationY: 0,
     splatRotationZ: 0,
-    alphaThreshold: isMobile ? 12 : 5,
+    alphaThreshold: SPLAT_CONFIG.alphaThreshold,
   };
 
   let config = cloneDefaultConfig(defaults);
