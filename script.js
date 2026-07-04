@@ -26,6 +26,7 @@ const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
 
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
+const SPLAT_ASSET_VERSION = 2;
 
 const SPLAT_CONFIG = {
   cameraStart: {
@@ -107,6 +108,16 @@ const setStatus = (state, message = "") => {
   }
 };
 
+const appendSplatVersion = (url) => {
+  if (!url) {
+    return url;
+  }
+
+  const separator = url.includes("?") ? "&" : "?";
+
+  return `${url}${separator}v=${SPLAT_ASSET_VERSION}`;
+};
+
 const getSplatUrl = () => {
   const productionUrl = splatContainer?.dataset.splatSrc;
   const localUrl = splatContainer?.dataset.localSplatSrc;
@@ -114,7 +125,9 @@ const getSplatUrl = () => {
     window.location.hostname,
   );
 
-  return isLocalhost && localUrl ? localUrl : productionUrl;
+  const url = isLocalhost && localUrl ? localUrl : productionUrl;
+
+  return appendSplatVersion(url);
 };
 
 const getScrollProgress = () => {
