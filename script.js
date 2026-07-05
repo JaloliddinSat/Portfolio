@@ -190,16 +190,6 @@ const initSplat = async () => {
   try {
     console.log("[SPLAT] Loading from:", splatUrl);
 
-    const testResponse = await fetch(splatUrl, {
-      method: "HEAD",
-    });
-
-    console.log("[SPLAT] HEAD status:", testResponse.status);
-
-    if (!testResponse.ok) {
-      throw new Error(`Splat URL failed with status ${testResponse.status}`);
-    }
-
     const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
 
     console.log("[SPLAT] Renderer loaded:", GaussianSplats3D);
@@ -227,7 +217,7 @@ const initSplat = async () => {
     });
 
     const sceneOptions = {
-      progressiveLoad: false,
+      progressiveLoad: true,
       showLoadingUI: false,
       splatAlphaRemovalThreshold: SPLAT_CONFIG.alphaThreshold,
       scale: [splatScale, splatScale, splatScale],
@@ -248,25 +238,32 @@ const initSplat = async () => {
     viewer.start();
     setStatus("ready");
 
-    const animate = () => {
-      const progress = easeScrollProgress(getScrollProgress());
-      const { position, lookAt } = computeScrollPosition(
-        progress,
-        SPLAT_CONFIG.cameraStart,
-        SPLAT_CONFIG.cameraEnd,
-        SPLAT_CONFIG.lookAtTiming ?? 1,
-      );
+    let lastScrollY = -1;
 
-      if (viewer.camera) {
-        viewer.camera.position.set(
-          position[0],
-          position[1],
-          position[2],
+    const animate = () => {
+      if (window.scrollY !== lastScrollY) {
+        lastScrollY = window.scrollY;
+
+        const progress = easeScrollProgress(getScrollProgress());
+        const { position, lookAt } = computeScrollPosition(
+          progress,
+          SPLAT_CONFIG.cameraStart,
+          SPLAT_CONFIG.cameraEnd,
+          SPLAT_CONFIG.lookAtTiming ?? 1,
         );
-        viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+
+        if (viewer.camera) {
+          viewer.camera.position.set(
+            position[0],
+            position[1],
+            position[2],
+          );
+          viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+        }
+
+        viewer.forceRenderNextFrame?.();
       }
 
-      viewer.forceRenderNextFrame?.();
       requestAnimationFrame(animate);
     };
 

@@ -1,7 +1,5 @@
 splats/*.ply
+*.ply
 
 .DS_Store
 GaussianSplats3D/
-*.ply
-*.ksplat
-splats/
