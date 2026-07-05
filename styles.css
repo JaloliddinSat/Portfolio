@@ -134,7 +134,7 @@ a {
 
 .section-grid,
 .about-section,
-.skills-section {
+.resume-section {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
   gap: 48px;
@@ -465,7 +465,7 @@ h3 {
 
 
 .about-section,
-.skills-section,
+.resume-section,
 .contact-section,
 .section-heading {
   padding: 92px 0 0;
@@ -534,19 +534,32 @@ h3 {
   font-weight: 700;
 }
 
-.skills-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+.resume-list {
+  display: grid;
+  gap: 18px;
 }
 
-.skills-list span {
-  padding: 12px 15px;
+.resume-item {
+  padding: 24px 26px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.07);
-  font-weight: 700;
+  border-radius: var(--radius-medium);
+  background: var(--card);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
+}
+
+.resume-meta {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.resume-item p:last-child {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.75;
 }
 
 .contact-section {
@@ -601,7 +614,7 @@ h3 {
 
   .section-grid,
   .about-section,
-  .skills-section,
+  .resume-section,
   .project-grid {
     grid-template-columns: 1fr;
   }

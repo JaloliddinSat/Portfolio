@@ -1125,10 +1125,10 @@ const initHeroScrollTransition = () => {
     return;
   }
 
-  const COPY_FADE_START = 0.32;
-  const COPY_FADE_END = 0.44;
-  const TOC_FADE_START = 0.52;
-  const TOC_FADE_END = 0.64;
+  const COPY_FADE_START = 0.34;
+  const COPY_FADE_END = 0.47;
+  const TOC_FADE_START = 0.48;
+  const TOC_FADE_END = 0.61;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
