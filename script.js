@@ -244,17 +244,13 @@ const initSplat = async () => {
     setStatus("ready");
 
     let lastScrollY = -1;
-    let lastAnimateTime = 0;
     let animationFrameId = null;
 
     const startAnimate = () => {
       if (animationFrameId) return;
 
-      const loop = (timestamp) => {
+      const loop = () => {
         animationFrameId = requestAnimationFrame(loop);
-
-        if (timestamp - lastAnimateTime < 1000 / 30) return;
-        lastAnimateTime = timestamp;
 
         if (window.scrollY !== lastScrollY) {
           lastScrollY = window.scrollY;
