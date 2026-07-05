@@ -242,25 +242,24 @@ h3 {
   justify-content: center;
   min-height: 48px;
   padding: 0 20px;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
   border-radius: 999px;
   font-weight: 800;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition: border-color 180ms ease, background 180ms ease;
 }
 
 .button:hover {
-  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .button.primary {
-  color: #07101f;
-  background: linear-gradient(135deg, var(--accent), #f0f9ff);
-  box-shadow: 0 14px 34px rgba(141, 216, 255, 0.22);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .button.secondary {
   color: var(--text);
-  border-color: var(--line);
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -273,10 +272,17 @@ h3 {
 }
 
 .hero-copy {
-  max-width: 560px;
+  max-width: none;
   opacity: var(--hero-copy-opacity);
   transform: translateY(calc((1 - var(--hero-copy-opacity)) * -12px));
   will-change: opacity, transform;
+}
+
+.hero-copy h1 {
+  max-width: none;
+  margin-bottom: 0;
+  white-space: nowrap;
+  font-size: clamp(2.4rem, 4.2vw, 4rem);
 }
 
 .hero-toc {
@@ -647,6 +653,10 @@ h3 {
 
   h1 {
     font-size: clamp(3.4rem, 19vw, 4.5rem);
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(1.32rem, 6.5vw, 2.75rem);
   }
 
   .hero-actions,
