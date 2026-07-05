@@ -78,7 +78,18 @@ a {
   background: rgba(8, 12, 26, 0.72);
   backdrop-filter: blur(18px);
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.24);
-  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 28px));
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 280ms ease;
+}
+
+.site-header.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
 }
 
 .brand,

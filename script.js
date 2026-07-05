@@ -1119,6 +1119,7 @@ const initHeroScrollTransition = () => {
   const hero = document.querySelector(".hero");
   const heroCopy = document.querySelector(".hero-copy");
   const heroToc = document.querySelector(".hero-toc");
+  const siteHeader = document.querySelector(".site-header");
 
   if (!hero || !heroCopy || !heroToc) {
     return;
@@ -1154,6 +1155,12 @@ const initHeroScrollTransition = () => {
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
     heroToc.style.pointerEvents = tocOpacity > 0.4 ? "auto" : "none";
     heroToc.setAttribute("aria-hidden", tocOpacity < 0.5 ? "true" : "false");
+
+    if (siteHeader) {
+      const pastSplat = progress >= 1;
+      siteHeader.classList.toggle("is-visible", pastSplat);
+      siteHeader.setAttribute("aria-hidden", pastSplat ? "false" : "true");
+    }
   };
 
   const onScroll = () => {
