@@ -211,7 +211,7 @@ const initSplat = async () => {
       dynamicScene: true,
       ignoreDevicePixelRatio: isMobile,
       sphericalHarmonicsDegree: 0,
-      renderMode: GaussianSplats3D.RenderMode.Always,
+      renderMode: GaussianSplats3D.RenderMode.OnChange,
       sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
@@ -236,41 +236,69 @@ const initSplat = async () => {
     console.log("[SPLAT] Scene added successfully.");
 
     viewer.start();
+
+    if (viewer.threeRenderer) {
+      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    }
+
     setStatus("ready");
 
     let lastScrollY = -1;
+    let lastAnimateTime = 0;
+    let animationFrameId = null;
 
-    const animate = () => {
-      if (window.scrollY !== lastScrollY) {
-        lastScrollY = window.scrollY;
+    const startAnimate = () => {
+      if (animationFrameId) return;
 
-        const progress = easeScrollProgress(getScrollProgress());
-        const { position, lookAt } = computeScrollPosition(
-          progress,
-          SPLAT_CONFIG.cameraStart,
-          SPLAT_CONFIG.cameraEnd,
-          SPLAT_CONFIG.lookAtTiming ?? 1,
-        );
+      const loop = (timestamp) => {
+        animationFrameId = requestAnimationFrame(loop);
 
-        if (viewer.camera) {
-          viewer.camera.position.set(
-            position[0],
-            position[1],
-            position[2],
+        if (timestamp - lastAnimateTime < 1000 / 30) return;
+        lastAnimateTime = timestamp;
+
+        if (window.scrollY !== lastScrollY) {
+          lastScrollY = window.scrollY;
+
+          const progress = easeScrollProgress(getScrollProgress());
+          const { position, lookAt } = computeScrollPosition(
+            progress,
+            SPLAT_CONFIG.cameraStart,
+            SPLAT_CONFIG.cameraEnd,
+            SPLAT_CONFIG.lookAtTiming ?? 1,
           );
-          viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+
+          if (viewer.camera) {
+            viewer.camera.position.set(
+              position[0],
+              position[1],
+              position[2],
+            );
+            viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+          }
+
+          viewer.forceRenderNextFrame?.();
         }
+      };
 
-        viewer.forceRenderNextFrame?.();
+      animationFrameId = requestAnimationFrame(loop);
+    };
+
+    const stopAnimate = () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
-
-      requestAnimationFrame(animate);
     };
 
     if (DEBUG_SPLAT) {
       initDebugMode(viewer, isMobile);
     } else {
-      requestAnimationFrame(animate);
+      const observer = new IntersectionObserver(
+        ([entry]) => (entry.isIntersecting ? startAnimate() : stopAnimate()),
+        { threshold: 0 },
+      );
+      observer.observe(splatContainer);
+      startAnimate();
     }
   } catch (error) {
     const message = error?.stack || error?.message || String(error);
