@@ -229,13 +229,6 @@ h3 {
   max-width: 620px;
 }
 
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 30px;
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -287,7 +280,7 @@ h3 {
 .hero-copy::before {
   position: absolute;
   top: 0.16em;
-  bottom: 86px;
+  bottom: 16px;
   left: 0;
   width: 3px;
   border-radius: 999px;
@@ -306,6 +299,35 @@ h3 {
   font-size: clamp(3.4rem, 6.4vw, 6.6rem);
   line-height: 0.9;
   letter-spacing: -0.075em;
+}
+
+.hero-summary {
+  max-width: 650px;
+  margin: 28px 0 0;
+  color: rgba(248, 250, 252, 0.82);
+  font-size: clamp(1.12rem, 1.8vw, 1.55rem);
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.025em;
+}
+
+.hero-scroll-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  color: rgba(168, 179, 207, 0.82);
+  font-size: clamp(0.78rem, 1vw, 0.9rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero-scroll-cue::before {
+  width: 26px;
+  height: 1px;
+  content: "";
+  background: rgba(141, 216, 255, 0.58);
 }
 
 .hero-toc {
@@ -688,10 +710,9 @@ h3 {
   }
 
   .hero-copy::before {
-    bottom: 118px;
+    bottom: 14px;
   }
 
-  .hero-actions,
   .button {
     width: 100%;
   }
