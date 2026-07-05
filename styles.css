@@ -138,6 +138,9 @@ a {
 }
 
 .hero {
+  --hero-copy-opacity: 1;
+  --hero-toc-opacity: 0;
+  --hero-toc-shift: 16px;
   position: sticky;
   top: 0;
   width: 100%;
@@ -148,14 +151,6 @@ a {
   overflow: hidden;
   display: flex;
   align-items: flex-start;
-}
-
-.hero-toc-section {
-  display: flex;
-  justify-content: center;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  padding: 80px 20px 100px;
 }
 
 .eyebrow {
@@ -265,14 +260,29 @@ h3 {
   padding: 100px 0 60px;
 }
 
+.hero-copy {
+  max-width: 560px;
+  opacity: var(--hero-copy-opacity);
+  transform: translateY(calc((1 - var(--hero-copy-opacity)) * -12px));
+  will-change: opacity, transform;
+}
+
 .hero-toc {
-  width: min(540px, 100%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: min(540px, calc(100% - 80px));
   padding: 40px 44px;
   border: 1px solid rgba(141, 216, 255, 0.2);
   border-radius: 28px;
   background: rgba(4, 8, 20, 0.72);
   backdrop-filter: blur(20px);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+  opacity: var(--hero-toc-opacity);
+  transform: translate(-50%, -50%) translateY(var(--hero-toc-shift));
+  pointer-events: none;
+  will-change: opacity, transform;
 }
 
 .hero-toc-label {
@@ -329,10 +339,6 @@ h3 {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 500;
-}
-
-.hero-copy {
-  max-width: 560px;
 }
 
 .splat-stage {
@@ -571,10 +577,6 @@ h3 {
 
   .hero-content {
     padding: 120px 0 60px;
-  }
-
-  .hero-toc-section {
-    padding: 60px 20px 80px;
   }
 
   .hero-toc {

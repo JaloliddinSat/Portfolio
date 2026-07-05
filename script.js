@@ -1115,4 +1115,55 @@ const initDebugMode = async (viewer, isMobile) => {
   requestAnimationFrame(syncLoop);
 };
 
+const initHeroScrollTransition = () => {
+  const hero = document.querySelector(".hero");
+  const heroCopy = document.querySelector(".hero-copy");
+  const heroToc = document.querySelector(".hero-toc");
+
+  if (!hero || !heroCopy || !heroToc) {
+    return;
+  }
+
+  const TRANSITION_START = 0.42;
+  const TRANSITION_END = 0.58;
+
+  const smoothstep = (value) => {
+    const t = Math.min(1, Math.max(0, value));
+
+    return t * t * (3 - 2 * t);
+  };
+
+  let ticking = false;
+
+  const update = () => {
+    ticking = false;
+    const progress = getScrollProgress();
+    const fade = smoothstep(
+      (progress - TRANSITION_START) / (TRANSITION_END - TRANSITION_START),
+    );
+    const copyOpacity = 1 - fade;
+    const tocOpacity = fade;
+
+    hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
+    hero.style.setProperty("--hero-toc-opacity", String(tocOpacity));
+    hero.style.setProperty("--hero-toc-shift", `${(1 - fade) * 16}px`);
+
+    heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
+    heroToc.style.pointerEvents = tocOpacity > 0.4 ? "auto" : "none";
+    heroToc.setAttribute("aria-hidden", tocOpacity < 0.5 ? "true" : "false");
+  };
+
+  const onScroll = () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(update);
+    }
+  };
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  update();
+};
+
+initHeroScrollTransition();
 initSplat();
