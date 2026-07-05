@@ -1124,8 +1124,10 @@ const initHeroScrollTransition = () => {
     return;
   }
 
-  const TRANSITION_START = 0.42;
-  const TRANSITION_END = 0.58;
+  const COPY_FADE_START = 0.32;
+  const COPY_FADE_END = 0.44;
+  const TOC_FADE_START = 0.52;
+  const TOC_FADE_END = 0.64;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
@@ -1133,20 +1135,21 @@ const initHeroScrollTransition = () => {
     return t * t * (3 - 2 * t);
   };
 
+  const fadeBetween = (progress, start, end) =>
+    smoothstep((progress - start) / (end - start));
+
   let ticking = false;
 
   const update = () => {
     ticking = false;
     const progress = getScrollProgress();
-    const fade = smoothstep(
-      (progress - TRANSITION_START) / (TRANSITION_END - TRANSITION_START),
-    );
-    const copyOpacity = 1 - fade;
-    const tocOpacity = fade;
+    const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
+    const tocOpacity = fadeBetween(progress, TOC_FADE_START, TOC_FADE_END);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
     hero.style.setProperty("--hero-toc-opacity", String(tocOpacity));
-    hero.style.setProperty("--hero-toc-shift", `${(1 - fade) * 16}px`);
+    hero.style.setProperty("--hero-toc-shift", `${(1 - tocOpacity) * 16}px`);
+    hero.style.setProperty("--splat-panel", String(tocOpacity));
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
     heroToc.style.pointerEvents = tocOpacity > 0.4 ? "auto" : "none";
