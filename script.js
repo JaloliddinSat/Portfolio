@@ -247,6 +247,8 @@ const initSplat = async () => {
     let lastScrollY = null;
     let renderFrameId = null;
     let renderStopTimer = null;
+    let initialLoadTimer = null;
+    let allowIdleStop = false;
     let splatInView = false;
     let forceNextRender = true;
 
@@ -254,6 +256,11 @@ const initSplat = async () => {
       if (renderStopTimer) {
         clearTimeout(renderStopTimer);
         renderStopTimer = null;
+      }
+
+      if (initialLoadTimer) {
+        clearTimeout(initialLoadTimer);
+        initialLoadTimer = null;
       }
 
       if (renderFrameId) {
@@ -274,12 +281,30 @@ const initSplat = async () => {
       }
     };
 
+    const scheduleInitialLoadGrace = () => {
+      if (allowIdleStop || initialLoadTimer) {
+        return;
+      }
+
+      ensureViewerRunning();
+
+      initialLoadTimer = setTimeout(() => {
+        allowIdleStop = true;
+        initialLoadTimer = null;
+        stopViewerAfterIdle(1200);
+      }, 6500);
+    };
+
     const stopViewerAfterIdle = (delay = 280) => {
       if (renderStopTimer) {
         clearTimeout(renderStopTimer);
       }
 
       if (typeof viewer.stop !== "function") {
+        return;
+      }
+
+      if (!allowIdleStop) {
         return;
       }
 
@@ -350,6 +375,8 @@ const initSplat = async () => {
           splatInView = entry.isIntersecting;
 
           if (splatInView) {
+            ensureViewerRunning();
+            scheduleInitialLoadGrace();
             requestSplatRender({ force: true });
           } else {
             stopViewer();
@@ -370,13 +397,14 @@ const initSplat = async () => {
         if (document.hidden) {
           stopViewer();
         } else {
+          scheduleInitialLoadGrace();
           requestSplatRender({ force: true });
         }
       });
 
       splatInView = true;
+      scheduleInitialLoadGrace();
       requestSplatRender({ force: true });
-      stopViewerAfterIdle(1200);
     }
   } catch (error) {
     const message = error?.stack || error?.message || String(error);
