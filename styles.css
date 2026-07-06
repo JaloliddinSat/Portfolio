@@ -73,11 +73,14 @@ a {
   gap: 24px;
   width: min(calc(100% - 40px), var(--max-width));
   padding: 12px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
-  background: rgba(8, 12, 26, 0.72);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.24);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 28px));
@@ -109,18 +112,18 @@ a {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 50%;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
   font-size: 1rem;
   line-height: 1;
   transition: border-color 180ms ease, background 180ms ease;
 }
 
 .brand:hover .brand-mark {
-  border-color: rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-links {
@@ -185,9 +188,36 @@ a {
   perspective: 1200px;
 }
 
+.nav-links a:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.section-title {
+  margin: 0 0 20px;
+  color: var(--text);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.98;
+  text-transform: none;
+}
+
+.subsection-title {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  text-transform: none;
+}
+
 .eyebrow {
   margin: 0 0 16px;
-  color: var(--accent);
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -592,7 +622,7 @@ h3 {
 .about-item .about-email {
   display: block;
   margin: 0 0 10px;
-  color: var(--accent);
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -704,7 +734,7 @@ h3 {
 }
 
 .project-list a:hover {
-  color: var(--accent);
+  color: var(--muted);
 }
 
 .project-list span {
@@ -731,14 +761,12 @@ h3 {
 
 .project-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(141, 216, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.28);
   background: var(--card-strong);
 }
 
 .project-card.featured {
-  background:
-    linear-gradient(145deg, rgba(141, 216, 255, 0.2), rgba(167, 139, 250, 0.16)),
-    var(--card);
+  background: var(--card);
 }
 
 .project-number {
@@ -759,15 +787,15 @@ h3 {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--text);
   font-size: 0.82rem;
   font-weight: 700;
   transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
 }
 
 .project-link:hover {
-  color: var(--text);
-  border-color: rgba(141, 216, 255, 0.42);
+  color: var(--muted);
+  border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -826,7 +854,7 @@ h3 {
 
 .resume-meta {
   margin: 0 0 10px;
-  color: var(--accent);
+  color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -853,9 +881,7 @@ h3 {
   gap: 12px;
   width: min(100%, 760px);
   padding: clamp(28px, 6vw, 64px);
-  background:
-    radial-gradient(circle at top right, rgba(141, 216, 255, 0.28), transparent 24rem),
-    var(--card);
+  background: var(--card);
 }
 
 .contact-card p {
@@ -874,12 +900,12 @@ h3 {
 }
 
 .contact-links a {
-  color: var(--accent);
+  color: var(--text);
   transition: color 180ms ease;
 }
 
 .contact-links a:hover {
-  color: var(--text);
+  color: var(--muted);
 }
 
 .contact-sep {
