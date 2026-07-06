@@ -152,6 +152,129 @@ const getScrollProgress = () => {
   return Math.min(Math.max(scrolled / scrollRange, 0), 1);
 };
 
+const HERO_SCROLL_ANIM_MS = 3400;
+
+const getHeroTrackEndScrollY = () => {
+  if (!heroScrollTrack) {
+    return window.scrollY;
+  }
+
+  const scrollRange = heroScrollTrack.offsetHeight - window.innerHeight;
+
+  if (scrollRange <= 0) {
+    return window.scrollY;
+  }
+
+  const trackTop =
+    heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+
+  return trackTop + scrollRange;
+};
+
+const getElementScrollY = (element) =>
+  element.getBoundingClientRect().top + window.scrollY;
+
+const smoothScrollTo = (targetY, duration) => {
+  document.documentElement.style.scrollBehavior = "auto";
+
+  return new Promise((resolve) => {
+    if (
+      duration <= 0 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      window.scrollTo(0, targetY);
+      resolve();
+      return;
+    }
+
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+
+    if (Math.abs(distance) < 1) {
+      resolve();
+      return;
+    }
+
+    const startTime = performance.now();
+    const easeInOut = (t) => t * t * (3 - 2 * t);
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+
+      window.scrollTo(0, startY + distance * easeInOut(t));
+
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        resolve();
+      }
+    };
+
+    requestAnimationFrame(step);
+  }).finally(() => {
+    document.documentElement.style.scrollBehavior = "";
+  });
+};
+
+const initHeroActionLinks = () => {
+  const links = document.querySelectorAll(".hero-actions .button[href^=\"#\"]");
+
+  if (!links.length) {
+    return;
+  }
+
+  let isAnimating = false;
+
+  links.forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      const selector = link.getAttribute("href");
+
+      if (!selector || selector === "#") {
+        return;
+      }
+
+      const target = document.querySelector(selector);
+
+      if (!target) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (isAnimating) {
+        return;
+      }
+
+      isAnimating = true;
+
+      try {
+        const reducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+
+        if (!reducedMotion && getScrollProgress() < 0.995) {
+          const heroEnd = getHeroTrackEndScrollY();
+          const remaining = 1 - getScrollProgress();
+
+          await smoothScrollTo(heroEnd, remaining * HERO_SCROLL_ANIM_MS);
+        }
+
+        const targetY = getElementScrollY(target);
+        const phaseTwoDistance = Math.abs(targetY - window.scrollY);
+        const phaseTwoDuration = reducedMotion
+          ? 0
+          : Math.min(Math.max(phaseTwoDistance * 0.45, 500), 1400);
+
+        await smoothScrollTo(targetY, phaseTwoDuration);
+        history.replaceState(null, "", selector);
+      } finally {
+        isAnimating = false;
+      }
+    });
+  });
+};
+
 const mapScrollProgress = (rawProgress, scrollEndAt = 1) => {
   const endAt = Math.max(0.05, Math.min(1, scrollEndAt));
 
@@ -1327,5 +1450,6 @@ const initHeroMotion = () => {
 };
 
 initHeroScrollTransition();
+initHeroActionLinks();
 initHeroMotion();
 initSplat();
