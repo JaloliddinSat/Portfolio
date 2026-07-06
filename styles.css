@@ -798,6 +798,30 @@ h3 {
   max-width: 650px;
 }
 
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 6px;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.contact-links a {
+  color: var(--accent);
+  transition: color 180ms ease;
+}
+
+.contact-links a:hover {
+  color: var(--text);
+}
+
+.contact-sep {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .site-footer {
   display: flex;
   align-items: center;
