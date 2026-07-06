@@ -193,41 +193,96 @@
           </div>
         </section>
 
-        <section class="section-heading" id="portfolio">
-          <p class="eyebrow">Portfolio</p>
-          <h2>Projects I can shape as I grow.</h2>
-        </section>
+        <section class="portfolio-section" id="portfolio">
+          <div class="portfolio-intro">
+            <p class="eyebrow">Portfolio</p>
+            <h2>Where I've worked and what I've built.</h2>
+          </div>
 
-        <section class="project-grid" aria-label="Project cards">
-          <article class="project-card">
-            <div class="project-number">01</div>
-            <h3>Math Notes Hub</h3>
-            <p>
-              A clean study dashboard concept for organizing formulas, proof ideas,
-              and course notes into searchable collections.
-            </p>
-            <span>Study Tools</span>
-          </article>
+          <div class="portfolio-subsection">
+            <div>
+              <p class="eyebrow">Work</p>
+            </div>
+            <div class="portfolio-list">
+              <article class="resume-item portfolio-entry">
+                <p class="resume-meta">Full-stack internship</p>
+                <h3>TradExim (e-TradeFTZ)</h3>
+                <p>
+                  TradExim (e-TradeFTZ) was my first full-stack internship, working on a
+                  production platform for international trade, finance, and user onboarding.
+                </p>
+                <p>
+                  A project included rebuilding the public website and reconnecting it to the
+                  existing backend, redesigning 15+ pages while working through Firebase
+                  Authentication, Firestore records, admin approval visibility, and fixing
+                  registration so users actually landed in the proper registry paths instead
+                  of ending up with duplicate accounts.
+                </p>
+                <p>
+                  I also handled a good chunk of deployment: Rebel hosting, DNS, Google Search
+                  Console verification, contact form routing, and email/API key setup.
+                </p>
+                <p>
+                  What stuck with me from TradExim is that a small frontend change can affect
+                  auth, the database, admin workflows, and deployment all at once. I got better
+                  at moving fast without breaking what was already running.
+                </p>
+              </article>
 
-          <article class="project-card featured">
-            <div class="project-number">02</div>
-            <h3>Portfolio Website</h3>
-            <p>
-              A modern personal site with smooth sections, responsive design, and a
-              visual identity that feels minimal and polished.
-            </p>
-            <span>Web Design</span>
-          </article>
+              <article class="resume-item portfolio-entry">
+                <p class="resume-meta">Autonomy Software Division</p>
+                <h3>WATonomous</h3>
+                <p>
+                  WATonomous was my first real exposure to robotics and autonomy engineering.
+                  I went through the Autonomy Software Division training, learning ROS2, C++,
+                  Docker-based development, and the simulation tools used in autonomous vehicle
+                  systems.
+                </p>
+                <p>
+                  My main focus was costmaps: how lidar and occupancy grid data get turned into
+                  a map that planning algorithms use to avoid obstacles. I worked through how
+                  costmap updates, obstacle inflation, and trajectory safety all connect inside
+                  the autonomy stack.
+                </p>
+                <p>
+                  The biggest thing I took away was a much clearer picture of how perception,
+                  mapping, and planning fit together in a real autonomy system, even before
+                  making bigger contributions of my own.
+                </p>
+              </article>
+            </div>
+          </div>
 
-          <article class="project-card">
-            <div class="project-number">03</div>
-            <h3>Problem Solver</h3>
-            <p>
-              A future project space for small programming experiments, algorithms,
-              and math-inspired utilities.
-            </p>
-            <span>Programming</span>
-          </article>
+          <div class="portfolio-subsection portfolio-projects">
+            <div>
+              <p class="eyebrow">Projects</p>
+            </div>
+            <div class="project-grid project-grid--pair" aria-label="Personal projects">
+              <article class="project-card featured">
+                <h3>Portfolio Website</h3>
+                <a
+                  class="project-link"
+                  href="https://github.com/JaloliddinSat/Portfolio.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  github.com/JaloliddinSat/Portfolio
+                </a>
+              </article>
+
+              <article class="project-card">
+                <h3>Reddit Sentiment Scanner (Hype Scanner)</h3>
+                <a
+                  class="project-link"
+                  href="https://github.com/JaloliddinSat/reddit-sentiment-scanner.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  github.com/JaloliddinSat/reddit-sentiment-scanner
+                </a>
+              </article>
+            </div>
+          </div>
         </section>
 
         <section class="contact-section" id="contact">
