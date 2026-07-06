@@ -13,6 +13,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preload" href="/splats/Color.png" as="image" />
     <link rel="preload" href="/splats/Fairview.ksplat?v=2" as="fetch" crossorigin />
+    <link rel="preload" href="/resume/resume.pdf" as="fetch" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
@@ -162,9 +163,10 @@
           <div class="resume-panel">
             <div class="resume-preview">
               <iframe
+                id="resume-preview-frame"
                 src="/resume/resume.pdf#page=1&view=Fit&toolbar=0&navpanes=0&scrollbar=0"
                 title="Resume preview"
-                loading="lazy"
+                fetchpriority="high"
                 tabindex="-1"
               ></iframe>
               <div class="resume-preview-shield" aria-hidden="true"></div>

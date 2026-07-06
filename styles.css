@@ -816,6 +816,12 @@ h3 {
   background: transparent;
   box-shadow: none;
   user-select: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+
+.resume-preview.is-ready {
+  opacity: 1;
 }
 
 .resume-preview iframe {
