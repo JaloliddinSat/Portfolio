@@ -160,10 +160,12 @@
           <div class="resume-panel">
             <div class="resume-preview">
               <iframe
-                src="/resume/resume.pdf"
+                src="/resume/resume.pdf#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0"
                 title="Resume preview"
                 loading="lazy"
+                tabindex="-1"
               ></iframe>
+              <div class="resume-preview-shield" aria-hidden="true"></div>
             </div>
             <div class="resume-actions">
               <a
@@ -257,41 +259,38 @@
             <div>
               <p class="eyebrow">Projects</p>
             </div>
-            <div class="project-grid project-grid--pair" aria-label="Personal projects">
-              <article class="project-card featured">
-                <h3>Portfolio Website</h3>
-                <a
-                  class="project-link"
-                  href="https://github.com/JaloliddinSat/Portfolio.git"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  github.com/JaloliddinSat/Portfolio
-                </a>
-              </article>
-
-              <article class="project-card">
-                <h3>Reddit Sentiment Scanner (Hype Scanner)</h3>
-                <a
-                  class="project-link"
-                  href="https://github.com/JaloliddinSat/reddit-sentiment-scanner.git"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  github.com/JaloliddinSat/reddit-sentiment-scanner
-                </a>
-              </article>
-            </div>
+            <article class="resume-item project-list-card" aria-label="Personal projects">
+              <ul class="project-list">
+                <li>
+                  <a
+                    href="https://github.com/JaloliddinSat/Portfolio.git"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Portfolio Website
+                  </a>
+                  <span>github.com/JaloliddinSat/Portfolio</span>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/JaloliddinSat/reddit-sentiment-scanner.git"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Reddit Sentiment Scanner (Hype Scanner)
+                  </a>
+                  <span>github.com/JaloliddinSat/reddit-sentiment-scanner</span>
+                </li>
+              </ul>
+            </article>
           </div>
         </section>
 
         <section class="contact-section" id="contact">
           <div class="contact-card">
             <p class="eyebrow">Contact me</p>
-            <h2>Let's connect.</h2>
             <p>
-              I'm open to learning opportunities, collaboration, and conversations
-              around mathematics, software, and creative problem solving.
+              The best way to reach me is by email or LinkedIn — I usually respond fastest there.
             </p>
             <div class="contact-links">
               <a href="mailto:jsatimov@uwaterloo.ca">Email</a>
@@ -317,7 +316,7 @@
       </main>
 
       <footer class="site-footer">
-        <p>© <span id="year"></span> Jaloliddin Satimov. Built with care.</p>
+        <p>Jalol Satimov</p>
         <a href="#top">Back to top</a>
       </footer>
     </div>

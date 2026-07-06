@@ -677,8 +677,39 @@ h3 {
   width: min(100%, 860px);
 }
 
-.project-grid--pair {
-  grid-template-columns: repeat(2, 1fr);
+.project-list-card {
+  width: min(100%, 860px);
+  text-align: left;
+}
+
+.project-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-list li + li {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.project-list a {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  transition: color 180ms ease;
+}
+
+.project-list a:hover {
+  color: var(--accent);
+}
+
+.project-list span {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .project-card,
@@ -751,6 +782,7 @@ h3 {
 }
 
 .resume-preview {
+  position: relative;
   overflow: hidden;
   width: 100%;
   height: clamp(720px, 82vh, 1040px);
@@ -758,6 +790,7 @@ h3 {
   border-radius: var(--radius-medium);
   background: var(--card);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
+  user-select: none;
 }
 
 .resume-preview iframe {
@@ -766,6 +799,14 @@ h3 {
   height: 100%;
   border: 0;
   background: #fff;
+  pointer-events: none;
+}
+
+.resume-preview-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: default;
 }
 
 .resume-actions {
@@ -882,8 +923,7 @@ h3 {
   .about-section,
   .resume-section,
   .portfolio-subsection,
-  .project-grid,
-  .project-grid--pair {
+  .project-grid {
     width: 100%;
   }
 
