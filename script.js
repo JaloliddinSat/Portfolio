@@ -100,15 +100,10 @@ const cloneKeyframes = (keyframes) => ({
 });
 
 const splatContainer = document.querySelector("#splat-viewer");
-const splatLoader = document.querySelector("#splat-loader");
 const splatError = document.querySelector("#splat-error");
 const heroScrollTrack = document.querySelector("#hero-scroll-track");
 
 const setStatus = (state, message = "") => {
-  if (splatLoader) {
-    splatLoader.hidden = state !== "loading";
-  }
-
   if (splatError) {
     splatError.hidden = state !== "error";
     if (message) {

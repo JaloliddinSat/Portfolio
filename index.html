@@ -14,7 +14,7 @@
     <link rel="preload" href="/splats/Color.png" as="image" />
     <link rel="preload" href="/splats/Fairview.ksplat?v=2" as="fetch" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -51,10 +51,6 @@
                 data-splat-src="/splats/Fairview.ksplat"
                 data-local-splat-src="/splats/Fairview.ksplat"
               ></div>
-              <div id="splat-loader" class="splat-status">
-                <span class="loader-dot"></span>
-                Loading Gaussian splat
-              </div>
               <p id="splat-error" class="splat-error" hidden>
                 The splat could not be loaded.
               </p>
@@ -80,37 +76,47 @@
               aria-label="Page contents"
               aria-hidden="true"
             >
-              <p class="hero-toc-label">On this page</p>
-              <ul class="hero-toc-list">
-                <li>
-                  <a href="#about">
-                    <span class="hero-toc-num">01</span>
-                    About me
-                    <span class="hero-toc-desc">Who I am</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#resume">
-                    <span class="hero-toc-num">02</span>
-                    Resume
-                    <span class="hero-toc-desc">Experience and education</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#portfolio">
-                    <span class="hero-toc-num">03</span>
-                    Portfolio
-                    <span class="hero-toc-desc">Selected work</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#contact">
-                    <span class="hero-toc-num">04</span>
-                    Contact me
-                    <span class="hero-toc-desc">Get in touch</span>
-                  </a>
-                </li>
-              </ul>
+              <div class="terminal-window">
+                <div class="terminal-titlebar">
+                  <div class="terminal-traffic-lights" aria-hidden="true">
+                    <span class="terminal-dot terminal-dot--close"></span>
+                    <span class="terminal-dot terminal-dot--minimize"></span>
+                    <span class="terminal-dot terminal-dot--maximize"></span>
+                  </div>
+                  <p class="terminal-title">
+                    jalol<span class="terminal-cursor" aria-hidden="true">▌</span>
+                    — zsh — 80×24
+                  </p>
+                </div>
+                <div class="terminal-body">
+                  <ul class="hero-toc-list">
+                    <li>
+                      <a href="#about">
+                        <span class="hero-toc-num">01</span>
+                        About me
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#resume">
+                        <span class="hero-toc-num">02</span>
+                        Resume
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#portfolio">
+                        <span class="hero-toc-num">03</span>
+                        Portfolio
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#contact">
+                        <span class="hero-toc-num">04</span>
+                        Contact me
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </nav>
           </section>
         </div>
