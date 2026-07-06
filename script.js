@@ -236,6 +236,7 @@ const initSplat = async () => {
     console.log("[SPLAT] Scene added successfully.");
 
     viewer.start();
+    let viewerRunning = true;
 
     if (viewer.threeRenderer) {
       viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -243,58 +244,139 @@ const initSplat = async () => {
 
     setStatus("ready");
 
-    let lastScrollY = -1;
-    let animationFrameId = null;
+    let lastScrollY = null;
+    let renderFrameId = null;
+    let renderStopTimer = null;
+    let splatInView = false;
+    let forceNextRender = true;
 
-    const startAnimate = () => {
-      if (animationFrameId) return;
+    const stopViewer = () => {
+      if (renderStopTimer) {
+        clearTimeout(renderStopTimer);
+        renderStopTimer = null;
+      }
 
-      const loop = () => {
-        animationFrameId = requestAnimationFrame(loop);
+      if (renderFrameId) {
+        cancelAnimationFrame(renderFrameId);
+        renderFrameId = null;
+      }
 
-        if (window.scrollY !== lastScrollY) {
-          lastScrollY = window.scrollY;
-
-          const progress = easeScrollProgress(getScrollProgress());
-          const { position, lookAt } = computeScrollPosition(
-            progress,
-            SPLAT_CONFIG.cameraStart,
-            SPLAT_CONFIG.cameraEnd,
-            SPLAT_CONFIG.lookAtTiming ?? 1,
-          );
-
-          if (viewer.camera) {
-            viewer.camera.position.set(
-              position[0],
-              position[1],
-              position[2],
-            );
-            viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
-          }
-
-          viewer.forceRenderNextFrame?.();
-        }
-      };
-
-      animationFrameId = requestAnimationFrame(loop);
+      if (viewerRunning && typeof viewer.stop === "function") {
+        viewer.stop();
+        viewerRunning = false;
+      }
     };
 
-    const stopAnimate = () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
+    const ensureViewerRunning = () => {
+      if (!viewerRunning) {
+        viewer.start();
+        viewerRunning = true;
       }
+    };
+
+    const stopViewerAfterIdle = (delay = 280) => {
+      if (renderStopTimer) {
+        clearTimeout(renderStopTimer);
+      }
+
+      if (typeof viewer.stop !== "function") {
+        return;
+      }
+
+      renderStopTimer = setTimeout(() => {
+        if (!document.hidden) {
+          viewer.stop();
+          viewerRunning = false;
+        }
+
+        renderStopTimer = null;
+      }, delay);
+    };
+
+    const renderSplatForScroll = () => {
+      renderFrameId = null;
+
+      if (document.hidden || !splatInView) {
+        return;
+      }
+
+      if (!forceNextRender && window.scrollY === lastScrollY) {
+        stopViewerAfterIdle();
+        return;
+      }
+
+      forceNextRender = false;
+      lastScrollY = window.scrollY;
+
+      const progress = easeScrollProgress(getScrollProgress());
+      const { position, lookAt } = computeScrollPosition(
+        progress,
+        SPLAT_CONFIG.cameraStart,
+        SPLAT_CONFIG.cameraEnd,
+        SPLAT_CONFIG.lookAtTiming ?? 1,
+      );
+
+      if (viewer.camera) {
+        viewer.camera.position.set(
+          position[0],
+          position[1],
+          position[2],
+        );
+        viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+      }
+
+      ensureViewerRunning();
+      viewer.forceRenderNextFrame?.();
+      stopViewerAfterIdle();
+    };
+
+    const requestSplatRender = ({ force = false } = {}) => {
+      if (force) {
+        forceNextRender = true;
+      }
+
+      if (renderFrameId || document.hidden || !splatInView) {
+        return;
+      }
+
+      renderFrameId = requestAnimationFrame(renderSplatForScroll);
     };
 
     if (DEBUG_SPLAT) {
       initDebugMode(viewer, isMobile);
     } else {
       const observer = new IntersectionObserver(
-        ([entry]) => (entry.isIntersecting ? startAnimate() : stopAnimate()),
+        ([entry]) => {
+          splatInView = entry.isIntersecting;
+
+          if (splatInView) {
+            requestSplatRender({ force: true });
+          } else {
+            stopViewer();
+          }
+        },
         { threshold: 0 },
       );
+
       observer.observe(splatContainer);
-      startAnimate();
+
+      window.addEventListener("scroll", () => requestSplatRender(), {
+        passive: true,
+      });
+      window.addEventListener("resize", () => requestSplatRender({ force: true }), {
+        passive: true,
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopViewer();
+        } else {
+          requestSplatRender({ force: true });
+        }
+      });
+
+      splatInView = true;
+      requestSplatRender({ force: true });
+      stopViewerAfterIdle(1200);
     }
   } catch (error) {
     const message = error?.stack || error?.message || String(error);
