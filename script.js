@@ -4,21 +4,6 @@ if (year) {
   year.textContent = new Date().getFullYear();
 }
 
-const resumePreview = document.querySelector(".resume-preview");
-const resumePreviewFrame = document.querySelector("#resume-preview-frame");
-
-if (resumePreview && resumePreviewFrame) {
-  const showResumePreview = () => {
-    resumePreview.classList.add("is-ready");
-  };
-
-  if (resumePreviewFrame.contentDocument?.readyState === "complete") {
-    showResumePreview();
-  } else {
-    resumePreviewFrame.addEventListener("load", showResumePreview, { once: true });
-  }
-}
-
 const cards = document.querySelectorAll(".project-card");
 
 cards.forEach((card) => {

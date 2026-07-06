@@ -807,38 +807,22 @@ h3 {
 }
 
 .resume-preview {
-  position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 8.5 / 11;
   border: 0;
   border-radius: var(--radius-medium);
   background: transparent;
   box-shadow: none;
   user-select: none;
-  opacity: 0;
-  transition: opacity 280ms ease;
 }
 
-.resume-preview.is-ready {
-  opacity: 1;
-}
-
-.resume-preview iframe {
+.resume-preview img {
   display: block;
   width: 100%;
-  height: 100%;
-  min-height: 100%;
-  border: 0;
-  background: #fff;
+  height: auto;
   pointer-events: none;
-}
-
-.resume-preview-shield {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  cursor: default;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .resume-actions {
