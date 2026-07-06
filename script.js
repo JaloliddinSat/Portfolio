@@ -152,7 +152,7 @@ const getScrollProgress = () => {
   return Math.min(Math.max(scrolled / scrollRange, 0), 1);
 };
 
-const HERO_SCROLL_ANIM_MS = 3400;
+const HERO_SCROLL_ANIM_MS = 1900;
 
 const getHeroTrackEndScrollY = () => {
   if (!heroScrollTrack) {
