@@ -1177,8 +1177,8 @@ const initHeroScrollTransition = () => {
 
 const initHeroMotion = () => {
   const motionTargets = [
-    { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 4 },
-    { element: document.querySelector(".hero-toc"), phase: 1.4, float: 2, tilt: 3 },
+    { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 8 },
+    { element: document.querySelector(".hero-toc"), phase: 1.4, float: 2, tilt: 6 },
   ].filter(({ element }) => element);
 
   if (
