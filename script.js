@@ -1175,5 +1175,52 @@ const initHeroScrollTransition = () => {
   update();
 };
 
+const initHeroMotion = () => {
+  const motionTargets = [
+    { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 4 },
+    { element: document.querySelector(".hero-toc"), phase: 1.4, float: 2, tilt: 3 },
+  ].filter(({ element }) => element);
+
+  if (
+    motionTargets.length === 0 ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  motionTargets.forEach(({ element, tilt }) => {
+    element.addEventListener("pointermove", (event) => {
+      const rect = element.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+
+      element.style.setProperty("--tilt-x", `${(-y * tilt).toFixed(2)}deg`);
+      element.style.setProperty("--tilt-y", `${(x * tilt).toFixed(2)}deg`);
+    });
+
+    element.addEventListener("pointerleave", () => {
+      element.style.setProperty("--tilt-x", "0deg");
+      element.style.setProperty("--tilt-y", "0deg");
+    });
+  });
+
+  const floatLoop = (time) => {
+    const seconds = time / 1000;
+
+    motionTargets.forEach(({ element, phase, float }) => {
+      const y = Math.sin(seconds * 0.75 + phase) * float;
+      const rotate = Math.cos(seconds * 0.55 + phase) * 0.18;
+
+      element.style.setProperty("--float-y", `${y.toFixed(2)}px`);
+      element.style.setProperty("--float-rotate", `${rotate.toFixed(3)}deg`);
+    });
+
+    requestAnimationFrame(floatLoop);
+  };
+
+  requestAnimationFrame(floatLoop);
+};
+
 initHeroScrollTransition();
+initHeroMotion();
 initSplat();

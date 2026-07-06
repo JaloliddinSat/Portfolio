@@ -172,6 +172,7 @@ a {
   overflow: hidden;
   display: flex;
   align-items: flex-start;
+  perspective: 1200px;
 }
 
 .eyebrow {
@@ -294,9 +295,20 @@ h3 {
 }
 
 .hero-copy {
+  --float-y: 0px;
+  --float-rotate: 0deg;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
   max-width: 620px;
   opacity: var(--hero-copy-opacity);
-  transform: translateY(calc((1 - var(--hero-copy-opacity)) * -12px));
+  transform:
+    perspective(1000px)
+    translateY(calc((1 - var(--hero-copy-opacity)) * -12px + var(--float-y)))
+    rotateX(var(--tilt-x))
+    rotateY(var(--tilt-y))
+    rotateZ(var(--float-rotate));
+  transform-style: preserve-3d;
+  transition: transform 180ms ease-out;
   will-change: opacity, transform;
 }
 
@@ -313,7 +325,18 @@ h3 {
   display: block;
 }
 
+.hero-copy h1,
+.hero-text,
+.hero-scroll-note,
+.hero-copy .button {
+  transform: translateZ(14px);
+}
+
 .hero-toc {
+  --float-y: 0px;
+  --float-rotate: 0deg;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -326,8 +349,16 @@ h3 {
   backdrop-filter: blur(20px);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
   opacity: var(--hero-toc-opacity);
-  transform: translate(-50%, -50%) translateY(var(--hero-toc-shift));
+  transform:
+    translate(-50%, -50%)
+    perspective(1000px)
+    translateY(calc(var(--hero-toc-shift) + var(--float-y)))
+    rotateX(var(--tilt-x))
+    rotateY(var(--tilt-y))
+    rotateZ(var(--float-rotate));
+  transform-style: preserve-3d;
   pointer-events: none;
+  transition: transform 180ms ease-out;
   will-change: opacity, transform;
 }
 
@@ -338,12 +369,14 @@ h3 {
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  transform: translateZ(16px);
 }
 
 .hero-toc-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  transform: translateZ(12px);
 }
 
 .hero-toc-list li {
