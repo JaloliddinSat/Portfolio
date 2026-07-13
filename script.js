@@ -1403,6 +1403,110 @@ const initHeroScrollTransition = () => {
   update();
 };
 
+const initAsciiCurtain = () => {
+  const canvas = document.querySelector("#ascii-curtain");
+
+  if (!canvas || !heroScrollTrack) {
+    return;
+  }
+
+  const context = canvas.getContext("2d");
+  const glyphs = "#@%+=*:.";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let width = 0;
+  let height = 0;
+  let cellWidth = 15;
+  let cellHeight = 18;
+  let ticking = false;
+
+  const noise = (column, row) => {
+    const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
+
+    return value - Math.floor(value);
+  };
+
+  const resize = () => {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    cellWidth = width < 560 ? 12 : 15;
+    cellHeight = width < 560 ? 15 : 18;
+    context.font = `700 ${cellHeight}px "JetBrains Mono", monospace`;
+    context.textBaseline = "top";
+  };
+
+  const draw = () => {
+    ticking = false;
+    context.clearRect(0, 0, width, height);
+
+    const distancePastSplat = window.scrollY - getHeroTrackEndScrollY();
+    const travel = Math.max(height * 1.25, 1);
+    const progress = Math.min(1, Math.max(0, distancePastSplat / travel));
+
+    canvas.style.opacity = progress > 0 ? "1" : "0";
+
+    if (progress <= 0) {
+      return;
+    }
+
+    const columns = Math.ceil(width / cellWidth) + 1;
+    const rows = Math.ceil(height / cellHeight) + 1;
+    const baseEdge = progress * (height + cellHeight * 8) - cellHeight * 4;
+
+    for (let column = 0; column < columns; column += 1) {
+      const wave =
+        Math.sin(column * 0.72) * cellHeight * 1.35 +
+        (noise(column, 3) - 0.5) * cellHeight * 4.2;
+      const edge = baseEdge + wave;
+
+      for (let row = 0; row < rows; row += 1) {
+        const y = row * cellHeight;
+        const depth = edge - y;
+
+        if (depth < -cellHeight * 2.5) {
+          continue;
+        }
+
+        const random = noise(column, row);
+        const edgeFade = Math.min(1, Math.max(0, (depth + cellHeight * 2.5) / (cellHeight * 5)));
+        const density = 0.28 + edgeFade * 0.66;
+
+        if (random > density) {
+          continue;
+        }
+
+        const glyphIndex = Math.floor(noise(row + 11, column + 7) * glyphs.length);
+        const shade = 8 + Math.floor(noise(column + 19, row + 23) * 14);
+        const alpha = (0.62 + edgeFade * 0.34) * (reducedMotion.matches ? 0.82 : 1);
+        context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${alpha})`;
+        context.fillText(glyphs[glyphIndex], column * cellWidth, y);
+      }
+    }
+  };
+
+  const requestDraw = () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(draw);
+    }
+  };
+
+  const handleResize = () => {
+    resize();
+    requestDraw();
+  };
+
+  window.addEventListener("scroll", requestDraw, { passive: true });
+  window.addEventListener("resize", handleResize, { passive: true });
+  resize();
+  draw();
+};
+
 const initHeroMotion = () => {
   const motionTargets = [
     { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 8 },
@@ -1450,6 +1554,7 @@ const initHeroMotion = () => {
 };
 
 initHeroScrollTransition();
+initAsciiCurtain();
 initHeroActionLinks();
 initHeroMotion();
 initSplat();
