@@ -1564,6 +1564,7 @@ const initAsciiCurtain = () => {
       overlayStart,
       window.scrollY + window.innerHeight * 0.05,
     );
+    const viewportTop = Math.max(overlayStart, window.scrollY);
 
     for (let column = 0; column < columns; column += 1) {
       const movingNoise =
@@ -1576,9 +1577,10 @@ const initAsciiCurtain = () => {
       const edge = Math.max(overlayStart, viewportMaskTop + wave);
       const startRow = Math.max(
         Math.floor(overlayStart / cellHeight),
-        Math.floor((edge - cellHeight * 2.5) / cellHeight),
+        Math.floor(viewportTop / cellHeight),
       );
       const endRow = Math.min(
+        Math.ceil((edge + cellHeight * 2.5) / cellHeight),
         Math.ceil(revealBottom / cellHeight),
         Math.ceil(documentHeight / cellHeight),
       );
@@ -1588,14 +1590,14 @@ const initAsciiCurtain = () => {
       context.fillStyle = "rgba(17, 17, 17, 0.88)";
       context.fillRect(
         column * cellWidth,
-        edge,
+        viewportTop,
         cellWidth + 1,
-        Math.max(0, revealBottom - edge + cellHeight * 1.5),
+        Math.max(0, edge - viewportTop + cellHeight * 1.5),
       );
 
       for (let row = startRow; row < endRow; row += 1) {
         const y = row * cellHeight;
-        const depth = y - edge;
+        const depth = edge - y;
 
         if (depth < -cellHeight * 2.5) {
           continue;
