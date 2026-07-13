@@ -1416,7 +1416,7 @@ const initAsciiCurtain = () => {
   let documentHeight = 0;
   let cellWidth = 15;
   let cellHeight = 18;
-  let backgroundColor = "#111111";
+  const backgroundGlyphColor = "#292929";
   let overlayStart = 0;
   let splatPixels = null;
   let resumePixels = null;
@@ -1838,7 +1838,7 @@ const initAsciiCurtain = () => {
     sampleRegion(resumePixels, resumeRect, x, y) ||
     sampleColorRegion(surfaceColorRegions, x, y) ||
     sampleRegion(splatPixels, splatRect, x, y, "cover") ||
-    backgroundColor;
+    backgroundGlyphColor;
 
   const updateTransitionOpacity = () => {
     const fadeStart = overlayStart + window.innerHeight * 0.08;
@@ -1869,9 +1869,6 @@ const initAsciiCurtain = () => {
     cellHeight = width < 560 ? 15 : 18;
     context.font = `700 ${cellHeight}px "JetBrains Mono", monospace`;
     context.textBaseline = "top";
-    backgroundColor =
-      getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() ||
-      "#111111";
     overlayStart = getHeroTrackEndScrollY();
     splatRect = {
       left: 0,
