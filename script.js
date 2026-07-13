@@ -1514,6 +1514,19 @@ const initAsciiCurtain = () => {
     sampleRegion(splatPixels, splatRect, x, y, "cover") ||
     backgroundColor;
 
+  const updateTransitionOpacity = () => {
+    const fadeStart = overlayStart + window.innerHeight * 0.08;
+    const fadeEnd = overlayStart + window.innerHeight * 0.42;
+    const linearProgress = Math.min(
+      1,
+      Math.max(0, (window.scrollY - fadeStart) / (fadeEnd - fadeStart)),
+    );
+    const easedProgress =
+      linearProgress * linearProgress * (3 - 2 * linearProgress);
+
+    canvas.style.opacity = easedProgress.toFixed(3);
+  };
+
   const resize = () => {
     const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
     width = window.innerWidth;
@@ -1546,6 +1559,8 @@ const initAsciiCurtain = () => {
       generatedBottom = overlayStart;
       revealBottom = overlayStart;
     }
+
+    updateTransitionOpacity();
   };
 
   const draw = () => {
@@ -1669,6 +1684,8 @@ const initAsciiCurtain = () => {
   };
 
   const handleScroll = () => {
+    updateTransitionOpacity();
+
     if (isActive) {
       const viewportLead = window.innerHeight * 1.15;
       generatedBottom = Math.min(
