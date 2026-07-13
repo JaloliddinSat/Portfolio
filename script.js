@@ -1418,9 +1418,6 @@ const initAsciiCurtain = () => {
   let cellWidth = 15;
   let cellHeight = 18;
   let backgroundColor = "#111111";
-  let lastScrollY = window.scrollY;
-  let currentOffset = 0;
-  let impulse = 0;
   let currentOpacity = 0;
   let currentReveal = 0;
   let frameId = 0;
@@ -1455,7 +1452,7 @@ const initAsciiCurtain = () => {
     const columns = Math.ceil(width / cellWidth) + 1;
     const fullEdge = Math.min(height * 0.38, 300);
     const baseEdge = fullEdge * currentReveal - cellHeight * 3;
-    const rows = Math.ceil((fullEdge + cellHeight * 5) / cellHeight);
+    const rows = Math.ceil(height / cellHeight) + 1;
     const phase = time * 0.00115;
     const noisePhase = phase * 2.4;
     const noiseFrame = Math.floor(noisePhase);
@@ -1471,6 +1468,18 @@ const initAsciiCurtain = () => {
         (movingNoise - 0.5) * cellHeight * 3.4;
       const edge = baseEdge + wave;
 
+      context.globalCompositeOperation = "source-over";
+      context.globalAlpha = 1;
+      context.fillStyle = backgroundColor;
+      context.fillRect(
+        column * cellWidth,
+        0,
+        cellWidth + 1,
+        Math.max(0, edge + cellHeight * 1.5),
+      );
+
+      context.globalCompositeOperation = "destination-out";
+
       for (let row = 0; row < rows; row += 1) {
         const y = row * cellHeight;
         const depth = edge - y;
@@ -1484,19 +1493,20 @@ const initAsciiCurtain = () => {
           1,
           Math.max(0, (depth + cellHeight * 2.5) / (cellHeight * 5)),
         );
-        const density = 0.22 + edgeFade * 0.7;
+        const density = 0.3 + edgeFade * 0.7;
 
         if (random > density) {
           continue;
         }
 
         const glyphIndex = Math.floor(noise(row + 11, column + 7) * glyphs.length);
-        context.globalAlpha = 0.72 + edgeFade * 0.28;
-        context.fillStyle = backgroundColor;
+        context.globalAlpha = edgeFade;
+        context.fillStyle = "#000000";
         context.fillText(glyphs[glyphIndex], column * cellWidth, y);
       }
     }
 
+    context.globalCompositeOperation = "source-over";
     context.globalAlpha = 1;
   };
 
@@ -1510,24 +1520,16 @@ const initAsciiCurtain = () => {
     currentReveal += (targetOpacity - currentReveal) * revealEase;
 
     if (reducedMotion.matches) {
-      currentOffset = 0;
-      impulse = 0;
       currentOpacity = targetOpacity;
       currentReveal = targetOpacity;
-    } else {
-      currentOffset += (impulse - currentOffset) * 0.11;
-      impulse *= 0.82;
     }
 
     draw(time);
     canvas.style.opacity = currentOpacity.toFixed(3);
-    canvas.style.transform = `translate3d(0, ${currentOffset.toFixed(2)}px, 0)`;
 
     if (
       Math.abs(targetOpacity - currentOpacity) > 0.002 ||
       Math.abs(targetOpacity - currentReveal) > 0.002 ||
-      Math.abs(currentOffset) > 0.08 ||
-      Math.abs(impulse) > 0.08 ||
       (targetOpacity > 0 && !reducedMotion.matches)
     ) {
       frameId = requestAnimationFrame(animate);
@@ -1541,13 +1543,6 @@ const initAsciiCurtain = () => {
   };
 
   const handleScroll = () => {
-    const delta = window.scrollY - lastScrollY;
-    lastScrollY = window.scrollY;
-
-    if (!reducedMotion.matches) {
-      impulse = Math.max(-54, Math.min(54, impulse - delta * 0.32));
-    }
-
     requestAnimation();
   };
 
