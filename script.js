@@ -1422,6 +1422,7 @@ const initAsciiCurtain = () => {
   let currentOffset = 0;
   let impulse = 0;
   let currentOpacity = 0;
+  let currentReveal = 0;
   let frameId = 0;
 
   const noise = (column, row) => {
@@ -1448,17 +1449,26 @@ const initAsciiCurtain = () => {
       "#111111";
   };
 
-  const draw = () => {
+  const draw = (time = 0) => {
     context.clearRect(0, 0, width, height);
 
     const columns = Math.ceil(width / cellWidth) + 1;
-    const baseEdge = Math.min(height * 0.24, 190);
-    const rows = Math.ceil((baseEdge + cellHeight * 5) / cellHeight);
+    const fullEdge = Math.min(height * 0.38, 300);
+    const baseEdge = fullEdge * currentReveal - cellHeight * 3;
+    const rows = Math.ceil((fullEdge + cellHeight * 5) / cellHeight);
+    const phase = time * 0.00115;
+    const noisePhase = phase * 2.4;
+    const noiseFrame = Math.floor(noisePhase);
+    const noiseMix = noisePhase - noiseFrame;
 
     for (let column = 0; column < columns; column += 1) {
+      const movingNoise =
+        noise(column, noiseFrame + 3) * (1 - noiseMix) +
+        noise(column, noiseFrame + 4) * noiseMix;
       const wave =
-        Math.sin(column * 0.72) * cellHeight * 1.35 +
-        (noise(column, 3) - 0.5) * cellHeight * 4.2;
+        Math.sin(column * 0.72 + phase) * cellHeight * 1.5 +
+        Math.sin(column * 0.19 - phase * 0.7) * cellHeight * 1.1 +
+        (movingNoise - 0.5) * cellHeight * 3.4;
       const edge = baseEdge + wave;
 
       for (let row = 0; row < rows; row += 1) {
@@ -1490,29 +1500,35 @@ const initAsciiCurtain = () => {
     context.globalAlpha = 1;
   };
 
-  const animate = () => {
+  const animate = (time) => {
     frameId = 0;
     const targetOpacity = window.scrollY >= getHeroTrackEndScrollY() ? 1 : 0;
     const opacityEase = targetOpacity > currentOpacity ? 0.16 : 0.075;
+    const revealEase = targetOpacity > currentReveal ? 0.085 : 0.055;
 
     currentOpacity += (targetOpacity - currentOpacity) * opacityEase;
+    currentReveal += (targetOpacity - currentReveal) * revealEase;
 
     if (reducedMotion.matches) {
       currentOffset = 0;
       impulse = 0;
       currentOpacity = targetOpacity;
+      currentReveal = targetOpacity;
     } else {
       currentOffset += (impulse - currentOffset) * 0.11;
       impulse *= 0.82;
     }
 
+    draw(time);
     canvas.style.opacity = currentOpacity.toFixed(3);
     canvas.style.transform = `translate3d(0, ${currentOffset.toFixed(2)}px, 0)`;
 
     if (
       Math.abs(targetOpacity - currentOpacity) > 0.002 ||
+      Math.abs(targetOpacity - currentReveal) > 0.002 ||
       Math.abs(currentOffset) > 0.08 ||
-      Math.abs(impulse) > 0.08
+      Math.abs(impulse) > 0.08 ||
+      (targetOpacity > 0 && !reducedMotion.matches)
     ) {
       frameId = requestAnimationFrame(animate);
     }
@@ -1537,14 +1553,12 @@ const initAsciiCurtain = () => {
 
   const handleResize = () => {
     resize();
-    draw();
     requestAnimation();
   };
 
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
   resize();
-  draw();
   requestAnimation();
 };
 
