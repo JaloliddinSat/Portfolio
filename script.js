@@ -1474,6 +1474,27 @@ const initAsciiCurtain = () => {
     };
   };
 
+  const getSamplingRect = (element) => {
+    const terminal = element?.closest?.(".terminal-window");
+
+    if (!terminal) {
+      return getDocumentRect(element);
+    }
+
+    const terminalRect = terminal.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const projectedTerminalLeft = (width - terminalRect.width) / 2;
+    const projectedTerminalTop =
+      overlayStart + (window.innerHeight - terminalRect.height) / 2;
+
+    return {
+      left: projectedTerminalLeft + elementRect.left - terminalRect.left,
+      top: projectedTerminalTop + elementRect.top - terminalRect.top,
+      width: elementRect.width,
+      height: elementRect.height,
+    };
+  };
+
   const readPixel = (asset, x, y) => {
     const pixelX = Math.max(0, Math.min(asset.width - 1, Math.round(x)));
     const pixelY = Math.max(0, Math.min(asset.height - 1, Math.round(y)));
@@ -1500,6 +1521,11 @@ const initAsciiCurtain = () => {
   const buildColorRegions = () => {
     const surfaceSelectors = [
       ".terminal-window",
+      ".terminal-titlebar",
+      ".terminal-body",
+      ".terminal-dot--close",
+      ".terminal-dot--minimize",
+      ".terminal-dot--maximize",
       ".resume-item",
       ".project-card",
       ".project-list-card",
@@ -1514,6 +1540,7 @@ const initAsciiCurtain = () => {
       ".section-title",
       ".subsection-title",
       ".eyebrow",
+      ".terminal-title",
       ".nav-links a",
       ".hero-toc-list a",
       ".button",
@@ -1523,8 +1550,11 @@ const initAsciiCurtain = () => {
 
     surfaceColorRegions = surfaceSelectors.flatMap((selector) =>
       [...document.querySelectorAll(selector)].flatMap((element) => {
-        const rect = getDocumentRect(element);
+        const rect = getSamplingRect(element);
         const style = getComputedStyle(element);
+        const surfaceColor = element.matches(".terminal-titlebar")
+          ? "rgb(241, 241, 241)"
+          : style.backgroundColor;
 
         if (
           !rect ||
@@ -1532,18 +1562,18 @@ const initAsciiCurtain = () => {
           rect.height <= 0 ||
           style.display === "none" ||
           style.visibility === "hidden" ||
-          style.backgroundColor === "rgba(0, 0, 0, 0)"
+          surfaceColor === "rgba(0, 0, 0, 0)"
         ) {
           return [];
         }
 
-        return [{ ...rect, color: blendColor(style.backgroundColor) }];
+        return [{ ...rect, color: blendColor(surfaceColor) }];
       }),
     );
 
     foregroundColorRegions = [...document.querySelectorAll(foregroundSelector)].flatMap(
       (element) => {
-        const rect = getDocumentRect(element);
+        const rect = getSamplingRect(element);
         const style = getComputedStyle(element);
 
         if (
