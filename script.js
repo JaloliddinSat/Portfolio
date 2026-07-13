@@ -1418,6 +1418,9 @@ const initAsciiCurtain = () => {
   let cellHeight = 18;
   let backgroundColor = "#111111";
   let overlayStart = 0;
+  let lastScrollY = window.scrollY;
+  let maskLag = 0;
+  let settleFrameId = 0;
   let splatPixels = null;
   let resumePixels = null;
   let terminalPixels = null;
@@ -1819,7 +1822,7 @@ const initAsciiCurtain = () => {
     const columns = Math.ceil(width / cellWidth) + 1;
     const viewportMaskTop = Math.max(
       overlayStart,
-      window.scrollY + window.innerHeight * 0.05,
+      window.scrollY + window.innerHeight * 0.05 + maskLag,
     );
     const maskNoisePosition = viewportMaskTop / cellHeight;
     const noiseFrame = Math.floor(maskNoisePosition);
@@ -1886,13 +1889,40 @@ const initAsciiCurtain = () => {
     context.globalAlpha = 1;
   };
 
+  const settleMaskLag = () => {
+    settleFrameId = 0;
+    maskLag *= 0.82;
+
+    if (Math.abs(maskLag) < 0.15) {
+      maskLag = 0;
+    }
+
+    draw();
+
+    if (maskLag !== 0) {
+      settleFrameId = requestAnimationFrame(settleMaskLag);
+    }
+  };
+
   const handleScroll = () => {
+    const delta = window.scrollY - lastScrollY;
+    lastScrollY = window.scrollY;
+    maskLag = Math.max(
+      -window.innerHeight * 0.12,
+      Math.min(window.innerHeight * 0.06, maskLag + delta * 0.24),
+    );
+
     updateTransitionOpacity();
     draw();
+
+    if (!settleFrameId) {
+      settleFrameId = requestAnimationFrame(settleMaskLag);
+    }
   };
 
   const handleResize = () => {
     resize();
+    lastScrollY = window.scrollY;
     draw();
   };
 
