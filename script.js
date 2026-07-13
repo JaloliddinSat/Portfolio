@@ -1548,7 +1548,7 @@ const initAsciiCurtain = () => {
     }
   };
 
-  const draw = (time = 0) => {
+  const draw = () => {
     context.clearRect(0, 0, width, documentHeight);
 
     if (!isActive || revealBottom <= overlayStart) {
@@ -1556,14 +1556,13 @@ const initAsciiCurtain = () => {
     }
 
     const columns = Math.ceil(width / cellWidth) + 1;
-    const phase = time * 0.00115;
-    const noisePhase = phase * 2.4;
-    const noiseFrame = Math.floor(noisePhase);
-    const noiseMix = noisePhase - noiseFrame;
     const viewportMaskTop = Math.max(
       overlayStart,
       window.scrollY + window.innerHeight * 0.05,
     );
+    const maskNoisePosition = viewportMaskTop / cellHeight;
+    const noiseFrame = Math.floor(maskNoisePosition);
+    const noiseMix = maskNoisePosition - noiseFrame;
     const viewportTop = Math.max(
       overlayStart,
       window.scrollY - window.innerHeight * 1.5,
@@ -1574,8 +1573,8 @@ const initAsciiCurtain = () => {
         noise(column, noiseFrame + 3) * (1 - noiseMix) +
         noise(column, noiseFrame + 4) * noiseMix;
       const wave =
-        Math.sin(column * 0.72 + phase) * cellHeight * 1.5 +
-        Math.sin(column * 0.19 - phase * 0.7) * cellHeight * 1.1 +
+        Math.sin(column * 0.72 + maskNoisePosition * 0.11) * cellHeight * 1.5 +
+        Math.sin(column * 0.19 - maskNoisePosition * 0.07) * cellHeight * 1.1 +
         (movingNoise - 0.5) * cellHeight * 3.4;
       const edge = Math.max(overlayStart, viewportMaskTop + wave);
       const startRow = Math.max(
@@ -1654,7 +1653,11 @@ const initAsciiCurtain = () => {
       lastDrawAt = time;
     }
 
-    if (isActive && !reducedMotion.matches) {
+    if (
+      isActive &&
+      !reducedMotion.matches &&
+      Math.abs(generatedBottom - revealBottom) > 0.5
+    ) {
       frameId = requestAnimationFrame(animate);
     }
   };
