@@ -94,14 +94,12 @@ a {
 }
 
 .ascii-curtain {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 9;
   width: 100vw;
-  height: 100svh;
   pointer-events: none;
-  opacity: 0;
-  will-change: opacity;
 }
 
 .brand,

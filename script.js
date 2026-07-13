@@ -1414,13 +1414,15 @@ const initAsciiCurtain = () => {
   const glyphs = "#@%+=*:.";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let width = 0;
-  let height = 0;
+  let documentHeight = 0;
   let cellWidth = 15;
   let cellHeight = 18;
   let backgroundColor = "#111111";
-  let currentOpacity = 0;
-  let currentReveal = 0;
+  let overlayStart = 0;
+  let generatedBottom = 0;
+  let revealBottom = 0;
   let frameId = 0;
+  let isActive = false;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -1429,13 +1431,16 @@ const initAsciiCurtain = () => {
   };
 
   const resize = () => {
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
     width = window.innerWidth;
-    height = window.innerHeight;
+    documentHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+    );
     canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
+    canvas.height = Math.round(documentHeight * ratio);
     canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.style.height = `${documentHeight}px`;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     cellWidth = width < 560 ? 12 : 15;
     cellHeight = width < 560 ? 15 : 18;
@@ -1444,19 +1449,27 @@ const initAsciiCurtain = () => {
     backgroundColor =
       getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() ||
       "#111111";
+    overlayStart = getHeroTrackEndScrollY();
+
+    if (!isActive) {
+      generatedBottom = overlayStart;
+      revealBottom = overlayStart;
+    }
   };
 
   const draw = (time = 0) => {
-    context.clearRect(0, 0, width, height);
+    context.clearRect(0, 0, width, documentHeight);
+
+    if (!isActive || revealBottom <= overlayStart) {
+      return;
+    }
 
     const columns = Math.ceil(width / cellWidth) + 1;
-    const fullEdge = Math.min(height * 0.38, 300);
-    const baseEdge = fullEdge * currentReveal - cellHeight * 3;
-    const rows = Math.ceil(height / cellHeight) + 1;
     const phase = time * 0.00115;
     const noisePhase = phase * 2.4;
     const noiseFrame = Math.floor(noisePhase);
     const noiseMix = noisePhase - noiseFrame;
+    const startRow = Math.floor(overlayStart / cellHeight);
 
     for (let column = 0; column < columns; column += 1) {
       const movingNoise =
@@ -1466,21 +1479,25 @@ const initAsciiCurtain = () => {
         Math.sin(column * 0.72 + phase) * cellHeight * 1.5 +
         Math.sin(column * 0.19 - phase * 0.7) * cellHeight * 1.1 +
         (movingNoise - 0.5) * cellHeight * 3.4;
-      const edge = baseEdge + wave;
+      const edge = Math.min(documentHeight, revealBottom + wave);
+      const endRow = Math.min(
+        Math.ceil((edge + cellHeight * 2.5) / cellHeight),
+        Math.ceil(documentHeight / cellHeight),
+      );
 
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
       context.fillStyle = backgroundColor;
       context.fillRect(
         column * cellWidth,
-        0,
+        overlayStart,
         cellWidth + 1,
-        Math.max(0, edge + cellHeight * 1.5),
+        Math.max(0, edge - overlayStart + cellHeight * 1.5),
       );
 
       context.globalCompositeOperation = "destination-out";
 
-      for (let row = 0; row < rows; row += 1) {
+      for (let row = startRow; row < endRow; row += 1) {
         const y = row * cellHeight;
         const depth = edge - y;
 
@@ -1512,26 +1529,25 @@ const initAsciiCurtain = () => {
 
   const animate = (time) => {
     frameId = 0;
-    const targetOpacity = window.scrollY >= getHeroTrackEndScrollY() ? 1 : 0;
-    const opacityEase = targetOpacity > currentOpacity ? 0.16 : 0.075;
-    const revealEase = targetOpacity > currentReveal ? 0.085 : 0.055;
+    const viewportLead = window.innerHeight * 1.15;
 
-    currentOpacity += (targetOpacity - currentOpacity) * opacityEase;
-    currentReveal += (targetOpacity - currentReveal) * revealEase;
+    if (window.scrollY + window.innerHeight >= overlayStart) {
+      isActive = true;
+      generatedBottom = Math.min(
+        documentHeight,
+        Math.max(generatedBottom, window.scrollY + viewportLead),
+      );
+    }
 
     if (reducedMotion.matches) {
-      currentOpacity = targetOpacity;
-      currentReveal = targetOpacity;
+      revealBottom = generatedBottom;
+    } else {
+      revealBottom += (generatedBottom - revealBottom) * 0.075;
     }
 
     draw(time);
-    canvas.style.opacity = currentOpacity.toFixed(3);
 
-    if (
-      Math.abs(targetOpacity - currentOpacity) > 0.002 ||
-      Math.abs(targetOpacity - currentReveal) > 0.002 ||
-      (targetOpacity > 0 && !reducedMotion.matches)
-    ) {
+    if (isActive && !reducedMotion.matches) {
       frameId = requestAnimationFrame(animate);
     }
   };
