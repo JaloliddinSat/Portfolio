@@ -1663,6 +1663,25 @@ const initAsciiCurtain = () => {
   };
 
   const handleScroll = () => {
+    if (isActive) {
+      const viewportLead = window.innerHeight * 1.15;
+      generatedBottom = Math.min(
+        documentHeight,
+        Math.max(generatedBottom, window.scrollY + viewportLead),
+      );
+
+      if (revealBottom < window.scrollY + window.innerHeight) {
+        revealBottom = Math.min(
+          generatedBottom,
+          window.scrollY + window.innerHeight,
+        );
+      }
+
+      const now = performance.now();
+      draw(now);
+      lastDrawAt = now;
+    }
+
     requestAnimation();
   };
 
