@@ -1417,7 +1417,12 @@ const initAsciiCurtain = () => {
   let height = 0;
   let cellWidth = 15;
   let cellHeight = 18;
-  let ticking = false;
+  let backgroundColor = "#111111";
+  let lastScrollY = window.scrollY;
+  let currentOffset = 0;
+  let impulse = 0;
+  let currentOpacity = 0;
+  let frameId = 0;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -1438,25 +1443,17 @@ const initAsciiCurtain = () => {
     cellHeight = width < 560 ? 15 : 18;
     context.font = `700 ${cellHeight}px "JetBrains Mono", monospace`;
     context.textBaseline = "top";
+    backgroundColor =
+      getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() ||
+      "#111111";
   };
 
   const draw = () => {
-    ticking = false;
     context.clearRect(0, 0, width, height);
 
-    const distancePastSplat = window.scrollY - getHeroTrackEndScrollY();
-    const travel = Math.max(height * 1.25, 1);
-    const progress = Math.min(1, Math.max(0, distancePastSplat / travel));
-
-    canvas.style.opacity = progress > 0 ? "1" : "0";
-
-    if (progress <= 0) {
-      return;
-    }
-
     const columns = Math.ceil(width / cellWidth) + 1;
-    const rows = Math.ceil(height / cellHeight) + 1;
-    const baseEdge = progress * (height + cellHeight * 8) - cellHeight * 4;
+    const baseEdge = Math.min(height * 0.24, 190);
+    const rows = Math.ceil((baseEdge + cellHeight * 5) / cellHeight);
 
     for (let column = 0; column < columns; column += 1) {
       const wave =
@@ -1473,38 +1470,82 @@ const initAsciiCurtain = () => {
         }
 
         const random = noise(column, row);
-        const edgeFade = Math.min(1, Math.max(0, (depth + cellHeight * 2.5) / (cellHeight * 5)));
-        const density = 0.28 + edgeFade * 0.66;
+        const edgeFade = Math.min(
+          1,
+          Math.max(0, (depth + cellHeight * 2.5) / (cellHeight * 5)),
+        );
+        const density = 0.22 + edgeFade * 0.7;
 
         if (random > density) {
           continue;
         }
 
         const glyphIndex = Math.floor(noise(row + 11, column + 7) * glyphs.length);
-        const shade = 8 + Math.floor(noise(column + 19, row + 23) * 14);
-        const alpha = (0.62 + edgeFade * 0.34) * (reducedMotion.matches ? 0.82 : 1);
-        context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${alpha})`;
+        context.globalAlpha = 0.72 + edgeFade * 0.28;
+        context.fillStyle = backgroundColor;
         context.fillText(glyphs[glyphIndex], column * cellWidth, y);
       }
     }
+
+    context.globalAlpha = 1;
   };
 
-  const requestDraw = () => {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(draw);
+  const animate = () => {
+    frameId = 0;
+    const targetOpacity = window.scrollY >= getHeroTrackEndScrollY() ? 1 : 0;
+    const opacityEase = targetOpacity > currentOpacity ? 0.16 : 0.075;
+
+    currentOpacity += (targetOpacity - currentOpacity) * opacityEase;
+
+    if (reducedMotion.matches) {
+      currentOffset = 0;
+      impulse = 0;
+      currentOpacity = targetOpacity;
+    } else {
+      currentOffset += (impulse - currentOffset) * 0.11;
+      impulse *= 0.82;
     }
+
+    canvas.style.opacity = currentOpacity.toFixed(3);
+    canvas.style.transform = `translate3d(0, ${currentOffset.toFixed(2)}px, 0)`;
+
+    if (
+      Math.abs(targetOpacity - currentOpacity) > 0.002 ||
+      Math.abs(currentOffset) > 0.08 ||
+      Math.abs(impulse) > 0.08
+    ) {
+      frameId = requestAnimationFrame(animate);
+    }
+  };
+
+  const requestAnimation = () => {
+    if (!frameId) {
+      frameId = requestAnimationFrame(animate);
+    }
+  };
+
+  const handleScroll = () => {
+    const delta = window.scrollY - lastScrollY;
+    lastScrollY = window.scrollY;
+
+    if (!reducedMotion.matches) {
+      impulse = Math.max(-54, Math.min(54, impulse - delta * 0.32));
+    }
+
+    requestAnimation();
   };
 
   const handleResize = () => {
     resize();
-    requestDraw();
+    draw();
+    requestAnimation();
   };
 
-  window.addEventListener("scroll", requestDraw, { passive: true });
+  window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
   resize();
   draw();
+  requestAnimation();
 };
 
 const initHeroMotion = () => {

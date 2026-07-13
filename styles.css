@@ -101,6 +101,7 @@ a {
   height: 100svh;
   pointer-events: none;
   opacity: 0;
+  will-change: transform, opacity;
 }
 
 .brand,
