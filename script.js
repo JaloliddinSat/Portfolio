@@ -1412,18 +1412,12 @@ const initAsciiCurtain = () => {
 
   const context = canvas.getContext("2d");
   const glyphs = "#@%+=*:.";
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let width = 0;
   let documentHeight = 0;
   let cellWidth = 15;
   let cellHeight = 18;
   let backgroundColor = "#111111";
   let overlayStart = 0;
-  let generatedBottom = 0;
-  let revealBottom = 0;
-  let frameId = 0;
-  let isActive = false;
-  let lastDrawAt = 0;
   let splatPixels = null;
   let resumePixels = null;
   let terminalPixels = null;
@@ -1783,16 +1777,16 @@ const initAsciiCurtain = () => {
   };
 
   const resize = () => {
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
     width = window.innerWidth;
     documentHeight = Math.max(
       document.documentElement.scrollHeight,
       document.body.scrollHeight,
     );
     canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(documentHeight * ratio);
+    canvas.height = Math.round(window.innerHeight * ratio);
     canvas.style.width = `${width}px`;
-    canvas.style.height = `${documentHeight}px`;
+    canvas.style.height = `${window.innerHeight}px`;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     cellWidth = width < 560 ? 12 : 15;
     cellHeight = width < 560 ? 15 : 18;
@@ -1812,18 +1806,13 @@ const initAsciiCurtain = () => {
     renderTerminalPixels();
     buildColorRegions();
 
-    if (!isActive) {
-      generatedBottom = overlayStart;
-      revealBottom = overlayStart;
-    }
-
     updateTransitionOpacity();
   };
 
   const draw = () => {
-    context.clearRect(0, 0, width, documentHeight);
+    context.clearRect(0, 0, width, window.innerHeight);
 
-    if (!isActive || revealBottom <= overlayStart) {
+    if (window.scrollY + window.innerHeight < overlayStart) {
       return;
     }
 
@@ -1835,9 +1824,9 @@ const initAsciiCurtain = () => {
     const maskNoisePosition = viewportMaskTop / cellHeight;
     const noiseFrame = Math.floor(maskNoisePosition);
     const noiseMix = maskNoisePosition - noiseFrame;
-    const viewportTop = Math.max(
-      overlayStart,
-      window.scrollY - window.innerHeight * 1.5,
+    const firstDocumentRow = Math.max(
+      Math.floor(overlayStart / cellHeight),
+      Math.floor(window.scrollY / cellHeight),
     );
 
     for (let column = 0; column < columns; column += 1) {
@@ -1849,29 +1838,23 @@ const initAsciiCurtain = () => {
         Math.sin(column * 0.19 - maskNoisePosition * 0.07) * cellHeight * 1.1 +
         (movingNoise - 0.5) * cellHeight * 3.4;
       const edge = Math.max(overlayStart, viewportMaskTop + wave);
-      const startRow = Math.max(
-        Math.floor(overlayStart / cellHeight),
-        Math.floor(viewportTop / cellHeight),
-      );
-      const endRow = Math.min(
-        Math.ceil((edge + cellHeight * 2.5) / cellHeight),
-        Math.ceil(revealBottom / cellHeight),
-        Math.ceil(documentHeight / cellHeight),
-      );
+      const endRow = Math.ceil((edge + cellHeight * 2.5) / cellHeight);
+      const edgeOnScreen = edge - window.scrollY;
 
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
       context.fillStyle = "rgba(17, 17, 17, 0.88)";
       context.fillRect(
         column * cellWidth,
-        viewportTop,
+        0,
         cellWidth + 1,
-        Math.max(0, edge - viewportTop + cellHeight * 1.5),
+        Math.max(0, edgeOnScreen + cellHeight * 1.5),
       );
 
-      for (let row = startRow; row < endRow; row += 1) {
-        const y = row * cellHeight;
-        const depth = edge - y;
+      for (let row = firstDocumentRow; row < endRow; row += 1) {
+        const documentY = row * cellHeight;
+        const screenY = documentY - window.scrollY;
+        const depth = edge - documentY;
 
         if (depth < -cellHeight * 2.5) {
           continue;
@@ -1891,10 +1874,11 @@ const initAsciiCurtain = () => {
         const glyphIndex = Math.floor(noise(row + 11, column + 7) * glyphs.length);
         const sampleX =
           column * cellWidth + noise(column + 31, row + 41) * cellWidth;
-        const sampleY = y + noise(column + 53, row + 61) * cellHeight;
+        const sampleY =
+          documentY + noise(column + 53, row + 61) * cellHeight;
         context.globalAlpha = edgeFade;
         context.fillStyle = sampleColor(sampleX, sampleY);
-        context.fillText(glyphs[glyphIndex], column * cellWidth, y);
+        context.fillText(glyphs[glyphIndex], column * cellWidth, screenY);
       }
     }
 
@@ -1902,72 +1886,14 @@ const initAsciiCurtain = () => {
     context.globalAlpha = 1;
   };
 
-  const animate = (time) => {
-    frameId = 0;
-    const viewportLead = window.innerHeight * 1.15;
-
-    if (window.scrollY + window.innerHeight >= overlayStart) {
-      isActive = true;
-      generatedBottom = Math.min(
-        documentHeight,
-        Math.max(generatedBottom, window.scrollY + viewportLead),
-      );
-    }
-
-    if (reducedMotion.matches) {
-      revealBottom = generatedBottom;
-    } else {
-      revealBottom += (generatedBottom - revealBottom) * 0.075;
-    }
-
-    if (time - lastDrawAt >= 32 || reducedMotion.matches) {
-      draw(time);
-      lastDrawAt = time;
-    }
-
-    if (
-      isActive &&
-      !reducedMotion.matches &&
-      Math.abs(generatedBottom - revealBottom) > 0.5
-    ) {
-      frameId = requestAnimationFrame(animate);
-    }
-  };
-
-  const requestAnimation = () => {
-    if (!frameId) {
-      frameId = requestAnimationFrame(animate);
-    }
-  };
-
   const handleScroll = () => {
     updateTransitionOpacity();
-
-    if (isActive) {
-      const viewportLead = window.innerHeight * 1.15;
-      generatedBottom = Math.min(
-        documentHeight,
-        Math.max(generatedBottom, window.scrollY + viewportLead),
-      );
-
-      if (revealBottom < window.scrollY + window.innerHeight) {
-        revealBottom = Math.min(
-          generatedBottom,
-          window.scrollY + window.innerHeight,
-        );
-      }
-
-      const now = performance.now();
-      draw(now);
-      lastDrawAt = now;
-    }
-
-    requestAnimation();
+    draw();
   };
 
   const handleResize = () => {
     resize();
-    requestAnimation();
+    draw();
   };
 
   window.addEventListener("scroll", handleScroll, { passive: true });
@@ -1985,7 +1911,7 @@ const initAsciiCurtain = () => {
     })
     .finally(() => {
       resize();
-      requestAnimation();
+      draw();
     });
 };
 
