@@ -1426,8 +1426,10 @@ const initAsciiCurtain = () => {
   let lastDrawAt = 0;
   let splatPixels = null;
   let resumePixels = null;
+  let terminalPixels = null;
   let splatRect = null;
   let resumeRect = null;
+  let terminalRect = null;
   let surfaceColorRegions = [];
   let foregroundColorRegions = [];
 
@@ -1638,7 +1640,121 @@ const initAsciiCurtain = () => {
     );
   };
 
+  const renderTerminalPixels = () => {
+    const terminal = document.querySelector(".terminal-window");
+
+    if (!terminal) {
+      terminalPixels = null;
+      terminalRect = null;
+      return;
+    }
+
+    const sourceRect = terminal.getBoundingClientRect();
+    const scale = 2;
+    const buffer = document.createElement("canvas");
+    const bufferContext = buffer.getContext("2d", { willReadFrequently: true });
+    const titlebar = terminal.querySelector(".terminal-titlebar");
+    const titlebarRect = titlebar.getBoundingClientRect();
+
+    buffer.width = Math.max(1, Math.round(sourceRect.width * scale));
+    buffer.height = Math.max(1, Math.round(sourceRect.height * scale));
+    bufferContext.scale(scale, scale);
+    bufferContext.save();
+    bufferContext.beginPath();
+    bufferContext.roundRect(0, 0, sourceRect.width, sourceRect.height, 10);
+    bufferContext.clip();
+    bufferContext.fillStyle = "#0a0a0a";
+    bufferContext.fillRect(0, 0, sourceRect.width, sourceRect.height);
+
+    const titleGradient = bufferContext.createLinearGradient(
+      0,
+      titlebarRect.top - sourceRect.top,
+      0,
+      titlebarRect.bottom - sourceRect.top,
+    );
+    titleGradient.addColorStop(0, "#f5f5f5");
+    titleGradient.addColorStop(1, "#ececec");
+    bufferContext.fillStyle = titleGradient;
+    bufferContext.fillRect(
+      titlebarRect.left - sourceRect.left,
+      titlebarRect.top - sourceRect.top,
+      titlebarRect.width,
+      titlebarRect.height,
+    );
+
+    terminal.querySelectorAll(".terminal-dot").forEach((dot) => {
+      const rect = dot.getBoundingClientRect();
+      const style = getComputedStyle(dot);
+      const centerX = rect.left - sourceRect.left + rect.width / 2;
+      const centerY = rect.top - sourceRect.top + rect.height / 2;
+
+      bufferContext.beginPath();
+      bufferContext.arc(centerX, centerY, rect.width / 2, 0, Math.PI * 2);
+      bufferContext.fillStyle = style.backgroundColor;
+      bufferContext.fill();
+    });
+
+    terminal.querySelectorAll(".hero-toc-list li:not(:last-child)").forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      bufferContext.fillStyle = "rgba(255, 255, 255, 0.08)";
+      bufferContext.fillRect(
+        rect.left - sourceRect.left,
+        rect.bottom - sourceRect.top - 1,
+        rect.width,
+        1,
+      );
+    });
+
+    const walker = document.createTreeWalker(terminal, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+
+    while (textNode) {
+      const text = textNode.nodeValue.replace(/\s+/g, " ").trim();
+      const parent = textNode.parentElement;
+
+      if (text && parent) {
+        const range = document.createRange();
+        range.selectNodeContents(textNode);
+        const rect = range.getBoundingClientRect();
+        const style = getComputedStyle(parent);
+
+        if (rect.width > 0 && rect.height > 0 && style.visibility !== "hidden") {
+          bufferContext.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          bufferContext.textBaseline = "top";
+          bufferContext.fillStyle = style.color;
+          bufferContext.fillText(
+            text,
+            rect.left - sourceRect.left,
+            rect.top - sourceRect.top,
+          );
+        }
+      }
+
+      textNode = walker.nextNode();
+    }
+
+    bufferContext.restore();
+    bufferContext.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    bufferContext.lineWidth = 1;
+    bufferContext.beginPath();
+    bufferContext.roundRect(0.5, 0.5, sourceRect.width - 1, sourceRect.height - 1, 10);
+    bufferContext.stroke();
+
+    terminalPixels = {
+      width: buffer.width,
+      height: buffer.height,
+      data: bufferContext.getImageData(0, 0, buffer.width, buffer.height).data,
+    };
+    terminalRect = {
+      left: (width - sourceRect.width) / 2,
+      top: overlayStart + (window.innerHeight - sourceRect.height) / 2,
+      width: sourceRect.width,
+      height: sourceRect.height,
+    };
+  };
+
   const sampleColor = (x, y) =>
+    sampleRegion(terminalPixels, terminalRect, x, y) ||
     sampleColorRegion(foregroundColorRegions, x, y) ||
     sampleRegion(resumePixels, resumeRect, x, y) ||
     sampleColorRegion(surfaceColorRegions, x, y) ||
@@ -1685,6 +1801,7 @@ const initAsciiCurtain = () => {
       height: window.innerHeight,
     };
     resumeRect = getDocumentRect(document.querySelector(".resume-preview img"));
+    renderTerminalPixels();
     buildColorRegions();
 
     if (!isActive) {
