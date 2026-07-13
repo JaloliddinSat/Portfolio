@@ -1418,9 +1418,6 @@ const initAsciiCurtain = () => {
   let cellHeight = 18;
   let backgroundColor = "#111111";
   let overlayStart = 0;
-  let lastScrollY = window.scrollY;
-  let maskLag = 0;
-  let settleFrameId = 0;
   let splatPixels = null;
   let resumePixels = null;
   let terminalPixels = null;
@@ -1429,6 +1426,8 @@ const initAsciiCurtain = () => {
   let terminalRect = null;
   let surfaceColorRegions = [];
   let foregroundColorRegions = [];
+  let liveSplatCaptured = false;
+  let liveSplatCapturePending = false;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -1456,6 +1455,81 @@ const initAsciiCurtain = () => {
       height: buffer.height,
       data: bufferContext.getImageData(0, 0, buffer.width, buffer.height).data,
     };
+  };
+
+  const captureLiveSplatPixels = () => {
+    liveSplatCapturePending = false;
+
+    if (liveSplatCaptured) {
+      return;
+    }
+
+    const source = document.querySelector("#splat-viewer canvas");
+
+    if (!source || source.width <= 0 || source.height <= 0) {
+      return;
+    }
+
+    try {
+      const maxWidth = 1280;
+      const scale = Math.min(1, maxWidth / source.width);
+      const buffer = document.createElement("canvas");
+      const bufferContext = buffer.getContext("2d", { willReadFrequently: true });
+      buffer.width = Math.max(1, Math.round(source.width * scale));
+      buffer.height = Math.max(1, Math.round(source.height * scale));
+      bufferContext.drawImage(source, 0, 0, buffer.width, buffer.height);
+
+      const imageData = bufferContext.getImageData(
+        0,
+        0,
+        buffer.width,
+        buffer.height,
+      );
+      let darkest = 255;
+      let lightest = 0;
+      let visibleSamples = 0;
+      const sampleStride = Math.max(4, Math.floor(imageData.data.length / 1600 / 4) * 4);
+
+      for (let index = 0; index < imageData.data.length; index += sampleStride) {
+        if (imageData.data[index + 3] < 8) {
+          continue;
+        }
+
+        const brightness =
+          (imageData.data[index] +
+            imageData.data[index + 1] +
+            imageData.data[index + 2]) /
+          3;
+        darkest = Math.min(darkest, brightness);
+        lightest = Math.max(lightest, brightness);
+        visibleSamples += 1;
+      }
+
+      if (visibleSamples < 20 || lightest - darkest < 12) {
+        return;
+      }
+
+      splatPixels = {
+        width: buffer.width,
+        height: buffer.height,
+        data: imageData.data,
+      };
+      liveSplatCaptured = true;
+      draw();
+    } catch (error) {
+      console.warn("[ASCII] Live splat sampling unavailable:", error);
+    }
+  };
+
+  const requestLiveSplatCapture = () => {
+    if (liveSplatCaptured || liveSplatCapturePending) {
+      return;
+    }
+
+    liveSplatCapturePending = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(captureLiveSplatPixels);
+    });
   };
 
   const getDocumentRect = (element) => {
@@ -1822,7 +1896,7 @@ const initAsciiCurtain = () => {
     const columns = Math.ceil(width / cellWidth) + 1;
     const viewportMaskTop = Math.max(
       overlayStart,
-      window.scrollY + window.innerHeight * 0.05 + maskLag,
+      window.scrollY + window.innerHeight * 0.05,
     );
     const maskNoisePosition = viewportMaskTop / cellHeight;
     const noiseFrame = Math.floor(maskNoisePosition);
@@ -1889,40 +1963,17 @@ const initAsciiCurtain = () => {
     context.globalAlpha = 1;
   };
 
-  const settleMaskLag = () => {
-    settleFrameId = 0;
-    maskLag *= 0.82;
-
-    if (Math.abs(maskLag) < 0.15) {
-      maskLag = 0;
-    }
-
-    draw();
-
-    if (maskLag !== 0) {
-      settleFrameId = requestAnimationFrame(settleMaskLag);
-    }
-  };
-
   const handleScroll = () => {
-    const delta = window.scrollY - lastScrollY;
-    lastScrollY = window.scrollY;
-    maskLag = Math.max(
-      -window.innerHeight * 0.12,
-      Math.min(window.innerHeight * 0.06, maskLag + delta * 0.24),
-    );
+    if (window.scrollY >= overlayStart - window.innerHeight * 0.12) {
+      requestLiveSplatCapture();
+    }
 
     updateTransitionOpacity();
     draw();
-
-    if (!settleFrameId) {
-      settleFrameId = requestAnimationFrame(settleMaskLag);
-    }
   };
 
   const handleResize = () => {
     resize();
-    lastScrollY = window.scrollY;
     draw();
   };
 
