@@ -1423,12 +1423,96 @@ const initAsciiCurtain = () => {
   let revealBottom = 0;
   let frameId = 0;
   let isActive = false;
+  let lastDrawAt = 0;
+  let splatPixels = null;
+  let resumePixels = null;
+  let splatRect = null;
+  let resumeRect = null;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
 
     return value - Math.floor(value);
   };
+
+  const loadPixels = async (source) => {
+    if (!source) {
+      return null;
+    }
+
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+
+    const buffer = document.createElement("canvas");
+    const bufferContext = buffer.getContext("2d", { willReadFrequently: true });
+    buffer.width = image.naturalWidth;
+    buffer.height = image.naturalHeight;
+    bufferContext.drawImage(image, 0, 0);
+
+    return {
+      width: buffer.width,
+      height: buffer.height,
+      data: bufferContext.getImageData(0, 0, buffer.width, buffer.height).data,
+    };
+  };
+
+  const getDocumentRect = (element) => {
+    if (!element) {
+      return null;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    return {
+      left: rect.left + window.scrollX,
+      top: rect.top + window.scrollY,
+      width: rect.width,
+      height: rect.height,
+    };
+  };
+
+  const readPixel = (asset, x, y) => {
+    const pixelX = Math.max(0, Math.min(asset.width - 1, Math.round(x)));
+    const pixelY = Math.max(0, Math.min(asset.height - 1, Math.round(y)));
+    const index = (pixelY * asset.width + pixelX) * 4;
+
+    return `rgb(${asset.data[index]}, ${asset.data[index + 1]}, ${asset.data[index + 2]})`;
+  };
+
+  const sampleRegion = (asset, rect, x, y, fit = "stretch") => {
+    if (
+      !asset ||
+      !rect ||
+      x < rect.left ||
+      x > rect.left + rect.width ||
+      y < rect.top ||
+      y > rect.top + rect.height
+    ) {
+      return null;
+    }
+
+    if (fit === "cover") {
+      const scale = Math.max(rect.width / asset.width, rect.height / asset.height);
+      const drawnWidth = asset.width * scale;
+      const drawnHeight = asset.height * scale;
+      const sourceX = (x - rect.left + (drawnWidth - rect.width) / 2) / scale;
+      const sourceY = (y - rect.top + (drawnHeight - rect.height) / 2) / scale;
+
+      return readPixel(asset, sourceX, sourceY);
+    }
+
+    return readPixel(
+      asset,
+      ((x - rect.left) / rect.width) * asset.width,
+      ((y - rect.top) / rect.height) * asset.height,
+    );
+  };
+
+  const sampleColor = (x, y) =>
+    sampleRegion(resumePixels, resumeRect, x, y) ||
+    sampleRegion(splatPixels, splatRect, x, y, "cover") ||
+    backgroundColor;
 
   const resize = () => {
     const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
@@ -1450,6 +1534,13 @@ const initAsciiCurtain = () => {
       getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() ||
       "#111111";
     overlayStart = getHeroTrackEndScrollY();
+    splatRect = {
+      left: 0,
+      top: overlayStart,
+      width,
+      height: window.innerHeight,
+    };
+    resumeRect = getDocumentRect(document.querySelector(".resume-preview img"));
 
     if (!isActive) {
       generatedBottom = overlayStart;
@@ -1487,15 +1578,13 @@ const initAsciiCurtain = () => {
 
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
-      context.fillStyle = backgroundColor;
+      context.fillStyle = "rgba(17, 17, 17, 0.88)";
       context.fillRect(
         column * cellWidth,
         overlayStart,
         cellWidth + 1,
         Math.max(0, edge - overlayStart + cellHeight * 1.5),
       );
-
-      context.globalCompositeOperation = "destination-out";
 
       for (let row = startRow; row < endRow; row += 1) {
         const y = row * cellHeight;
@@ -1517,8 +1606,11 @@ const initAsciiCurtain = () => {
         }
 
         const glyphIndex = Math.floor(noise(row + 11, column + 7) * glyphs.length);
+        const sampleX =
+          column * cellWidth + noise(column + 31, row + 41) * cellWidth;
+        const sampleY = y + noise(column + 53, row + 61) * cellHeight;
         context.globalAlpha = edgeFade;
-        context.fillStyle = "#000000";
+        context.fillStyle = sampleColor(sampleX, sampleY);
         context.fillText(glyphs[glyphIndex], column * cellWidth, y);
       }
     }
@@ -1545,7 +1637,10 @@ const initAsciiCurtain = () => {
       revealBottom += (generatedBottom - revealBottom) * 0.075;
     }
 
-    draw(time);
+    if (time - lastDrawAt >= 32 || reducedMotion.matches) {
+      draw(time);
+      lastDrawAt = time;
+    }
 
     if (isActive && !reducedMotion.matches) {
       frameId = requestAnimationFrame(animate);
@@ -1569,8 +1664,21 @@ const initAsciiCurtain = () => {
 
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
-  resize();
-  requestAnimation();
+  Promise.all([
+    loadPixels("/splats/Color.png"),
+    loadPixels(document.querySelector(".resume-preview img")?.currentSrc),
+  ])
+    .then(([loadedSplatPixels, loadedResumePixels]) => {
+      splatPixels = loadedSplatPixels;
+      resumePixels = loadedResumePixels;
+    })
+    .catch((error) => {
+      console.warn("[ASCII] Pixel sampling fallback active:", error);
+    })
+    .finally(() => {
+      resize();
+      requestAnimation();
+    });
 };
 
 const initHeroMotion = () => {
