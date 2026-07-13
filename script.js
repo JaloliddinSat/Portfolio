@@ -1560,7 +1560,10 @@ const initAsciiCurtain = () => {
     const noisePhase = phase * 2.4;
     const noiseFrame = Math.floor(noisePhase);
     const noiseMix = noisePhase - noiseFrame;
-    const startRow = Math.floor(overlayStart / cellHeight);
+    const viewportMaskTop = Math.max(
+      overlayStart,
+      window.scrollY + window.innerHeight * 0.05,
+    );
 
     for (let column = 0; column < columns; column += 1) {
       const movingNoise =
@@ -1570,9 +1573,13 @@ const initAsciiCurtain = () => {
         Math.sin(column * 0.72 + phase) * cellHeight * 1.5 +
         Math.sin(column * 0.19 - phase * 0.7) * cellHeight * 1.1 +
         (movingNoise - 0.5) * cellHeight * 3.4;
-      const edge = Math.min(documentHeight, revealBottom + wave);
+      const edge = Math.max(overlayStart, viewportMaskTop + wave);
+      const startRow = Math.max(
+        Math.floor(overlayStart / cellHeight),
+        Math.floor((edge - cellHeight * 2.5) / cellHeight),
+      );
       const endRow = Math.min(
-        Math.ceil((edge + cellHeight * 2.5) / cellHeight),
+        Math.ceil(revealBottom / cellHeight),
         Math.ceil(documentHeight / cellHeight),
       );
 
@@ -1581,14 +1588,14 @@ const initAsciiCurtain = () => {
       context.fillStyle = "rgba(17, 17, 17, 0.88)";
       context.fillRect(
         column * cellWidth,
-        overlayStart,
+        edge,
         cellWidth + 1,
-        Math.max(0, edge - overlayStart + cellHeight * 1.5),
+        Math.max(0, revealBottom - edge + cellHeight * 1.5),
       );
 
       for (let row = startRow; row < endRow; row += 1) {
         const y = row * cellHeight;
-        const depth = edge - y;
+        const depth = y - edge;
 
         if (depth < -cellHeight * 2.5) {
           continue;
