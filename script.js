@@ -1552,6 +1552,10 @@ const initAsciiCurtain = () => {
 
     surfaceColorRegions = surfaceSelectors.flatMap((selector) =>
       [...document.querySelectorAll(selector)].flatMap((element) => {
+        if (element.closest(".hero")) {
+          return [];
+        }
+
         const rect = getSamplingRect(element);
         const style = getComputedStyle(element);
         const surfaceColor = element.matches(".terminal-titlebar")
@@ -1575,6 +1579,10 @@ const initAsciiCurtain = () => {
 
     foregroundColorRegions = [...document.querySelectorAll(foregroundSelector)].flatMap(
       (element) => {
+        if (element.closest(".hero")) {
+          return [];
+        }
+
         const rect = getSamplingRect(element);
         const style = getComputedStyle(element);
 
