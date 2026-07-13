@@ -1428,6 +1428,8 @@ const initAsciiCurtain = () => {
   let resumePixels = null;
   let splatRect = null;
   let resumeRect = null;
+  let surfaceColorRegions = [];
+  let foregroundColorRegions = [];
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -1480,6 +1482,103 @@ const initAsciiCurtain = () => {
     return `rgb(${asset.data[index]}, ${asset.data[index + 1]}, ${asset.data[index + 2]})`;
   };
 
+  const blendColor = (color, backdrop = [17, 17, 17]) => {
+    const channels = color.match(/[\d.]+/g)?.map(Number);
+
+    if (!channels || channels.length < 3) {
+      return color;
+    }
+
+    const alpha = channels.length > 3 ? channels[3] : 1;
+    const blended = channels.slice(0, 3).map((channel, index) =>
+      Math.round(channel * alpha + backdrop[index] * (1 - alpha)),
+    );
+
+    return `rgb(${blended[0]}, ${blended[1]}, ${blended[2]})`;
+  };
+
+  const buildColorRegions = () => {
+    const surfaceSelectors = [
+      ".terminal-window",
+      ".resume-item",
+      ".project-card",
+      ".project-list-card",
+      ".resume-panel",
+      ".button",
+      ".brand-mark",
+    ];
+    const foregroundSelector = [
+      "h1",
+      "h2",
+      "h3",
+      ".section-title",
+      ".subsection-title",
+      ".eyebrow",
+      ".nav-links a",
+      ".hero-toc-list a",
+      ".button",
+      "p",
+      "li",
+    ].join(",");
+
+    surfaceColorRegions = surfaceSelectors.flatMap((selector) =>
+      [...document.querySelectorAll(selector)].flatMap((element) => {
+        const rect = getDocumentRect(element);
+        const style = getComputedStyle(element);
+
+        if (
+          !rect ||
+          rect.width <= 0 ||
+          rect.height <= 0 ||
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          style.backgroundColor === "rgba(0, 0, 0, 0)"
+        ) {
+          return [];
+        }
+
+        return [{ ...rect, color: blendColor(style.backgroundColor) }];
+      }),
+    );
+
+    foregroundColorRegions = [...document.querySelectorAll(foregroundSelector)].flatMap(
+      (element) => {
+        const rect = getDocumentRect(element);
+        const style = getComputedStyle(element);
+
+        if (
+          !rect ||
+          rect.width <= 0 ||
+          rect.height <= 0 ||
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          Number(style.opacity) === 0
+        ) {
+          return [];
+        }
+
+        return [{ ...rect, color: blendColor(style.color) }];
+      },
+    );
+  };
+
+  const sampleColorRegion = (regions, x, y) => {
+    for (let index = regions.length - 1; index >= 0; index -= 1) {
+      const region = regions[index];
+
+      if (
+        x >= region.left &&
+        x <= region.left + region.width &&
+        y >= region.top &&
+        y <= region.top + region.height
+      ) {
+        return region.color;
+      }
+    }
+
+    return null;
+  };
+
   const sampleRegion = (asset, rect, x, y, fit = "stretch") => {
     if (
       !asset ||
@@ -1510,7 +1609,9 @@ const initAsciiCurtain = () => {
   };
 
   const sampleColor = (x, y) =>
+    sampleColorRegion(foregroundColorRegions, x, y) ||
     sampleRegion(resumePixels, resumeRect, x, y) ||
+    sampleColorRegion(surfaceColorRegions, x, y) ||
     sampleRegion(splatPixels, splatRect, x, y, "cover") ||
     backgroundColor;
 
@@ -1554,6 +1655,7 @@ const initAsciiCurtain = () => {
       height: window.innerHeight,
     };
     resumeRect = getDocumentRect(document.querySelector(".resume-preview img"));
+    buildColorRegions();
 
     if (!isActive) {
       generatedBottom = overlayStart;
