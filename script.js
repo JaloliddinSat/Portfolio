@@ -1564,7 +1564,10 @@ const initAsciiCurtain = () => {
       overlayStart,
       window.scrollY + window.innerHeight * 0.05,
     );
-    const viewportTop = Math.max(overlayStart, window.scrollY);
+    const viewportTop = Math.max(
+      overlayStart,
+      window.scrollY - window.innerHeight * 1.5,
+    );
 
     for (let column = 0; column < columns; column += 1) {
       const movingNoise =
