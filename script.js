@@ -58,8 +58,11 @@ const STEPNOTE_SPLAT_CONFIG = {
   splatScale: 1,
   alphaThreshold: 5,
   loopKeyframe: [-3, -2.45, 0],
-  spinAxis: [0, 1, 0],
-  rotationOrigin: [0, 0, 0],
+  spinAxis: [0, 1, 0.26],
+  rotationOrigin: [0.12, 0, 0],
+  orbitStartPercent: -14.2,
+  orbitEndPercent: 27.5,
+  pingPong: true,
   loopSeconds: 8.5,
 };
 
@@ -1373,6 +1376,9 @@ const cloneStepNoteSplatConfig = (source = STEPNOTE_SPLAT_CONFIG) => ({
   loopKeyframe: [...source.loopKeyframe],
   spinAxis: [...source.spinAxis],
   rotationOrigin: [...(source.rotationOrigin || [0, 0, 0])],
+  orbitStartPercent: source.orbitStartPercent ?? 0,
+  orbitEndPercent: source.orbitEndPercent ?? 100,
+  pingPong: source.pingPong ?? false,
   loopSeconds: source.loopSeconds,
 });
 
@@ -1454,6 +1460,9 @@ const formatStepNoteSplatConfig = (config) =>
   loopKeyframe: [${config.loopKeyframe.join(", ")}],
   spinAxis: [${config.spinAxis.join(", ")}],
   rotationOrigin: [${config.rotationOrigin.join(", ")}],
+  orbitStartPercent: ${config.orbitStartPercent},
+  orbitEndPercent: ${config.orbitEndPercent},
+  pingPong: ${config.pingPong},
   loopSeconds: ${config.loopSeconds},
 };`;
 
@@ -1569,20 +1578,20 @@ const buildStepNoteDebugPanel = ({
   panel.setAttribute("aria-label", "StepNote splat debug controls");
   panel.innerHTML = `
     <h2>StepNote Splat Debug</h2>
-    <p class="stepnote-debug-caption">The loop keyframe is both the first and final pose. Tune the live preview, save it in this browser, then copy the config into script.js to make it permanent.</p>
+    <p class="stepnote-debug-caption">The keyframe sets the splat pose while the camera follows the configured orbit. Tune the live preview, save it in this browser, then copy the config into script.js to make it permanent.</p>
     <div class="stepnote-debug-section" data-debug-section="camera"><p class="stepnote-debug-title">Camera</p><p class="stepnote-debug-caption">px / py / pz pan the camera and aim together. lx / ly / lz change only where the camera looks.</p></div>
     <div class="stepnote-debug-section" data-debug-section="placement"><p class="stepnote-debug-title">Splat placement</p></div>
-    <div class="stepnote-debug-section" data-debug-section="rotation"><p class="stepnote-debug-title">Camera orbit</p><p class="stepnote-debug-caption">x° / y° / z° set the splat pose. ax / ay / az set the camera-orbit axis. ox / oy / oz set the world-space orbit origin. Scrub time away from 0% to position the orbit, then press Play loop.</p></div>
+    <div class="stepnote-debug-section" data-debug-section="rotation"><p class="stepnote-debug-title">Camera orbit</p><p class="stepnote-debug-caption">x° / y° / z° set the splat pose. ax / ay / az set the camera-orbit axis. ox / oy / oz set the world-space orbit origin. Time travels from ${config.orbitStartPercent}% (${(100 + config.orbitStartPercent).toFixed(1)}%) to ${config.orbitEndPercent}% and then reverses. Press Play to preview it.</p></div>
     <div class="stepnote-debug-actions">
-      <button type="button" class="stepnote-debug-wide" data-debug-action="keyframe">Set current pose as loop keyframe</button>
-      <button type="button" data-debug-action="pause">Play loop</button>
+      <button type="button" class="stepnote-debug-wide" data-debug-action="keyframe">Set current splat pose</button>
+      <button type="button" data-debug-action="pause">Play orbit</button>
       <button type="button" data-debug-action="copy">Copy config</button>
       <button type="button" data-debug-action="save">Save in browser</button>
       <button type="button" data-debug-action="reset">Reset defaults</button>
       <button type="button" data-debug-action="download">Download JSON</button>
       <button type="button" data-debug-action="clear">Clear saved data</button>
     </div>
-    <p class="stepnote-debug-output" data-debug-output>Loop: 0% · 8.00s</p>
+    <p class="stepnote-debug-output" data-debug-output>Orbit paused</p>
   `;
   document.body.appendChild(panel);
 
@@ -1645,19 +1654,21 @@ const buildStepNoteDebugPanel = ({
   addField("rotation", "secs", "loopSeconds", null, 1, 30, 0.25);
 
   const rotationSection = panel.querySelector('[data-debug-section="rotation"]');
+  const timeMin = config.pingPong ? config.orbitStartPercent : 0;
+  const timeMax = config.pingPong ? config.orbitEndPercent : 100;
   const progressRow = document.createElement("div");
   progressRow.className = "stepnote-debug-row";
   progressRow.innerHTML = `
     <label for="stepnote-debug-progress">time</label>
-    <input id="stepnote-debug-progress" type="range" min="0" max="100" step="0.1" value="0">
-    <input type="number" min="0" max="100" step="0.1" value="0" aria-label="Loop time percent">
+    <input id="stepnote-debug-progress" type="range" min="${timeMin}" max="${timeMax}" step="0.1" value="${timeMin}">
+    <input type="number" min="${timeMin}" max="${timeMax}" step="0.1" value="${timeMin}" aria-label="Orbit position percent">
   `;
   rotationSection.appendChild(progressRow);
   const [progressSlider, progressNumber] = progressRow.querySelectorAll("input");
   let isScrubbingProgress = false;
 
   const applyProgress = (percent) => {
-    const safePercent = Math.min(100, Math.max(0, Number(percent)));
+    const safePercent = Math.min(timeMax, Math.max(timeMin, Number(percent)));
     progressSlider.value = String(safePercent);
     progressNumber.value = String(Number(safePercent.toFixed(1)));
     onProgressChange(safePercent / 100);
@@ -1687,11 +1698,11 @@ const buildStepNoteDebugPanel = ({
   panel.querySelector('[data-debug-action="keyframe"]').addEventListener("click", () => {
     onSetKeyframe();
     refresh();
-    showToast("Loop keyframe captured.");
+    showToast("Splat pose captured.");
   });
   pauseButton.addEventListener("click", () => {
     paused = !paused;
-    pauseButton.textContent = paused ? "Play loop" : "Pause loop";
+    pauseButton.textContent = paused ? "Play orbit" : "Pause orbit";
     onPause(paused);
   });
   panel.querySelector('[data-debug-action="copy"]').addEventListener("click", async () => {
@@ -1730,9 +1741,13 @@ const buildStepNoteDebugPanel = ({
 
   return {
     refresh,
-    updateProgress(progress, cameraPose) {
+    updateProgress(progress, cameraPose, playback = {}) {
       const percent = progress * 100;
-      const currentSeconds = progress * config.loopSeconds;
+      const normalizedPercent = ((percent % 100) + 100) % 100;
+      const span = Math.max(0.0001, config.orbitEndPercent - config.orbitStartPercent);
+      const legProgress = playback.legProgress ??
+        Math.min(1, Math.max(0, (percent - config.orbitStartPercent) / span));
+      const currentSeconds = legProgress * config.loopSeconds;
 
       if (
         !isScrubbingProgress &&
@@ -1743,8 +1758,9 @@ const buildStepNoteDebugPanel = ({
       }
 
       output.textContent =
-        `Loop: ${percent.toFixed(1)}% · ` +
-        `${currentSeconds.toFixed(2)}s / ${config.loopSeconds.toFixed(2)}s` +
+        `Orbit: ${percent.toFixed(1)}% (${normalizedPercent.toFixed(1)}%) · ` +
+        `${currentSeconds.toFixed(2)}s / ${config.loopSeconds.toFixed(2)}s one way` +
+        (playback.direction ? ` · ${playback.direction}` : " · paused") +
         (cameraPose
           ? `\ncam ${formatVec3(cameraPose.position)}` +
             `\naim ${formatVec3(cameraPose.lookAt)}`
@@ -1839,9 +1855,17 @@ const initStepNoteSplat = async () => {
       viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     }
 
-    let loopStart = performance.now();
     let paused = DEBUG_STEPNOTE_SPLAT;
-    let pausedProgress = 0;
+    let playbackPhase = 0;
+    const orbitStart = () => config.orbitStartPercent / 100;
+    const orbitEnd = () => config.orbitEndPercent / 100;
+    const progressFromPhase = (phase) => {
+      if (!config.pingPong) return phase % 1;
+      const legProgress = phase <= 1 ? phase : 2 - phase;
+      return orbitStart() + (orbitEnd() - orbitStart()) * legProgress;
+    };
+    let pausedProgress = progressFromPhase(playbackPhase);
+    let loopStart = performance.now();
     let currentQuaternion = initialRotation;
     let debugPanel = null;
 
@@ -1878,10 +1902,13 @@ const initStepNoteSplat = async () => {
     const applyConfig = () => {
       scene.scale.set(config.splatScale, config.splatScale, config.splatScale);
       scene.minimumAlpha = config.alphaThreshold;
-      loopStart = performance.now() - pausedProgress * config.loopSeconds * 1000;
+      pausedProgress = progressFromPhase(playbackPhase);
+      loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
       const cameraPose = applyLoopTransform(pausedProgress);
       window.__stepNoteSplatConfig = cloneStepNoteSplatConfig(config);
-      debugPanel?.updateProgress(pausedProgress, cameraPose);
+      debugPanel?.updateProgress(pausedProgress, cameraPose, {
+        legProgress: playbackPhase <= 1 ? playbackPhase : 2 - playbackPhase,
+      });
     };
 
     const applyDebugChange = (change) => {
@@ -1899,21 +1926,26 @@ const initStepNoteSplat = async () => {
         onChange: applyDebugChange,
         onSetKeyframe: () => {
           config.loopKeyframe = eulerDegreesFromQuaternion(currentQuaternion);
-          pausedProgress = 0;
+          playbackPhase = 0;
+          pausedProgress = progressFromPhase(playbackPhase);
           loopStart = performance.now();
           applyConfig();
         },
         onPause: (shouldPause) => {
           paused = shouldPause;
           if (!paused) {
-            loopStart = performance.now() - pausedProgress * config.loopSeconds * 1000;
+            loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
           }
         },
         onProgressChange: (progress) => {
-          pausedProgress = Math.min(1, Math.max(0, progress));
-          loopStart = performance.now() - pausedProgress * config.loopSeconds * 1000;
+          pausedProgress = Math.min(orbitEnd(), Math.max(orbitStart(), progress));
+          const orbitSpan = Math.max(0.0001, orbitEnd() - orbitStart());
+          playbackPhase = (pausedProgress - orbitStart()) / orbitSpan;
+          loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
           const cameraPose = applyLoopTransform(pausedProgress);
-          debugPanel?.updateProgress(pausedProgress, cameraPose);
+          debugPanel?.updateProgress(pausedProgress, cameraPose, {
+            legProgress: playbackPhase,
+          });
         },
       });
       window.__stepNoteSplatConfig = cloneStepNoteSplatConfig(config);
@@ -1928,12 +1960,20 @@ const initStepNoteSplat = async () => {
 
       if (!document.hidden && !details?.hidden && shouldUpdateLoop) {
         const durationMs = Math.max(1, config.loopSeconds) * 1000;
-        const progress = paused
-          ? pausedProgress
-          : ((time - loopStart) % durationMs) / durationMs;
+        if (!paused) {
+          const cycleLegs = config.pingPong ? 2 : 1;
+          playbackPhase = ((time - loopStart) / durationMs) % cycleLegs;
+        }
+        const progress = paused ? pausedProgress : progressFromPhase(playbackPhase);
         pausedProgress = progress;
         const cameraPose = applyLoopTransform(progress);
-        debugPanel?.updateProgress(progress, cameraPose);
+        const legProgress = config.pingPong
+          ? (playbackPhase <= 1 ? playbackPhase : 2 - playbackPhase)
+          : playbackPhase;
+        debugPanel?.updateProgress(progress, cameraPose, {
+          legProgress,
+          direction: paused ? null : playbackPhase <= 1 ? "forward" : "reverse",
+        });
       }
 
       requestAnimationFrame(animate);
