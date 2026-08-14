@@ -1693,7 +1693,9 @@ const initStepNoteSplat = async () => {
   }
 
   stage.dataset.initialized = "true";
+  stage.classList.remove("has-error");
   stage.classList.add("is-loading");
+  status.hidden = false;
   status.textContent = "Loading StepNote 3D preview…";
 
   const splatUrl =
@@ -1840,14 +1842,17 @@ const initStepNoteSplat = async () => {
 const initStepNoteProject = () => {
   const toggle = document.querySelector(".stepnote-project-toggle");
   const details = document.querySelector("#stepnote-project-details");
+  const stage = document.querySelector("#stepnote-splat-stage");
 
-  if (!toggle || !details) {
+  if (!toggle || !details || !stage) {
     return;
   }
 
   const setExpanded = (expanded) => {
     toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.closest(".stepnote-project")?.classList.toggle("is-expanded", expanded);
     details.hidden = !expanded;
+    stage.hidden = !expanded;
 
     if (expanded) {
       initStepNoteSplat();

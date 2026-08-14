@@ -749,7 +749,40 @@ h3 {
   font-size: 0.9rem;
 }
 
+.stepnote-project {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  isolation: isolate;
+}
+
+.stepnote-project::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  content: "";
+  background:
+    linear-gradient(
+      90deg,
+      rgba(8, 8, 8, 0.98) 0%,
+      rgba(8, 8, 8, 0.9) 34%,
+      rgba(8, 8, 8, 0.62) 52%,
+      rgba(8, 8, 8, 0.15) 72%,
+      transparent 88%
+    ),
+    linear-gradient(0deg, rgba(8, 8, 8, 0.42), transparent 38%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.stepnote-project.is-expanded::after {
+  opacity: 1;
+}
+
 .stepnote-project-toggle {
+  position: relative;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -802,10 +835,9 @@ h3 {
 }
 
 .stepnote-project-details {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
-  gap: 24px;
-  align-items: stretch;
+  position: relative;
+  z-index: 3;
+  width: min(56%, 470px);
   margin-top: 22px;
   padding-top: 22px;
   border-top: 1px solid var(--line);
@@ -830,13 +862,13 @@ h3 {
   align-items: flex-start;
   justify-content: center;
   gap: 20px;
-  min-height: 260px;
-  padding: 8px 4px;
+  min-height: 300px;
+  padding: 16px 4px 24px;
 }
 
 .stepnote-project-copy p {
   margin: 0;
-  color: var(--muted);
+  color: rgba(245, 245, 245, 0.88);
   font-size: 1rem;
   line-height: 1.75;
 }
@@ -863,15 +895,14 @@ h3 {
 }
 
 .stepnote-splat-stage {
-  position: relative;
-  min-height: 280px;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.1), transparent 42%),
-    rgba(0, 0, 0, 0.18);
-  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .stepnote-splat-viewer,
@@ -884,7 +915,7 @@ h3 {
 
 .stepnote-splat-status {
   position: absolute;
-  left: 50%;
+  left: 76%;
   bottom: 14px;
   z-index: -1;
   margin: 0;
@@ -1134,7 +1165,7 @@ h3 {
   }
 
   .stepnote-project-details {
-    grid-template-columns: 1fr;
+    width: min(66%, 470px);
   }
 
   .stepnote-project-copy {
@@ -1157,6 +1188,29 @@ h3 {
 
   .nav-links a {
     padding: 8px 10px;
+  }
+
+  .stepnote-project::after {
+    background: linear-gradient(
+      180deg,
+      rgba(8, 8, 8, 0.98) 0%,
+      rgba(8, 8, 8, 0.92) 42%,
+      rgba(8, 8, 8, 0.68) 70%,
+      rgba(8, 8, 8, 0.18) 100%
+    );
+  }
+
+  .stepnote-project-details {
+    width: 100%;
+  }
+
+  .stepnote-project-copy {
+    min-height: 360px;
+    justify-content: flex-start;
+  }
+
+  .stepnote-splat-status {
+    left: 50%;
   }
 
   h1 {
