@@ -1878,7 +1878,7 @@ const initStepNoteSplat = async () => {
       viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     }
 
-    let paused = DEBUG_STEPNOTE_SPLAT;
+    let paused = DEBUG_STEPNOTE_SPLAT || stage.dataset.playbackPaused === "true";
     let playbackPhase = 0;
     const orbitStart = () => config.orbitStartPercent / 100;
     const orbitEnd = () => config.orbitEndPercent / 100;
@@ -1892,6 +1892,13 @@ const initStepNoteSplat = async () => {
     let loopStart = performance.now();
     let currentQuaternion = initialRotation;
     let debugPanel = null;
+
+    stage.addEventListener("stepnote-playback-change", (event) => {
+      paused = Boolean(event.detail?.paused);
+      if (!paused) {
+        loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
+      }
+    });
 
     const applyLoopTransform = (progress) => {
       const baseRotation = quaternionFromEulerDegrees(config.loopKeyframe);
@@ -1991,6 +1998,7 @@ const initStepNoteSplat = async () => {
         }
         const progress = paused ? pausedProgress : progressFromPhase(playbackPhase);
         pausedProgress = progress;
+        stage.dataset.orbitProgress = progress.toFixed(6);
         const cameraPose = applyLoopTransform(progress);
         const legProgress = config.pingPong
           ? (playbackPhase <= 1 ? playbackPhase : 2 - playbackPhase)
@@ -2017,12 +2025,26 @@ const initStepNoteSplat = async () => {
 
 const initStepNoteProject = () => {
   const toggle = document.querySelector(".stepnote-project-toggle");
+  const playbackToggle = document.querySelector(".stepnote-splat-playback-toggle");
   const details = document.querySelector("#stepnote-project-details");
   const stage = document.querySelector("#stepnote-splat-stage");
 
-  if (!toggle || !details || !stage) {
+  if (!toggle || !playbackToggle || !details || !stage) {
     return;
   }
+
+  const setPlaybackPaused = (paused) => {
+    stage.dataset.playbackPaused = String(paused);
+    playbackToggle.classList.toggle("is-paused", paused);
+    playbackToggle.setAttribute("aria-pressed", String(paused));
+    playbackToggle.setAttribute(
+      "aria-label",
+      paused ? "Resume StepNote animation" : "Pause StepNote animation",
+    );
+    stage.dispatchEvent(new CustomEvent("stepnote-playback-change", {
+      detail: { paused },
+    }));
+  };
 
   const setExpanded = (expanded) => {
     toggle.setAttribute("aria-expanded", String(expanded));
@@ -2037,6 +2059,10 @@ const initStepNoteProject = () => {
 
   toggle.addEventListener("click", () => {
     setExpanded(toggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  playbackToggle.addEventListener("click", () => {
+    setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
   if (DEBUG_STEPNOTE_SPLAT) {

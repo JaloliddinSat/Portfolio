@@ -900,6 +900,56 @@ h3 {
   -webkit-backdrop-filter: blur(10px);
 }
 
+.stepnote-splat-playback-toggle {
+  position: absolute;
+  top: 34px;
+  right: 88px;
+  z-index: 4;
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: var(--text);
+  background: rgba(8, 8, 8, 0.22);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.stepnote-project.is-expanded .stepnote-splat-playback-toggle {
+  display: grid;
+}
+
+.stepnote-splat-playback-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.04);
+}
+
+.stepnote-splat-playback-toggle:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.62);
+  outline-offset: 3px;
+}
+
+.stepnote-splat-playback-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.stepnote-splat-playback-toggle .stepnote-play-icon,
+.stepnote-splat-playback-toggle.is-paused .stepnote-pause-icon {
+  display: none;
+}
+
+.stepnote-splat-playback-toggle.is-paused .stepnote-play-icon {
+  display: block;
+}
+
 .stepnote-project-details {
   position: relative;
   z-index: 3;
@@ -1277,7 +1327,12 @@ h3 {
   }
 
   .stepnote-project.is-expanded .stepnote-project-toggle-copy {
-    max-width: calc(100% - 52px);
+    max-width: calc(100% - 104px);
+  }
+
+  .stepnote-splat-playback-toggle {
+    top: 26px;
+    right: 74px;
   }
 
   .stepnote-project.is-expanded .stepnote-project-toggle-copy strong {
