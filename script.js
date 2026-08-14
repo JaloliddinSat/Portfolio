@@ -1549,7 +1549,7 @@ const buildStepNoteDebugPanel = ({ config, onChange, onSetKeyframe, onPause }) =
   panel.innerHTML = `
     <h2>StepNote Splat Debug</h2>
     <p class="stepnote-debug-caption">The loop keyframe is both the first and final pose. Tune the live preview, save it in this browser, then copy the config into script.js to make it permanent.</p>
-    <div class="stepnote-debug-section" data-debug-section="camera"><p class="stepnote-debug-title">Camera</p></div>
+    <div class="stepnote-debug-section" data-debug-section="camera"><p class="stepnote-debug-title">Camera</p><p class="stepnote-debug-caption">px / py / pz pan the camera and aim together. lx / ly / lz change only where the camera looks.</p></div>
     <div class="stepnote-debug-section" data-debug-section="placement"><p class="stepnote-debug-title">Splat placement</p></div>
     <div class="stepnote-debug-section" data-debug-section="rotation"><p class="stepnote-debug-title">Loop rotation</p></div>
     <div class="stepnote-debug-actions">
@@ -1589,10 +1589,11 @@ const buildStepNoteDebugPanel = ({ config, onChange, onSetKeyframe, onPause }) =
     const [slider, number] = row.querySelectorAll("input");
     const apply = (value) => {
       const parsed = Number(value);
+      const previousValue = readValue();
       slider.value = String(parsed);
       number.value = String(parsed);
       writeValue(parsed);
-      onChange();
+      onChange({ targetKey, index, previousValue, value: parsed });
     };
     slider.addEventListener("input", () => apply(slider.value));
     number.addEventListener("change", () => apply(number.value));
@@ -1786,10 +1787,19 @@ const initStepNoteSplat = async () => {
       viewer.forceRenderNextFrame?.();
     };
 
+    const applyDebugChange = (change) => {
+      if (change?.targetKey === "cameraPosition" && change.index !== null) {
+        config.cameraLookAt[change.index] += change.value - change.previousValue;
+        debugPanel?.refresh();
+      }
+
+      applyConfig();
+    };
+
     if (DEBUG_STEPNOTE_SPLAT) {
       debugPanel = buildStepNoteDebugPanel({
         config,
-        onChange: applyConfig,
+        onChange: applyDebugChange,
         onSetKeyframe: () => {
           config.loopKeyframe = eulerDegreesFromQuaternion(currentQuaternion);
           loopStart = performance.now();
