@@ -50,17 +50,16 @@ const SPLAT_CONFIG = {
   scrollEndAt: 0.18,
 };
 
-// Replace these defaults with the values copied from ?debugStepNoteSplat after
-// the StepNote.ksplat asset has been added to /splats.
+// Production values captured with ?debugStepNoteSplat.
 const STEPNOTE_SPLAT_CONFIG = {
-  cameraPosition: [0, 0, -3],
-  cameraLookAt: [0, 0, 0],
+  cameraPosition: [0.15, -0.3, -0.32],
+  cameraLookAt: [-0.6400000000000001, 2.3500000000000014, 2.560000000000001],
   splatPosition: [0, 0, 0],
   splatScale: 1,
   alphaThreshold: 5,
-  loopKeyframe: [0, 0, 0],
+  loopKeyframe: [-3, -2.45, 0],
   spinAxis: [0, 1, 0],
-  loopSeconds: 8,
+  loopSeconds: 8.5,
 };
 
 const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
