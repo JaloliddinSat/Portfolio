@@ -63,7 +63,7 @@ const STEPNOTE_SPLAT_CONFIG = {
   orbitStartPercent: -14.2,
   orbitEndPercent: 27.5,
   pingPong: true,
-  loopSeconds: 8.5,
+  loopSeconds: 14,
 };
 
 const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
@@ -86,6 +86,29 @@ const cubicBezierVec3 = (p0, p1, p2, p3, t) => {
     uuu * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + ttt * p3[1],
     uuu * p0[2] + 3 * uu * t * p1[2] + 3 * u * tt * p2[2] + ttt * p3[2],
   ];
+};
+
+// Equivalent to cubic-bezier(0.333, 0, 0.667, 1): zero velocity at both ends.
+const easeOrbitPingPong = (progress) => {
+  const t = Math.min(1, Math.max(0, progress));
+  return t * t * (3 - 2 * t);
+};
+
+const inverseOrbitEase = (progress) => {
+  const target = Math.min(1, Math.max(0, progress));
+  let low = 0;
+  let high = 1;
+
+  for (let index = 0; index < 14; index += 1) {
+    const midpoint = (low + high) / 2;
+    if (easeOrbitPingPong(midpoint) < target) {
+      low = midpoint;
+    } else {
+      high = midpoint;
+    }
+  }
+
+  return (low + high) / 2;
 };
 
 const easeInLookAt = (progress) => {
@@ -1862,7 +1885,8 @@ const initStepNoteSplat = async () => {
     const progressFromPhase = (phase) => {
       if (!config.pingPong) return phase % 1;
       const legProgress = phase <= 1 ? phase : 2 - phase;
-      return orbitStart() + (orbitEnd() - orbitStart()) * legProgress;
+      const easedProgress = easeOrbitPingPong(legProgress);
+      return orbitStart() + (orbitEnd() - orbitStart()) * easedProgress;
     };
     let pausedProgress = progressFromPhase(playbackPhase);
     let loopStart = performance.now();
@@ -1940,7 +1964,8 @@ const initStepNoteSplat = async () => {
         onProgressChange: (progress) => {
           pausedProgress = Math.min(orbitEnd(), Math.max(orbitStart(), progress));
           const orbitSpan = Math.max(0.0001, orbitEnd() - orbitStart());
-          playbackPhase = (pausedProgress - orbitStart()) / orbitSpan;
+          const easedProgress = (pausedProgress - orbitStart()) / orbitSpan;
+          playbackPhase = inverseOrbitEase(easedProgress);
           loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
           const cameraPose = applyLoopTransform(pausedProgress);
           debugPanel?.updateProgress(pausedProgress, cameraPose, {
