@@ -758,6 +758,10 @@ h3 {
     padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.stepnote-project:not(.is-expanded) {
+  overflow: visible;
+}
+
 .stepnote-project.is-expanded {
   min-height: 470px;
   padding: 34px 36px 38px;
@@ -818,6 +822,7 @@ h3 {
 }
 
 .stepnote-project-toggle-copy strong {
+  color: var(--text);
   font-size: 1.1rem;
   line-height: 1.35;
   transition: color 180ms ease;
