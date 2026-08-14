@@ -792,7 +792,7 @@ h3 {
 }
 
 .stepnote-project.is-expanded::after {
-  opacity: 0.2;
+  opacity: 0.7;
 }
 
 .stepnote-project-toggle {
