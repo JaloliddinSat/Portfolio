@@ -752,8 +752,15 @@ h3 {
 .stepnote-project {
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 18px;
   isolation: isolate;
+  transition: min-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stepnote-project.is-expanded {
+  min-height: 470px;
+  padding: 34px 36px 38px;
 }
 
 .stepnote-project::after {
@@ -762,15 +769,23 @@ h3 {
   z-index: 2;
   content: "";
   background:
-    linear-gradient(
-      90deg,
-      rgba(8, 8, 8, 0.98) 0%,
-      rgba(8, 8, 8, 0.9) 34%,
-      rgba(8, 8, 8, 0.62) 52%,
-      rgba(8, 8, 8, 0.15) 72%,
-      transparent 88%
+    radial-gradient(
+      ellipse 112% 145% at -10% 52%,
+      rgba(6, 6, 6, 0.99) 0%,
+      rgba(6, 6, 6, 0.95) 28%,
+      rgba(6, 6, 6, 0.82) 45%,
+      rgba(6, 6, 6, 0.58) 61%,
+      rgba(6, 6, 6, 0.3) 74%,
+      rgba(6, 6, 6, 0.1) 87%,
+      transparent 100%
     ),
-    linear-gradient(0deg, rgba(8, 8, 8, 0.42), transparent 38%);
+    linear-gradient(
+      180deg,
+      rgba(6, 6, 6, 0.52) 0%,
+      transparent 28%,
+      transparent 70%,
+      rgba(6, 6, 6, 0.48) 100%
+    );
   opacity: 0;
   pointer-events: none;
   transition: opacity 300ms ease;
@@ -808,8 +823,45 @@ h3 {
   transition: color 180ms ease;
 }
 
+.stepnote-project.is-expanded .stepnote-project-toggle {
+  align-items: flex-start;
+}
+
+.stepnote-project.is-expanded .stepnote-project-toggle-copy {
+  max-width: 620px;
+  gap: 12px;
+}
+
+.stepnote-project.is-expanded .stepnote-project-toggle-copy strong {
+  max-width: 16ch;
+  color: #fff;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+}
+
+.project-list .stepnote-project.is-expanded .stepnote-project-toggle-copy span {
+  color: rgba(255, 255, 255, 0.62);
+  font: 700 0.68rem/1.4 "JetBrains Mono", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .stepnote-project-toggle:hover strong {
   color: var(--muted);
+}
+
+.stepnote-project-toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.stepnote-project-toggle:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.32);
+  outline-offset: 6px;
+  border-radius: 12px;
 }
 
 .project-list .stepnote-project-toggle-icon {
@@ -834,13 +886,20 @@ h3 {
   transform: rotate(45deg);
 }
 
+.stepnote-project.is-expanded .stepnote-project-toggle-icon {
+  width: 40px;
+  height: 40px;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(8, 8, 8, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 .stepnote-project-details {
   position: relative;
   z-index: 3;
-  width: min(56%, 470px);
-  margin-top: 22px;
-  padding-top: 22px;
-  border-top: 1px solid var(--line);
+  width: min(57%, 520px);
+  margin-top: 34px;
   animation: stepnote-details-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -860,17 +919,20 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  gap: 20px;
-  min-height: 300px;
-  padding: 16px 4px 24px;
+  justify-content: flex-start;
+  gap: 26px;
+  min-height: 0;
+  padding: 0;
 }
 
 .stepnote-project-copy p {
   margin: 0;
   color: rgba(245, 245, 245, 0.88);
-  font-size: 1rem;
-  line-height: 1.75;
+  font-size: clamp(0.98rem, 1.55vw, 1.08rem);
+  line-height: 1.68;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.5);
 }
 
 .project-list .stepnote-app-store-link {
@@ -879,10 +941,12 @@ h3 {
   justify-content: center;
   margin: 0;
   padding: 11px 16px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 999px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   font-size: 0.88rem;
   transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
 }
@@ -1165,7 +1229,7 @@ h3 {
   }
 
   .stepnote-project-details {
-    width: min(66%, 470px);
+    width: min(68%, 470px);
   }
 
   .stepnote-project-copy {
@@ -1191,13 +1255,28 @@ h3 {
   }
 
   .stepnote-project::after {
-    background: linear-gradient(
-      180deg,
-      rgba(8, 8, 8, 0.98) 0%,
-      rgba(8, 8, 8, 0.92) 42%,
-      rgba(8, 8, 8, 0.68) 70%,
-      rgba(8, 8, 8, 0.18) 100%
-    );
+    background:
+      radial-gradient(
+        ellipse 150% 115% at 20% -5%,
+        rgba(6, 6, 6, 0.99) 0%,
+        rgba(6, 6, 6, 0.92) 42%,
+        rgba(6, 6, 6, 0.66) 68%,
+        rgba(6, 6, 6, 0.18) 100%
+      ),
+      linear-gradient(0deg, rgba(6, 6, 6, 0.34), transparent 42%);
+  }
+
+  .stepnote-project.is-expanded {
+    min-height: 530px;
+    padding: 26px 22px 30px;
+  }
+
+  .stepnote-project.is-expanded .stepnote-project-toggle-copy {
+    max-width: calc(100% - 52px);
+  }
+
+  .stepnote-project.is-expanded .stepnote-project-toggle-copy strong {
+    font-size: clamp(1.7rem, 7.5vw, 1.95rem);
   }
 
   .stepnote-project-details {
@@ -1205,7 +1284,7 @@ h3 {
   }
 
   .stepnote-project-copy {
-    min-height: 360px;
+    min-height: 0;
     justify-content: flex-start;
   }
 
