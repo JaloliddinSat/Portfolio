@@ -21,6 +21,12 @@ cards.forEach((card) => {
 });
 
 const DEBUG_SPLAT = new URLSearchParams(window.location.search).has("debugSplat");
+const DEBUG_STEPNOTE_SPLAT = new URLSearchParams(window.location.search).has(
+  "debugStepNoteSplat",
+);
+const DEBUG_STEPNOTE_SPLAT_ASSET = new URLSearchParams(window.location.search).get(
+  "stepNoteSplat",
+);
 
 const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
@@ -43,6 +49,21 @@ const SPLAT_CONFIG = {
   lookAtTiming: 0.1,
   scrollEndAt: 0.18,
 };
+
+// Replace these defaults with the values copied from ?debugStepNoteSplat after
+// the StepNote.ksplat asset has been added to /splats.
+const STEPNOTE_SPLAT_CONFIG = {
+  cameraPosition: [0, 0, -3],
+  cameraLookAt: [0, 0, 0],
+  splatPosition: [0, 0, 0],
+  splatScale: 1,
+  alphaThreshold: 5,
+  loopKeyframe: [0, 0, 0],
+  spinAxis: [0, 1, 0],
+  loopSeconds: 8,
+};
+
+const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
 
 const lerpVec3 = (a, b, t) => [
   a[0] + (b[0] - a[0]) * t,
@@ -1343,6 +1364,505 @@ const initDebugMode = async (viewer, isMobile) => {
   requestAnimationFrame(syncLoop);
 };
 
+const cloneStepNoteSplatConfig = (source = STEPNOTE_SPLAT_CONFIG) => ({
+  cameraPosition: [...source.cameraPosition],
+  cameraLookAt: [...source.cameraLookAt],
+  splatPosition: [...source.splatPosition],
+  splatScale: source.splatScale,
+  alphaThreshold: source.alphaThreshold,
+  loopKeyframe: [...source.loopKeyframe],
+  spinAxis: [...source.spinAxis],
+  loopSeconds: source.loopSeconds,
+});
+
+const degreesToRadians = (degrees) => (degrees * Math.PI) / 180;
+const radiansToDegrees = (radians) => (radians * 180) / Math.PI;
+
+const quaternionFromEulerDegrees = ([xDegrees, yDegrees, zDegrees]) => {
+  const x = degreesToRadians(xDegrees) / 2;
+  const y = degreesToRadians(yDegrees) / 2;
+  const z = degreesToRadians(zDegrees) / 2;
+  const cx = Math.cos(x);
+  const sx = Math.sin(x);
+  const cy = Math.cos(y);
+  const sy = Math.sin(y);
+  const cz = Math.cos(z);
+  const sz = Math.sin(z);
+
+  return [
+    sx * cy * cz + cx * sy * sz,
+    cx * sy * cz - sx * cy * sz,
+    cx * cy * sz + sx * sy * cz,
+    cx * cy * cz - sx * sy * sz,
+  ];
+};
+
+const quaternionFromAxisAngle = (axis, angle) => {
+  const length = Math.hypot(axis[0], axis[1], axis[2]) || 1;
+  const halfAngle = angle / 2;
+  const multiplier = Math.sin(halfAngle) / length;
+
+  return [
+    axis[0] * multiplier,
+    axis[1] * multiplier,
+    axis[2] * multiplier,
+    Math.cos(halfAngle),
+  ];
+};
+
+const multiplyQuaternions = (a, b) => [
+  a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+  a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+  a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+  a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+];
+
+const eulerDegreesFromQuaternion = ([x, y, z, w]) => {
+  const sinXCosY = 2 * (w * x - y * z);
+  const cosXCosY = 1 - 2 * (x * x + y * y);
+  const sinY = Math.max(-1, Math.min(1, 2 * (w * y + z * x)));
+  const sinZCosY = 2 * (w * z - x * y);
+  const cosZCosY = 1 - 2 * (y * y + z * z);
+
+  return [
+    radiansToDegrees(Math.atan2(sinXCosY, cosXCosY)),
+    radiansToDegrees(Math.asin(sinY)),
+    radiansToDegrees(Math.atan2(sinZCosY, cosZCosY)),
+  ].map((value) => Number(value.toFixed(2)));
+};
+
+const formatStepNoteSplatConfig = (config) =>
+  `const STEPNOTE_SPLAT_CONFIG = {
+  cameraPosition: [${config.cameraPosition.join(", ")}],
+  cameraLookAt: [${config.cameraLookAt.join(", ")}],
+  splatPosition: [${config.splatPosition.join(", ")}],
+  splatScale: ${config.splatScale},
+  alphaThreshold: ${config.alphaThreshold},
+  loopKeyframe: [${config.loopKeyframe.join(", ")}],
+  spinAxis: [${config.spinAxis.join(", ")}],
+  loopSeconds: ${config.loopSeconds},
+};`;
+
+const injectStepNoteDebugStyles = () => {
+  if (document.getElementById("stepnote-splat-debug-styles")) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "stepnote-splat-debug-styles";
+  style.textContent = `
+    #stepnote-splat-debug-panel {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 10000;
+      width: min(92vw, 340px);
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      padding: 14px;
+      border: 1px solid rgba(141, 216, 255, 0.35);
+      border-radius: 16px;
+      color: #e2e8f0;
+      background: rgba(4, 8, 20, 0.94);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      font: 500 12px/1.4 Inter, system-ui, sans-serif;
+    }
+    #stepnote-splat-debug-panel h2,
+    #stepnote-splat-debug-panel p { margin-top: 0; }
+    #stepnote-splat-debug-panel h2 { margin-bottom: 6px; font-size: 14px; }
+    #stepnote-splat-debug-panel .stepnote-debug-caption {
+      margin-bottom: 12px;
+      color: #64748b;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+    #stepnote-splat-debug-panel .stepnote-debug-section {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    #stepnote-splat-debug-panel .stepnote-debug-title {
+      margin-bottom: 8px;
+      color: #8dd8ff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    #stepnote-splat-debug-panel .stepnote-debug-row {
+      display: grid;
+      grid-template-columns: 44px 1fr 62px;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    #stepnote-splat-debug-panel label {
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    #stepnote-splat-debug-panel input[type="range"] {
+      width: 100%;
+      accent-color: #8dd8ff;
+    }
+    #stepnote-splat-debug-panel input[type="number"] {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.06);
+      font: 600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    #stepnote-splat-debug-panel .stepnote-debug-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    #stepnote-splat-debug-panel button {
+      padding: 8px 10px;
+      border: 1px solid rgba(141, 216, 255, 0.35);
+      border-radius: 10px;
+      color: #e2e8f0;
+      background: rgba(141, 216, 255, 0.12);
+      font: 700 11px/1.2 Inter, system-ui, sans-serif;
+      cursor: pointer;
+    }
+    #stepnote-splat-debug-panel button:hover { background: rgba(141, 216, 255, 0.22); }
+    #stepnote-splat-debug-panel .stepnote-debug-wide { grid-column: 1 / -1; }
+    #stepnote-splat-debug-panel .stepnote-debug-output {
+      margin: 10px 0 0;
+      color: #94a3b8;
+      font: 600 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+const buildStepNoteDebugPanel = ({ config, onChange, onSetKeyframe, onPause }) => {
+  injectStepNoteDebugStyles();
+
+  const panel = document.createElement("aside");
+  panel.id = "stepnote-splat-debug-panel";
+  panel.setAttribute("aria-label", "StepNote splat debug controls");
+  panel.innerHTML = `
+    <h2>StepNote Splat Debug</h2>
+    <p class="stepnote-debug-caption">The loop keyframe is both the first and final pose. Tune the live preview, save it in this browser, then copy the config into script.js to make it permanent.</p>
+    <div class="stepnote-debug-section" data-debug-section="camera"><p class="stepnote-debug-title">Camera</p></div>
+    <div class="stepnote-debug-section" data-debug-section="placement"><p class="stepnote-debug-title">Splat placement</p></div>
+    <div class="stepnote-debug-section" data-debug-section="rotation"><p class="stepnote-debug-title">Loop rotation</p></div>
+    <div class="stepnote-debug-actions">
+      <button type="button" class="stepnote-debug-wide" data-debug-action="keyframe">Set current pose as loop keyframe</button>
+      <button type="button" data-debug-action="pause">Pause rotation</button>
+      <button type="button" data-debug-action="copy">Copy config</button>
+      <button type="button" data-debug-action="save">Save in browser</button>
+      <button type="button" data-debug-action="reset">Reset defaults</button>
+      <button type="button" data-debug-action="download">Download JSON</button>
+      <button type="button" data-debug-action="clear">Clear saved data</button>
+    </div>
+    <p class="stepnote-debug-output" data-debug-output>Loop: 0% · 8.00s</p>
+  `;
+  document.body.appendChild(panel);
+
+  const fields = [];
+  const addField = (sectionName, label, targetKey, index, min, max, step) => {
+    const section = panel.querySelector(`[data-debug-section="${sectionName}"]`);
+    const row = document.createElement("div");
+    row.className = "stepnote-debug-row";
+    const id = `stepnote-debug-${targetKey}-${index ?? "value"}`;
+    const readValue = () =>
+      index === null ? config[targetKey] : config[targetKey][index];
+    const writeValue = (value) => {
+      if (index === null) {
+        config[targetKey] = value;
+      } else {
+        config[targetKey][index] = value;
+      }
+    };
+
+    row.innerHTML = `
+      <label for="${id}">${label}</label>
+      <input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${readValue()}">
+      <input type="number" min="${min}" max="${max}" step="${step}" value="${readValue()}">
+    `;
+    const [slider, number] = row.querySelectorAll("input");
+    const apply = (value) => {
+      const parsed = Number(value);
+      slider.value = String(parsed);
+      number.value = String(parsed);
+      writeValue(parsed);
+      onChange();
+    };
+    slider.addEventListener("input", () => apply(slider.value));
+    number.addEventListener("change", () => apply(number.value));
+    section.appendChild(row);
+    fields.push({ slider, number, readValue });
+  };
+
+  ["x", "y", "z"].forEach((axis, index) => {
+    addField("camera", `p${axis}`, "cameraPosition", index, -10, 10, 0.01);
+  });
+  ["x", "y", "z"].forEach((axis, index) => {
+    addField("camera", `l${axis}`, "cameraLookAt", index, -10, 10, 0.01);
+  });
+  ["x", "y", "z"].forEach((axis, index) => {
+    addField("placement", axis, "splatPosition", index, -10, 10, 0.01);
+  });
+  addField("placement", "scale", "splatScale", null, 0.05, 5, 0.01);
+  addField("placement", "alpha", "alphaThreshold", null, 0, 255, 1);
+  ["x°", "y°", "z°"].forEach((axis, index) => {
+    addField("rotation", axis, "loopKeyframe", index, -180, 180, 1);
+  });
+  ["ax", "ay", "az"].forEach((axis, index) => {
+    addField("rotation", axis, "spinAxis", index, -1, 1, 0.01);
+  });
+  addField("rotation", "secs", "loopSeconds", null, 1, 30, 0.25);
+
+  const refresh = () => {
+    fields.forEach(({ slider, number, readValue }) => {
+      const value = readValue();
+      slider.value = String(value);
+      number.value = String(value);
+    });
+  };
+
+  const output = panel.querySelector("[data-debug-output]");
+  const pauseButton = panel.querySelector('[data-debug-action="pause"]');
+  let paused = false;
+
+  panel.querySelector('[data-debug-action="keyframe"]').addEventListener("click", () => {
+    onSetKeyframe();
+    refresh();
+    showToast("Loop keyframe captured.");
+  });
+  pauseButton.addEventListener("click", () => {
+    paused = !paused;
+    pauseButton.textContent = paused ? "Resume rotation" : "Pause rotation";
+    onPause(paused);
+  });
+  panel.querySelector('[data-debug-action="copy"]').addEventListener("click", async () => {
+    const snippet = formatStepNoteSplatConfig(config);
+    try {
+      await navigator.clipboard.writeText(snippet);
+      showToast("StepNote config copied.");
+    } catch {
+      console.log("[STEPNOTE SPLAT] Config:\n", snippet);
+      showToast("Copy failed — config is in the console.");
+    }
+  });
+  panel.querySelector('[data-debug-action="save"]').addEventListener("click", () => {
+    localStorage.setItem(STEPNOTE_SPLAT_DEBUG_STORAGE_KEY, JSON.stringify(config));
+    showToast("StepNote config saved in this browser.");
+  });
+  panel.querySelector('[data-debug-action="reset"]').addEventListener("click", () => {
+    Object.assign(config, cloneStepNoteSplatConfig());
+    refresh();
+    onChange();
+    showToast("StepNote config reset.");
+  });
+  panel.querySelector('[data-debug-action="download"]').addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "stepnote-splat-config.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+  panel.querySelector('[data-debug-action="clear"]').addEventListener("click", () => {
+    localStorage.removeItem(STEPNOTE_SPLAT_DEBUG_STORAGE_KEY);
+    showToast("Saved StepNote config cleared.");
+  });
+
+  return {
+    refresh,
+    updateProgress(progress) {
+      output.textContent = `Loop: ${(progress * 100).toFixed(0)}% · ${config.loopSeconds.toFixed(2)}s`;
+    },
+  };
+};
+
+const initStepNoteSplat = async () => {
+  const stage = document.querySelector("#stepnote-splat-stage");
+  const container = document.querySelector("#stepnote-splat-viewer");
+  const status = document.querySelector("#stepnote-splat-status");
+
+  if (!stage || !container || stage.dataset.initialized === "true") {
+    return;
+  }
+
+  stage.dataset.initialized = "true";
+  stage.classList.add("is-loading");
+  status.textContent = "Loading StepNote 3D preview…";
+
+  const splatUrl =
+    (DEBUG_STEPNOTE_SPLAT && DEBUG_STEPNOTE_SPLAT_ASSET) || stage.dataset.splatSrc;
+
+  try {
+    const assetResponse = await fetch(splatUrl, {
+      method: "HEAD",
+      cache: "no-store",
+    });
+
+    if (!assetResponse.ok) {
+      throw new Error(`StepNote splat asset returned ${assetResponse.status}.`);
+    }
+
+    const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
+    const isMobile = window.matchMedia("(max-width: 700px)").matches;
+    let config = cloneStepNoteSplatConfig();
+
+    if (DEBUG_STEPNOTE_SPLAT) {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(STEPNOTE_SPLAT_DEBUG_STORAGE_KEY) || "null",
+        );
+        if (saved) {
+          config = cloneStepNoteSplatConfig({ ...STEPNOTE_SPLAT_CONFIG, ...saved });
+        }
+      } catch {
+        // Ignore incomplete or invalid browser-saved calibration data.
+      }
+    }
+
+    const initialRotation = quaternionFromEulerDegrees(config.loopKeyframe);
+    const viewer = new GaussianSplats3D.Viewer({
+      rootElement: container,
+      cameraUp: [0, -1, 0],
+      initialCameraPosition: [...config.cameraPosition],
+      initialCameraLookAt: [...config.cameraLookAt],
+      useBuiltInControls: false,
+      sharedMemoryForWorkers: false,
+      gpuAcceleratedSort: false,
+      dynamicScene: true,
+      ignoreDevicePixelRatio: isMobile,
+      sphericalHarmonicsDegree: 0,
+      renderMode: GaussianSplats3D.RenderMode.OnChange,
+      sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
+      webXRMode: GaussianSplats3D.WebXRMode.None,
+    });
+    const sceneOptions = {
+      progressiveLoad: true,
+      showLoadingUI: false,
+      splatAlphaRemovalThreshold: config.alphaThreshold,
+      scale: [config.splatScale, config.splatScale, config.splatScale],
+      position: [...config.splatPosition],
+      rotation: initialRotation,
+    };
+
+    if (splatUrl.toLowerCase().includes(".ksplat")) {
+      sceneOptions.format = GaussianSplats3D.SceneFormat.KSplat;
+    } else if (splatUrl.toLowerCase().includes(".ply")) {
+      sceneOptions.format = GaussianSplats3D.SceneFormat.Ply;
+    }
+
+    await viewer.addSplatScene(splatUrl, sceneOptions);
+    viewer.start();
+    const scene = viewer.getSplatScene(0);
+    stage.classList.remove("is-loading");
+    status.hidden = true;
+
+    if (viewer.threeRenderer) {
+      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    }
+
+    let loopStart = performance.now();
+    let paused = false;
+    let pausedProgress = 0;
+    let currentQuaternion = initialRotation;
+    let debugPanel = null;
+
+    const applyConfig = () => {
+      viewer.camera?.position.set(...config.cameraPosition);
+      viewer.camera?.lookAt(...config.cameraLookAt);
+      scene.position.set(...config.splatPosition);
+      scene.scale.set(config.splatScale, config.splatScale, config.splatScale);
+      scene.minimumAlpha = config.alphaThreshold;
+      loopStart = performance.now();
+      window.__stepNoteSplatConfig = cloneStepNoteSplatConfig(config);
+      viewer.forceRenderNextFrame?.();
+    };
+
+    if (DEBUG_STEPNOTE_SPLAT) {
+      debugPanel = buildStepNoteDebugPanel({
+        config,
+        onChange: applyConfig,
+        onSetKeyframe: () => {
+          config.loopKeyframe = eulerDegreesFromQuaternion(currentQuaternion);
+          loopStart = performance.now();
+          applyConfig();
+        },
+        onPause: (shouldPause) => {
+          paused = shouldPause;
+          if (!paused) {
+            loopStart = performance.now() - pausedProgress * config.loopSeconds * 1000;
+          }
+        },
+      });
+      window.__stepNoteSplatConfig = cloneStepNoteSplatConfig(config);
+      console.log("[STEPNOTE SPLAT] Debug mode enabled:", config);
+    }
+
+    const animate = (time) => {
+      const details = document.querySelector("#stepnote-project-details");
+      const inView = stage.getBoundingClientRect().bottom > 0 &&
+        stage.getBoundingClientRect().top < window.innerHeight;
+
+      if (!document.hidden && !details?.hidden && inView) {
+        const durationMs = Math.max(1, config.loopSeconds) * 1000;
+        const progress = paused
+          ? pausedProgress
+          : ((time - loopStart) % durationMs) / durationMs;
+        pausedProgress = progress;
+        const baseRotation = quaternionFromEulerDegrees(config.loopKeyframe);
+        const loopRotation = quaternionFromAxisAngle(config.spinAxis, progress * Math.PI * 2);
+        currentQuaternion = multiplyQuaternions(baseRotation, loopRotation);
+        scene.quaternion.set(...currentQuaternion);
+        viewer.forceRenderNextFrame?.();
+        debugPanel?.updateProgress(progress);
+      }
+
+      requestAnimationFrame(animate);
+    };
+
+    applyConfig();
+    requestAnimationFrame(animate);
+  } catch (error) {
+    stage.dataset.initialized = "false";
+    stage.classList.remove("is-loading");
+    stage.classList.add("has-error");
+    status.textContent = "Add /splats/StepNote.ksplat to activate this rotating preview";
+    console.info("[STEPNOTE SPLAT] Waiting for StepNote.ksplat:", error);
+  }
+};
+
+const initStepNoteProject = () => {
+  const toggle = document.querySelector(".stepnote-project-toggle");
+  const details = document.querySelector("#stepnote-project-details");
+
+  if (!toggle || !details) {
+    return;
+  }
+
+  const setExpanded = (expanded) => {
+    toggle.setAttribute("aria-expanded", String(expanded));
+    details.hidden = !expanded;
+
+    if (expanded) {
+      initStepNoteSplat();
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    setExpanded(toggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  if (DEBUG_STEPNOTE_SPLAT) {
+    setExpanded(true);
+  }
+};
+
 const initHeroScrollTransition = () => {
   const hero = document.querySelector(".hero");
   const heroCopy = document.querySelector(".hero-copy");
@@ -2043,4 +2563,5 @@ initHeroScrollTransition();
 initAsciiCurtain();
 initHeroActionLinks();
 initHeroMotion();
+initStepNoteProject();
 initSplat();

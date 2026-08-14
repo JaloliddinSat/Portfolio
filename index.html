@@ -279,15 +279,47 @@
             </div>
             <article class="resume-item project-list-card" aria-label="Personal projects">
               <ul class="project-list">
-                <li>
-                  <a
-                    href="https://apps.apple.com/us/app/stepnote-ai-study-workspace/id6767399609"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <li class="stepnote-project">
+                  <button
+                    class="stepnote-project-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="stepnote-project-details"
                   >
-                    StepNote: Notetaking with AI Feedback
-                  </a>
-                  <span>Available on the App Store</span>
+                    <span class="stepnote-project-toggle-copy">
+                      <strong>StepNote: Notetaking with AI Feedback</strong>
+                      <span>Available on the App Store</span>
+                    </span>
+                    <span class="stepnote-project-toggle-icon" aria-hidden="true">+</span>
+                  </button>
+                  <div class="stepnote-project-details" id="stepnote-project-details" hidden>
+                    <div class="stepnote-project-copy">
+                      <p>
+                        StepNote is an AI study app that lets students upload problems,
+                        work them out by hand, and get real-time step-by-step feedback
+                        without immediately revealing the answer.
+                      </p>
+                      <a
+                        class="stepnote-app-store-link"
+                        href="https://apps.apple.com/us/app/stepnote-ai-study-workspace/id6767399609"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View on the App Store
+                      </a>
+                    </div>
+                    <div
+                      class="stepnote-splat-stage"
+                      id="stepnote-splat-stage"
+                      data-splat-src="/splats/StepNote.ksplat"
+                      aria-label="Rotating StepNote 3D splat"
+                    >
+                      <div class="stepnote-splat-viewer" id="stepnote-splat-viewer"></div>
+                      <p class="stepnote-splat-status" id="stepnote-splat-status">
+                        StepNote 3D preview
+                      </p>
+                    </div>
+                  </div>
                 </li>
                 <li>
                   <a
