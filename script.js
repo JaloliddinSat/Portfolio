@@ -56,7 +56,7 @@ const STEPNOTE_SPLAT_CONFIG = {
   cameraLookAt: [-0.6400000000000001, 2.3500000000000014, 2.560000000000001],
   splatPosition: [0, 0, 0],
   splatScale: 1,
-  alphaThreshold: 5,
+  alphaThreshold: 1,
   loopKeyframe: [-3, -2.45, 0],
   spinAxis: [0, 1, 0.26],
   rotationOrigin: [0.12, 0, 0],
@@ -1848,7 +1848,7 @@ const initStepNoteSplat = async () => {
       gpuAcceleratedSort: false,
       dynamicScene: true,
       ignoreDevicePixelRatio: isMobile,
-      sphericalHarmonicsDegree: 0,
+      sphericalHarmonicsDegree: 2,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
       sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
@@ -1875,7 +1875,7 @@ const initStepNoteSplat = async () => {
     status.hidden = true;
 
     if (viewer.threeRenderer) {
-      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     }
 
     let paused = DEBUG_STEPNOTE_SPLAT || stage.dataset.playbackPaused === "true";
