@@ -28,6 +28,7 @@ const initGridCursorGlow = () => {
   const panelSelector = ".resume-item, .project-card, .contact-card";
   const panels = document.querySelectorAll(panelSelector);
   const cursorGlow = document.createElement("span");
+  const glowRadius = 230;
   let pointerClientX = -200;
   let pointerClientY = -200;
   let hasPointer = false;
@@ -53,10 +54,10 @@ const initGridCursorGlow = () => {
   const drawGlow = () => {
     const pointerX = pointerClientX + window.scrollX;
     const pointerY = pointerClientY + window.scrollY;
-    const glowPageX = pointerX - 170;
-    const glowPageY = pointerY - 170;
-    const glowViewportX = pointerClientX - 170;
-    const glowViewportY = pointerClientY - 170;
+    const glowPageX = pointerX - glowRadius;
+    const glowPageY = pointerY - glowRadius;
+    const glowViewportX = pointerClientX - glowRadius;
+    const glowViewportY = pointerClientY - glowRadius;
     const hoveredElement = document.elementFromPoint(pointerClientX, pointerClientY);
     const hoveredPanel = hoveredElement instanceof Element
       ? hoveredElement.closest(panelSelector)
@@ -72,11 +73,11 @@ const initGridCursorGlow = () => {
 
       activePanel.style.setProperty(
         "--grid-panel-translate-x",
-        `${pointerClientX - rect.left - 170}px`,
+        `${pointerClientX - rect.left - glowRadius}px`,
       );
       activePanel.style.setProperty(
         "--grid-panel-translate-y",
-        `${pointerClientY - rect.top - 170}px`,
+        `${pointerClientY - rect.top - glowRadius}px`,
       );
       activePanel.style.setProperty("--grid-panel-offset-x", `${-glowPageX}px`);
       activePanel.style.setProperty("--grid-panel-offset-y", `${-glowPageY}px`);
