@@ -54,25 +54,37 @@ body::before {
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
 }
 
-body::after {
+.grid-cursor-glow {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 0;
-  content: "";
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.28) 1px, transparent 1px);
+  background-position:
+    var(--grid-glow-offset-x, 0) var(--grid-glow-offset-y, 0);
   background-size: 56px 56px;
-  opacity: var(--grid-cursor-opacity, 0);
+  contain: strict;
+  opacity: 0;
   pointer-events: none;
   mask-image: radial-gradient(
-    circle 170px at var(--grid-cursor-x, -200px) var(--grid-cursor-y, -200px),
+    circle at center,
     #000 0%,
     rgba(0, 0, 0, 0.78) 42%,
     rgba(0, 0, 0, 0.28) 72%,
     transparent 100%
   );
+  transform: translate3d(
+    var(--grid-glow-translate-x, -400px),
+    var(--grid-glow-translate-y, -400px),
+    0
+  );
   transition: opacity 180ms ease;
+  will-change: transform, opacity;
 }
 
 a {
@@ -1084,11 +1096,10 @@ h3 {
 .contact-card {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
-  background: var(--card);
-  backdrop-filter: brightness(0.32);
-  -webkit-backdrop-filter: brightness(0.32);
+  background: rgba(24, 24, 24, 0.82);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
@@ -1104,11 +1115,11 @@ h3 {
 .project-card:hover {
   transform: translateY(-6px);
   border-color: rgba(255, 255, 255, 0.28);
-  background: var(--card-strong);
+  background: rgba(32, 32, 32, 0.9);
 }
 
 .project-card.featured {
-  background: var(--card);
+  background: rgba(24, 24, 24, 0.82);
 }
 
 .project-number {
@@ -1180,37 +1191,45 @@ h3 {
 .resume-item {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   padding: 24px 26px;
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
-  background: var(--card);
-  backdrop-filter: brightness(0.32);
-  -webkit-backdrop-filter: brightness(0.32);
+  background: rgba(24, 24, 24, 0.82);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
 .grid-panel-glow {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   z-index: 0;
-  overflow: hidden;
-  border-radius: inherit;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-position:
     var(--grid-panel-offset-x, 0) var(--grid-panel-offset-y, 0);
   background-size: 56px 56px;
+  contain: strict;
   opacity: var(--grid-panel-opacity, 0);
   pointer-events: none;
   mask-image: radial-gradient(
-    circle 170px at var(--grid-panel-x, -200px) var(--grid-panel-y, -200px),
+    circle at center,
     #000 0%,
     rgba(0, 0, 0, 0.72) 44%,
     rgba(0, 0, 0, 0.24) 74%,
     transparent 100%
   );
+  transform: translate3d(
+    var(--grid-panel-translate-x, -400px),
+    var(--grid-panel-translate-y, -400px),
+    0
+  );
   transition: opacity 180ms ease;
+  will-change: transform, opacity;
 }
 
 .resume-item > :not(.grid-panel-glow),
@@ -1257,7 +1276,7 @@ h3 {
   gap: 10px;
   width: min(100%, 520px);
   padding: 24px 28px 28px;
-  background: var(--card);
+  background: rgba(24, 24, 24, 0.82);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.16);
 }
 

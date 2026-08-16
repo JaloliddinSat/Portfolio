@@ -27,11 +27,16 @@ const initGridCursorGlow = () => {
 
   const panelSelector = ".resume-item, .project-card, .contact-card";
   const panels = document.querySelectorAll(panelSelector);
+  const cursorGlow = document.createElement("span");
   let pointerClientX = -200;
   let pointerClientY = -200;
   let hasPointer = false;
   let updateFrame = null;
   let activePanel = null;
+
+  cursorGlow.className = "grid-cursor-glow";
+  cursorGlow.setAttribute("aria-hidden", "true");
+  document.body.prepend(cursorGlow);
 
   panels.forEach((panel) => {
     const panelGlow = document.createElement("span");
@@ -48,6 +53,8 @@ const initGridCursorGlow = () => {
   const drawGlow = () => {
     const pointerX = pointerClientX + window.scrollX;
     const pointerY = pointerClientY + window.scrollY;
+    const glowPageX = pointerX - 170;
+    const glowPageY = pointerY - 170;
     const hoveredElement = document.elementFromPoint(pointerClientX, pointerClientY);
     const hoveredPanel = hoveredElement instanceof Element
       ? hoveredElement.closest(panelSelector)
@@ -60,19 +67,25 @@ const initGridCursorGlow = () => {
 
     if (activePanel) {
       const rect = activePanel.getBoundingClientRect();
-      const panelPageX = rect.left + window.scrollX;
-      const panelPageY = rect.top + window.scrollY;
 
-      activePanel.style.setProperty("--grid-panel-x", `${pointerClientX - rect.left}px`);
-      activePanel.style.setProperty("--grid-panel-y", `${pointerClientY - rect.top}px`);
-      activePanel.style.setProperty("--grid-panel-offset-x", `${-panelPageX}px`);
-      activePanel.style.setProperty("--grid-panel-offset-y", `${-panelPageY}px`);
+      activePanel.style.setProperty(
+        "--grid-panel-translate-x",
+        `${pointerClientX - rect.left - 170}px`,
+      );
+      activePanel.style.setProperty(
+        "--grid-panel-translate-y",
+        `${pointerClientY - rect.top - 170}px`,
+      );
+      activePanel.style.setProperty("--grid-panel-offset-x", `${-glowPageX}px`);
+      activePanel.style.setProperty("--grid-panel-offset-y", `${-glowPageY}px`);
       activePanel.style.setProperty("--grid-panel-opacity", "1");
     }
 
-    document.body.style.setProperty("--grid-cursor-x", `${pointerX}px`);
-    document.body.style.setProperty("--grid-cursor-y", `${pointerY}px`);
-    document.body.style.setProperty("--grid-cursor-opacity", "1");
+    cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowPageX}px`);
+    cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowPageY}px`);
+    cursorGlow.style.setProperty("--grid-glow-offset-x", `${-glowPageX}px`);
+    cursorGlow.style.setProperty("--grid-glow-offset-y", `${-glowPageY}px`);
+    cursorGlow.style.opacity = "1";
     updateFrame = null;
   };
 
@@ -98,7 +111,7 @@ const initGridCursorGlow = () => {
 
   document.documentElement.addEventListener("pointerleave", () => {
     hasPointer = false;
-    document.body.style.setProperty("--grid-cursor-opacity", "0");
+    cursorGlow.style.opacity = "0";
     hideActivePanelGlow();
   });
 };
