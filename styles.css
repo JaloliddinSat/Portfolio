@@ -55,34 +55,16 @@ body::before {
 }
 
 .grid-cursor-glow {
-  --grid-glow-mask: radial-gradient(
-    circle at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.7) 25%,
-    rgba(0, 0, 0, 0.4) 50%,
-    rgba(0, 0, 0, 0.25) 75%,
-    transparent 100%
-  );
   position: fixed;
   top: 0;
   left: 0;
   z-index: 0;
   width: 200px;
   height: 200px;
-  border-radius: 50%;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.42) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.42) 1px, transparent 1px);
-  background-position:
-    var(--grid-glow-offset-x, 0) var(--grid-glow-offset-y, 0);
-  background-size: 56px 56px;
+  display: block;
   contain: strict;
   opacity: 0;
   pointer-events: none;
-  -webkit-mask-image: var(--grid-glow-mask);
-  mask-image: var(--grid-glow-mask);
-  -webkit-mask-mode: alpha;
-  mask-mode: alpha;
   transform: translate3d(
     var(--grid-glow-translate-x, -400px),
     var(--grid-glow-translate-y, -400px),
@@ -1205,34 +1187,16 @@ h3 {
 }
 
 .grid-panel-glow {
-  --grid-panel-mask: radial-gradient(
-    circle at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.7) 25%,
-    rgba(0, 0, 0, 0.4) 50%,
-    rgba(0, 0, 0, 0.25) 75%,
-    transparent 100%
-  );
   position: absolute;
   top: 0;
   left: 0;
   z-index: 0;
   width: 200px;
   height: 200px;
-  border-radius: 50%;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-position:
-    var(--grid-panel-offset-x, 0) var(--grid-panel-offset-y, 0);
-  background-size: 56px 56px;
+  display: block;
   contain: strict;
   opacity: var(--grid-panel-opacity, 0);
   pointer-events: none;
-  -webkit-mask-image: var(--grid-panel-mask);
-  mask-image: var(--grid-panel-mask);
-  -webkit-mask-mode: alpha;
-  mask-mode: alpha;
   transform: translate3d(
     var(--grid-panel-translate-x, -400px),
     var(--grid-panel-translate-y, -400px),

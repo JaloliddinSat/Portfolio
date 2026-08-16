@@ -27,8 +27,10 @@ const initGridCursorGlow = () => {
 
   const panelSelector = ".resume-item, .project-card, .contact-card";
   const panels = document.querySelectorAll(panelSelector);
-  const cursorGlow = document.createElement("span");
+  const cursorGlow = document.createElement("canvas");
   const glowRadius = 100;
+  const glowSize = glowRadius * 2;
+  const gridSize = 56;
   let pointerClientX = -200;
   let pointerClientY = -200;
   let hasPointer = false;
@@ -40,11 +42,66 @@ const initGridCursorGlow = () => {
   document.body.prepend(cursorGlow);
 
   panels.forEach((panel) => {
-    const panelGlow = document.createElement("span");
+    const panelGlow = document.createElement("canvas");
     panelGlow.className = "grid-panel-glow";
     panelGlow.setAttribute("aria-hidden", "true");
     panel.prepend(panelGlow);
   });
+
+  const drawGridTexture = (canvas, pageLeft, pageTop, lineAlpha) => {
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const bitmapSize = Math.round(glowSize * pixelRatio);
+
+    if (canvas.width !== bitmapSize || canvas.height !== bitmapSize) {
+      canvas.width = bitmapSize;
+      canvas.height = bitmapSize;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.clearRect(0, 0, glowSize, glowSize);
+    context.strokeStyle = `rgba(255, 255, 255, ${lineAlpha})`;
+    context.lineWidth = 1;
+    context.beginPath();
+
+    const firstGridX = ((-pageLeft % gridSize) + gridSize) % gridSize;
+    const firstGridY = ((-pageTop % gridSize) + gridSize) % gridSize;
+
+    for (let x = firstGridX; x <= glowSize; x += gridSize) {
+      context.moveTo(x, 0);
+      context.lineTo(x, glowSize);
+    }
+
+    for (let y = firstGridY; y <= glowSize; y += gridSize) {
+      context.moveTo(0, y);
+      context.lineTo(glowSize, y);
+    }
+
+    context.stroke();
+    context.globalCompositeOperation = "destination-in";
+
+    const falloff = context.createRadialGradient(
+      glowRadius,
+      glowRadius,
+      0,
+      glowRadius,
+      glowRadius,
+      glowRadius,
+    );
+    falloff.addColorStop(0, "rgba(0, 0, 0, 1)");
+    falloff.addColorStop(0.25, "rgba(0, 0, 0, 0.7)");
+    falloff.addColorStop(0.5, "rgba(0, 0, 0, 0.4)");
+    falloff.addColorStop(0.75, "rgba(0, 0, 0, 0.25)");
+    falloff.addColorStop(1, "rgba(0, 0, 0, 0)");
+    context.fillStyle = falloff;
+    context.fillRect(0, 0, glowSize, glowSize);
+    context.globalCompositeOperation = "source-over";
+  };
 
   const hideActivePanelGlow = () => {
     activePanel?.style.setProperty("--grid-panel-opacity", "0");
@@ -79,15 +136,18 @@ const initGridCursorGlow = () => {
         "--grid-panel-translate-y",
         `${pointerClientY - rect.top - glowRadius}px`,
       );
-      activePanel.style.setProperty("--grid-panel-offset-x", `${-glowPageX}px`);
-      activePanel.style.setProperty("--grid-panel-offset-y", `${-glowPageY}px`);
       activePanel.style.setProperty("--grid-panel-opacity", "1");
+      drawGridTexture(
+        activePanel.querySelector(".grid-panel-glow"),
+        glowPageX,
+        glowPageY,
+        0.055,
+      );
     }
 
     cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowViewportX}px`);
     cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowViewportY}px`);
-    cursorGlow.style.setProperty("--grid-glow-offset-x", `${-glowPageX}px`);
-    cursorGlow.style.setProperty("--grid-glow-offset-y", `${-glowPageY}px`);
+    drawGridTexture(cursorGlow, glowPageX, glowPageY, 0.42);
     cursorGlow.style.opacity = "1";
     updateFrame = null;
   };
