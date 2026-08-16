@@ -128,9 +128,14 @@ a {
 }
 
 .brand,
+.header-controls,
 .nav-links {
   display: flex;
   align-items: center;
+}
+
+.header-controls {
+  gap: 8px;
 }
 
 .brand {
@@ -156,6 +161,63 @@ a {
 .brand:hover .brand-mark {
   border-color: rgba(255, 255, 255, 0.32);
   background: rgba(255, 255, 255, 0.13);
+}
+
+.ascii-toggle {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.ascii-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.ascii-toggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.82);
+  outline-offset: 3px;
+}
+
+.ascii-toggle svg {
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.45;
+}
+
+.ascii-toggle-hash,
+.ascii-toggle-slash {
+  transition: opacity 160ms ease;
+}
+
+.ascii-toggle-slash {
+  opacity: 0;
+  stroke-width: 2;
+}
+
+.ascii-toggle[aria-pressed="true"] {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ascii-toggle[aria-pressed="true"] .ascii-toggle-hash {
+  opacity: 0.42;
+}
+
+.ascii-toggle[aria-pressed="true"] .ascii-toggle-slash {
+  opacity: 1;
 }
 
 .nav-links {

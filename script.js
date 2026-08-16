@@ -2291,6 +2291,7 @@ const initHeroScrollTransition = () => {
 
 const initAsciiCurtain = () => {
   const canvas = document.querySelector("#ascii-curtain");
+  const toggle = document.querySelector("#ascii-toggle");
 
   if (!canvas || !heroScrollTrack) {
     return;
@@ -2314,6 +2315,7 @@ const initAsciiCurtain = () => {
   let foregroundColorRegions = [];
   let liveSplatCaptured = false;
   let liveSplatCapturePending = false;
+  let asciiEnabled = true;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -2727,6 +2729,10 @@ const initAsciiCurtain = () => {
     backgroundGlyphColor;
 
   const updateTransitionOpacity = () => {
+    if (!asciiEnabled) {
+      return;
+    }
+
     const fadeStart = overlayStart + window.innerHeight * 0.08;
     const fadeEnd = overlayStart + window.innerHeight * 0.42;
     const linearProgress = Math.min(
@@ -2740,6 +2746,10 @@ const initAsciiCurtain = () => {
   };
 
   const resize = () => {
+    if (!asciiEnabled) {
+      return;
+    }
+
     const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
     width = window.innerWidth;
     documentHeight = Math.max(
@@ -2770,6 +2780,10 @@ const initAsciiCurtain = () => {
   };
 
   const draw = () => {
+    if (!asciiEnabled) {
+      return;
+    }
+
     context.clearRect(0, 0, width, window.innerHeight);
 
     if (window.scrollY + window.innerHeight < overlayStart) {
@@ -2847,6 +2861,10 @@ const initAsciiCurtain = () => {
   };
 
   const handleScroll = () => {
+    if (!asciiEnabled) {
+      return;
+    }
+
     if (window.scrollY >= overlayStart - window.innerHeight * 0.12) {
       requestLiveSplatCapture();
     }
@@ -2856,9 +2874,53 @@ const initAsciiCurtain = () => {
   };
 
   const handleResize = () => {
+    if (!asciiEnabled) {
+      return;
+    }
+
     resize();
     draw();
   };
+
+  const setAsciiEnabled = (enabled, persist = true) => {
+    asciiEnabled = enabled;
+    canvas.hidden = !enabled;
+
+    if (toggle) {
+      const label = enabled
+        ? "Disable ASCII screen effect"
+        : "Enable ASCII screen effect";
+      toggle.setAttribute("aria-pressed", enabled ? "false" : "true");
+      toggle.setAttribute("aria-label", label);
+      toggle.title = label;
+    }
+
+    if (persist) {
+      try {
+        window.localStorage.setItem("asciiEffectDisabled", enabled ? "0" : "1");
+      } catch (error) {
+        console.warn("[ASCII] Preference could not be saved:", error);
+      }
+    }
+
+    if (enabled) {
+      resize();
+      draw();
+    } else {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  toggle?.addEventListener("click", () => {
+    setAsciiEnabled(!asciiEnabled);
+  });
+
+  try {
+    setAsciiEnabled(window.localStorage.getItem("asciiEffectDisabled") !== "1", false);
+  } catch (error) {
+    console.warn("[ASCII] Preference could not be read:", error);
+    setAsciiEnabled(true, false);
+  }
 
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });

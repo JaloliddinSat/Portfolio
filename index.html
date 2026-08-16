@@ -31,7 +31,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260816-8" />
+    <link rel="stylesheet" href="styles.css?v=20260816-9" />
     <script type="importmap">
       {
         "imports": {
@@ -42,9 +42,24 @@
   </head>
   <body>
     <header class="site-header" aria-hidden="true">
-      <a class="brand" href="#top" aria-label="Back to top">
-        <span class="brand-mark" aria-hidden="true">↑</span>
-      </a>
+      <div class="header-controls">
+        <a class="brand" href="#top" aria-label="Back to top">
+          <span class="brand-mark" aria-hidden="true">↑</span>
+        </a>
+        <button
+          class="ascii-toggle"
+          id="ascii-toggle"
+          type="button"
+          aria-label="Disable ASCII screen effect"
+          aria-pressed="false"
+          title="Disable ASCII screen effect"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path class="ascii-toggle-hash" d="M7.5 3.5 6 16.5m7-13-1.5 13M3.5 8h13m-13 4h13" />
+            <path class="ascii-toggle-slash" d="m4 4 12 12" />
+          </svg>
+        </button>
+      </div>
 
       <nav class="nav-links" aria-label="Primary navigation">
         <a href="#about">About me</a>
@@ -399,6 +414,6 @@
       </footer>
     </div>
 
-    <script type="module" src="script.js?v=20260816-8"></script>
+    <script type="module" src="script.js?v=20260816-9"></script>
   </body>
 </html>
