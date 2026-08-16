@@ -28,7 +28,7 @@ const initGridCursorGlow = () => {
   const panelSelector = ".resume-item, .project-card, .contact-card";
   const panels = document.querySelectorAll(panelSelector);
   const cursorGlow = document.createElement("span");
-  const glowRadius = 230;
+  const glowRadius = 100;
   let pointerClientX = -200;
   let pointerClientY = -200;
   let hasPointer = false;

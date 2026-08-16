@@ -55,33 +55,34 @@ body::before {
 }
 
 .grid-cursor-glow {
+  --grid-glow-mask: radial-gradient(
+    circle at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 22%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.2) 74%,
+    transparent 100%
+  );
   position: fixed;
   top: 0;
   left: 0;
   z-index: 0;
-  width: 460px;
-  height: 460px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.36) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.36) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.42) 1px, transparent 1px);
   background-position:
     var(--grid-glow-offset-x, 0) var(--grid-glow-offset-y, 0);
   background-size: 56px 56px;
   contain: strict;
   opacity: 0;
   pointer-events: none;
-  mask-image: radial-gradient(
-    circle at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.96) 8%,
-    rgba(0, 0, 0, 0.82) 24%,
-    rgba(0, 0, 0, 0.6) 42%,
-    rgba(0, 0, 0, 0.38) 60%,
-    rgba(0, 0, 0, 0.2) 75%,
-    rgba(0, 0, 0, 0.08) 88%,
-    transparent 100%
-  );
+  -webkit-mask-image: var(--grid-glow-mask);
+  mask-image: var(--grid-glow-mask);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
   transform: translate3d(
     var(--grid-glow-translate-x, -400px),
     var(--grid-glow-translate-y, -400px),
@@ -1204,12 +1205,20 @@ h3 {
 }
 
 .grid-panel-glow {
+  --grid-panel-mask: radial-gradient(
+    circle at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.8) 22%,
+    rgba(0, 0, 0, 0.46) 50%,
+    rgba(0, 0, 0, 0.18) 74%,
+    transparent 100%
+  );
   position: absolute;
   top: 0;
   left: 0;
   z-index: 0;
-  width: 460px;
-  height: 460px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
@@ -1220,17 +1229,10 @@ h3 {
   contain: strict;
   opacity: var(--grid-panel-opacity, 0);
   pointer-events: none;
-  mask-image: radial-gradient(
-    circle at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.94) 8%,
-    rgba(0, 0, 0, 0.78) 24%,
-    rgba(0, 0, 0, 0.56) 42%,
-    rgba(0, 0, 0, 0.34) 60%,
-    rgba(0, 0, 0, 0.18) 75%,
-    rgba(0, 0, 0, 0.07) 88%,
-    transparent 100%
-  );
+  -webkit-mask-image: var(--grid-panel-mask);
+  mask-image: var(--grid-panel-mask);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
   transform: translate3d(
     var(--grid-panel-translate-x, -400px),
     var(--grid-panel-translate-y, -400px),
