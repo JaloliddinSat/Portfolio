@@ -1087,8 +1087,8 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--card);
-  backdrop-filter: brightness(0.72);
-  -webkit-backdrop-filter: brightness(0.72);
+  backdrop-filter: brightness(0.32);
+  -webkit-backdrop-filter: brightness(0.32);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
@@ -1184,8 +1184,8 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--card);
-  backdrop-filter: brightness(0.72);
-  -webkit-backdrop-filter: brightness(0.72);
+  backdrop-filter: brightness(0.32);
+  -webkit-backdrop-filter: brightness(0.32);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
@@ -1196,8 +1196,8 @@ h3 {
   overflow: hidden;
   border-radius: inherit;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-position:
     var(--grid-panel-offset-x, 0) var(--grid-panel-offset-y, 0);
   background-size: 56px 56px;
