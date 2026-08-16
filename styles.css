@@ -52,6 +52,27 @@ body::before {
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
 }
 
+body::after {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.28) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: var(--grid-cursor-opacity, 0);
+  pointer-events: none;
+  mask-image: radial-gradient(
+    circle 170px at var(--grid-cursor-x, -200px) var(--grid-cursor-y, -200px),
+    #000 0%,
+    rgba(0, 0, 0, 0.78) 42%,
+    rgba(0, 0, 0, 0.28) 72%,
+    transparent 100%
+  );
+  transition: opacity 180ms ease;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -1222,6 +1243,25 @@ h3 {
 
 .contact-links a:hover {
   color: var(--muted);
+}
+
+.contact-email-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px 9px;
+}
+
+.contact-links .contact-email-address {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.contact-links .contact-email-address:hover {
+  color: var(--text);
 }
 
 .contact-sep {

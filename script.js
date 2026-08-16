@@ -20,6 +20,36 @@ cards.forEach((card) => {
   });
 });
 
+const initGridCursorGlow = () => {
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    return;
+  }
+
+  let pointerX = -200;
+  let pointerY = -200;
+  let updateFrame = null;
+
+  const drawGlow = () => {
+    document.body.style.setProperty("--grid-cursor-x", `${pointerX}px`);
+    document.body.style.setProperty("--grid-cursor-y", `${pointerY}px`);
+    document.body.style.setProperty("--grid-cursor-opacity", "1");
+    updateFrame = null;
+  };
+
+  window.addEventListener("pointermove", (event) => {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+
+    if (updateFrame === null) {
+      updateFrame = requestAnimationFrame(drawGlow);
+    }
+  }, { passive: true });
+
+  document.documentElement.addEventListener("pointerleave", () => {
+    document.body.style.setProperty("--grid-cursor-opacity", "0");
+  });
+};
+
 const DEBUG_SPLAT = new URLSearchParams(window.location.search).has("debugSplat");
 const DEBUG_STEPNOTE_SPLAT = new URLSearchParams(window.location.search).has(
   "debugStepNoteSplat",
@@ -2770,5 +2800,6 @@ initHeroScrollTransition();
 initAsciiCurtain();
 initHeroActionLinks();
 initHeroMotion();
+initGridCursorGlow();
 initStepNoteProject();
 initSplat();
