@@ -29,6 +29,8 @@ html {
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
@@ -41,9 +43,9 @@ body {
 }
 
 body::before {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   content: "";
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
@@ -53,9 +55,9 @@ body::before {
 }
 
 body::after {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   content: "";
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
@@ -79,6 +81,8 @@ a {
 }
 
 .page-shell {
+  position: relative;
+  z-index: 1;
   width: min(100% - 40px, var(--max-width));
   margin: 0 auto;
 }
@@ -1081,6 +1085,8 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--card);
+  backdrop-filter: brightness(0.72);
+  -webkit-backdrop-filter: brightness(0.72);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
@@ -1174,6 +1180,8 @@ h3 {
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--card);
+  backdrop-filter: brightness(0.72);
+  -webkit-backdrop-filter: brightness(0.72);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 

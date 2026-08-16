@@ -37,8 +37,8 @@ const initGridCursorGlow = () => {
   };
 
   window.addEventListener("pointermove", (event) => {
-    pointerX = event.clientX;
-    pointerY = event.clientY;
+    pointerX = event.pageX;
+    pointerY = event.pageY;
 
     if (updateFrame === null) {
       updateFrame = requestAnimationFrame(drawGlow);
