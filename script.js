@@ -25,9 +25,24 @@ const initGridCursorGlow = () => {
     return;
   }
 
+  const panelSelector = ".resume-item, .project-card, .contact-card";
+  const panels = document.querySelectorAll(panelSelector);
   let pointerX = -200;
   let pointerY = -200;
   let updateFrame = null;
+  let activePanel = null;
+
+  panels.forEach((panel) => {
+    const panelGlow = document.createElement("span");
+    panelGlow.className = "grid-panel-glow";
+    panelGlow.setAttribute("aria-hidden", "true");
+    panel.prepend(panelGlow);
+  });
+
+  const hideActivePanelGlow = () => {
+    activePanel?.style.setProperty("--grid-panel-opacity", "0");
+    activePanel = null;
+  };
 
   const drawGlow = () => {
     document.body.style.setProperty("--grid-cursor-x", `${pointerX}px`);
@@ -40,6 +55,27 @@ const initGridCursorGlow = () => {
     pointerX = event.pageX;
     pointerY = event.pageY;
 
+    const hoveredPanel = event.target instanceof Element
+      ? event.target.closest(panelSelector)
+      : null;
+
+    if (hoveredPanel !== activePanel) {
+      hideActivePanelGlow();
+      activePanel = hoveredPanel;
+    }
+
+    if (activePanel) {
+      const rect = activePanel.getBoundingClientRect();
+      const panelPageX = rect.left + window.scrollX;
+      const panelPageY = rect.top + window.scrollY;
+
+      activePanel.style.setProperty("--grid-panel-x", `${event.pageX - panelPageX}px`);
+      activePanel.style.setProperty("--grid-panel-y", `${event.pageY - panelPageY}px`);
+      activePanel.style.setProperty("--grid-panel-offset-x", `${-panelPageX}px`);
+      activePanel.style.setProperty("--grid-panel-offset-y", `${-panelPageY}px`);
+      activePanel.style.setProperty("--grid-panel-opacity", "1");
+    }
+
     if (updateFrame === null) {
       updateFrame = requestAnimationFrame(drawGlow);
     }
@@ -47,6 +83,7 @@ const initGridCursorGlow = () => {
 
   document.documentElement.addEventListener("pointerleave", () => {
     document.body.style.setProperty("--grid-cursor-opacity", "0");
+    hideActivePanelGlow();
   });
 };
 

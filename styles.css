@@ -1082,6 +1082,8 @@ h3 {
 
 .project-card,
 .contact-card {
+  position: relative;
+  isolation: isolate;
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
   background: var(--card);
@@ -1176,6 +1178,8 @@ h3 {
 }
 
 .resume-item {
+  position: relative;
+  isolation: isolate;
   padding: 24px 26px;
   border: 1px solid var(--line);
   border-radius: var(--radius-medium);
@@ -1183,6 +1187,37 @@ h3 {
   backdrop-filter: brightness(0.72);
   -webkit-backdrop-filter: brightness(0.72);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
+}
+
+.grid-panel-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-position:
+    var(--grid-panel-offset-x, 0) var(--grid-panel-offset-y, 0);
+  background-size: 56px 56px;
+  opacity: var(--grid-panel-opacity, 0);
+  pointer-events: none;
+  mask-image: radial-gradient(
+    circle 170px at var(--grid-panel-x, -200px) var(--grid-panel-y, -200px),
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 44%,
+    rgba(0, 0, 0, 0.24) 74%,
+    transparent 100%
+  );
+  transition: opacity 180ms ease;
+}
+
+.resume-item > :not(.grid-panel-glow),
+.project-card > :not(.grid-panel-glow),
+.contact-card > :not(.grid-panel-glow) {
+  position: relative;
+  z-index: 1;
 }
 
 .resume-meta {
