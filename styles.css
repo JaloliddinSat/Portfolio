@@ -55,7 +55,7 @@ body::before {
 }
 
 .grid-cursor-glow {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 0;
@@ -74,8 +74,10 @@ body::before {
   mask-image: radial-gradient(
     circle at center,
     #000 0%,
-    rgba(0, 0, 0, 0.78) 42%,
-    rgba(0, 0, 0, 0.28) 72%,
+    rgba(0, 0, 0, 0.92) 18%,
+    rgba(0, 0, 0, 0.68) 40%,
+    rgba(0, 0, 0, 0.38) 60%,
+    rgba(0, 0, 0, 0.14) 80%,
     transparent 100%
   );
   transform: translate3d(
@@ -1219,8 +1221,10 @@ h3 {
   mask-image: radial-gradient(
     circle at center,
     #000 0%,
-    rgba(0, 0, 0, 0.72) 44%,
-    rgba(0, 0, 0, 0.24) 74%,
+    rgba(0, 0, 0, 0.88) 18%,
+    rgba(0, 0, 0, 0.62) 40%,
+    rgba(0, 0, 0, 0.34) 60%,
+    rgba(0, 0, 0, 0.12) 80%,
     transparent 100%
   );
   transform: translate3d(

@@ -55,6 +55,8 @@ const initGridCursorGlow = () => {
     const pointerY = pointerClientY + window.scrollY;
     const glowPageX = pointerX - 170;
     const glowPageY = pointerY - 170;
+    const glowViewportX = pointerClientX - 170;
+    const glowViewportY = pointerClientY - 170;
     const hoveredElement = document.elementFromPoint(pointerClientX, pointerClientY);
     const hoveredPanel = hoveredElement instanceof Element
       ? hoveredElement.closest(panelSelector)
@@ -81,8 +83,8 @@ const initGridCursorGlow = () => {
       activePanel.style.setProperty("--grid-panel-opacity", "1");
     }
 
-    cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowPageX}px`);
-    cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowPageY}px`);
+    cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowViewportX}px`);
+    cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowViewportY}px`);
     cursorGlow.style.setProperty("--grid-glow-offset-x", `${-glowPageX}px`);
     cursorGlow.style.setProperty("--grid-glow-offset-y", `${-glowPageY}px`);
     cursorGlow.style.opacity = "1";
