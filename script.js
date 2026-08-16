@@ -27,8 +27,9 @@ const initGridCursorGlow = () => {
 
   const panelSelector = ".resume-item, .project-card, .contact-card";
   const panels = document.querySelectorAll(panelSelector);
-  let pointerX = -200;
-  let pointerY = -200;
+  let pointerClientX = -200;
+  let pointerClientY = -200;
+  let hasPointer = false;
   let updateFrame = null;
   let activePanel = null;
 
@@ -45,18 +46,11 @@ const initGridCursorGlow = () => {
   };
 
   const drawGlow = () => {
-    document.body.style.setProperty("--grid-cursor-x", `${pointerX}px`);
-    document.body.style.setProperty("--grid-cursor-y", `${pointerY}px`);
-    document.body.style.setProperty("--grid-cursor-opacity", "1");
-    updateFrame = null;
-  };
-
-  window.addEventListener("pointermove", (event) => {
-    pointerX = event.pageX;
-    pointerY = event.pageY;
-
-    const hoveredPanel = event.target instanceof Element
-      ? event.target.closest(panelSelector)
+    const pointerX = pointerClientX + window.scrollX;
+    const pointerY = pointerClientY + window.scrollY;
+    const hoveredElement = document.elementFromPoint(pointerClientX, pointerClientY);
+    const hoveredPanel = hoveredElement instanceof Element
+      ? hoveredElement.closest(panelSelector)
       : null;
 
     if (hoveredPanel !== activePanel) {
@@ -69,19 +63,41 @@ const initGridCursorGlow = () => {
       const panelPageX = rect.left + window.scrollX;
       const panelPageY = rect.top + window.scrollY;
 
-      activePanel.style.setProperty("--grid-panel-x", `${event.pageX - panelPageX}px`);
-      activePanel.style.setProperty("--grid-panel-y", `${event.pageY - panelPageY}px`);
+      activePanel.style.setProperty("--grid-panel-x", `${pointerClientX - rect.left}px`);
+      activePanel.style.setProperty("--grid-panel-y", `${pointerClientY - rect.top}px`);
       activePanel.style.setProperty("--grid-panel-offset-x", `${-panelPageX}px`);
       activePanel.style.setProperty("--grid-panel-offset-y", `${-panelPageY}px`);
       activePanel.style.setProperty("--grid-panel-opacity", "1");
     }
 
+    document.body.style.setProperty("--grid-cursor-x", `${pointerX}px`);
+    document.body.style.setProperty("--grid-cursor-y", `${pointerY}px`);
+    document.body.style.setProperty("--grid-cursor-opacity", "1");
+    updateFrame = null;
+  };
+
+  const requestGlowUpdate = () => {
+    if (!hasPointer) {
+      return;
+    }
+
     if (updateFrame === null) {
       updateFrame = requestAnimationFrame(drawGlow);
     }
+  };
+
+  window.addEventListener("pointermove", (event) => {
+    pointerClientX = event.clientX;
+    pointerClientY = event.clientY;
+    hasPointer = true;
+    requestGlowUpdate();
   }, { passive: true });
 
+  window.addEventListener("scroll", requestGlowUpdate, { passive: true });
+  window.addEventListener("resize", requestGlowUpdate, { passive: true });
+
   document.documentElement.addEventListener("pointerleave", () => {
+    hasPointer = false;
     document.body.style.setProperty("--grid-cursor-opacity", "0");
     hideActivePanelGlow();
   });
