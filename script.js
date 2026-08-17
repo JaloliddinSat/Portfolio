@@ -531,14 +531,39 @@ const initSplat = async () => {
       initialCameraLookAt,
       useBuiltInControls: false,
       sharedMemoryForWorkers: false,
-      gpuAcceleratedSort: false,
-      dynamicScene: true,
+      gpuAcceleratedSort: true,
+      dynamicScene: false,
       ignoreDevicePixelRatio: isMobile,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
       sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
+
+    const restingPixelRatio = isMobile
+      ? 1
+      : Math.min(window.devicePixelRatio || 1, 1.75);
+    const movingPixelRatio = Math.min(restingPixelRatio, 1);
+    let activePixelRatio = null;
+
+    const setSplatPixelRatio = (pixelRatio) => {
+      if (activePixelRatio === pixelRatio) {
+        return;
+      }
+
+      activePixelRatio = pixelRatio;
+      viewer.devicePixelRatio = pixelRatio;
+
+      const splatMesh = viewer.getSplatMesh?.();
+      if (splatMesh) {
+        splatMesh.devicePixelRatio = pixelRatio;
+      }
+
+      viewer.renderer?.setPixelRatio(pixelRatio);
+      viewer.forceRenderNextFrame?.();
+    };
+
+    setSplatPixelRatio(restingPixelRatio);
 
     const sceneOptions = {
       progressiveLoad: true,
@@ -562,10 +587,6 @@ const initSplat = async () => {
     viewer.start();
     let viewerRunning = true;
 
-    if (viewer.threeRenderer) {
-      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    }
-
     setStatus("ready");
 
     let lastScrollY = null;
@@ -575,6 +596,25 @@ const initSplat = async () => {
     let allowIdleStop = false;
     let splatInView = false;
     let forceNextRender = true;
+    let qualityRestoreTimer = null;
+
+    const useMovingQuality = () => {
+      if (!splatInView) {
+        return;
+      }
+
+      setSplatPixelRatio(movingPixelRatio);
+
+      if (qualityRestoreTimer) {
+        clearTimeout(qualityRestoreTimer);
+      }
+
+      qualityRestoreTimer = setTimeout(() => {
+        qualityRestoreTimer = null;
+        setSplatPixelRatio(restingPixelRatio);
+        requestSplatRender({ force: true });
+      }, 180);
+    };
 
     const stopViewer = () => {
       if (renderStopTimer) {
@@ -590,6 +630,11 @@ const initSplat = async () => {
       if (renderFrameId) {
         cancelAnimationFrame(renderFrameId);
         renderFrameId = null;
+      }
+
+      if (qualityRestoreTimer) {
+        clearTimeout(qualityRestoreTimer);
+        qualityRestoreTimer = null;
       }
 
       if (viewerRunning && typeof viewer.stop === "function") {
@@ -699,6 +744,7 @@ const initSplat = async () => {
           splatInView = entry.isIntersecting;
 
           if (splatInView) {
+            setSplatPixelRatio(restingPixelRatio);
             ensureViewerRunning();
             scheduleInitialLoadGrace();
             requestSplatRender({ force: true });
@@ -711,9 +757,14 @@ const initSplat = async () => {
 
       observer.observe(splatContainer);
 
-      window.addEventListener("scroll", () => requestSplatRender(), {
-        passive: true,
-      });
+      window.addEventListener(
+        "scroll",
+        () => {
+          useMovingQuality();
+          requestSplatRender();
+        },
+        { passive: true },
+      );
       window.addEventListener("resize", () => requestSplatRender({ force: true }), {
         passive: true,
       });
@@ -2316,6 +2367,8 @@ const initAsciiCurtain = () => {
   let liveSplatCaptured = false;
   let liveSplatCapturePending = false;
   let asciiEnabled = true;
+  let asciiCanvasHasContent = false;
+  let asciiScrollFrame = null;
 
   const noise = (column, row) => {
     const value = Math.sin(column * 91.73 + row * 17.17) * 43758.5453;
@@ -2784,11 +2837,17 @@ const initAsciiCurtain = () => {
       return;
     }
 
-    context.clearRect(0, 0, width, window.innerHeight);
-
     if (window.scrollY + window.innerHeight < overlayStart) {
+      if (asciiCanvasHasContent) {
+        context.clearRect(0, 0, width, window.innerHeight);
+        asciiCanvasHasContent = false;
+      }
+
       return;
     }
+
+    context.clearRect(0, 0, width, window.innerHeight);
+    asciiCanvasHasContent = true;
 
     const columns = Math.ceil(width / cellWidth) + 1;
     const viewportMaskTop = Math.max(
@@ -2861,16 +2920,27 @@ const initAsciiCurtain = () => {
   };
 
   const handleScroll = () => {
-    if (!asciiEnabled) {
+    if (!asciiEnabled || asciiScrollFrame !== null) {
       return;
     }
 
-    if (window.scrollY >= overlayStart - window.innerHeight * 0.12) {
-      requestLiveSplatCapture();
-    }
+    asciiScrollFrame = requestAnimationFrame(() => {
+      asciiScrollFrame = null;
 
-    updateTransitionOpacity();
-    draw();
+      if (
+        window.scrollY + window.innerHeight < overlayStart &&
+        !asciiCanvasHasContent
+      ) {
+        return;
+      }
+
+      if (window.scrollY >= overlayStart - window.innerHeight * 0.12) {
+        requestLiveSplatCapture();
+      }
+
+      updateTransitionOpacity();
+      draw();
+    });
   };
 
   const handleResize = () => {
@@ -2907,7 +2977,13 @@ const initAsciiCurtain = () => {
       resize();
       draw();
     } else {
+      if (asciiScrollFrame !== null) {
+        cancelAnimationFrame(asciiScrollFrame);
+        asciiScrollFrame = null;
+      }
+
       context.clearRect(0, 0, canvas.width, canvas.height);
+      asciiCanvasHasContent = false;
     }
   };
 
