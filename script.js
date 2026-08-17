@@ -540,30 +540,13 @@ const initSplat = async () => {
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
-    const restingPixelRatio = isMobile
+    const splatPixelRatio = isMobile
       ? 1
-      : Math.min(window.devicePixelRatio || 1, 1.75);
-    const movingPixelRatio = Math.min(restingPixelRatio, 1);
-    let activePixelRatio = null;
+      : Math.min(window.devicePixelRatio || 1, 1.5);
 
-    const setSplatPixelRatio = (pixelRatio) => {
-      if (activePixelRatio === pixelRatio) {
-        return;
-      }
-
-      activePixelRatio = pixelRatio;
-      viewer.devicePixelRatio = pixelRatio;
-
-      const splatMesh = viewer.getSplatMesh?.();
-      if (splatMesh) {
-        splatMesh.devicePixelRatio = pixelRatio;
-      }
-
-      viewer.renderer?.setPixelRatio(pixelRatio);
-      viewer.forceRenderNextFrame?.();
-    };
-
-    setSplatPixelRatio(restingPixelRatio);
+    viewer.devicePixelRatio = splatPixelRatio;
+    viewer.getSplatMesh().devicePixelRatio = splatPixelRatio;
+    viewer.renderer.setPixelRatio(splatPixelRatio);
 
     const sceneOptions = {
       progressiveLoad: true,
@@ -596,25 +579,6 @@ const initSplat = async () => {
     let allowIdleStop = false;
     let splatInView = false;
     let forceNextRender = true;
-    let qualityRestoreTimer = null;
-
-    const useMovingQuality = () => {
-      if (!splatInView) {
-        return;
-      }
-
-      setSplatPixelRatio(movingPixelRatio);
-
-      if (qualityRestoreTimer) {
-        clearTimeout(qualityRestoreTimer);
-      }
-
-      qualityRestoreTimer = setTimeout(() => {
-        qualityRestoreTimer = null;
-        setSplatPixelRatio(restingPixelRatio);
-        requestSplatRender({ force: true });
-      }, 180);
-    };
 
     const stopViewer = () => {
       if (renderStopTimer) {
@@ -630,11 +594,6 @@ const initSplat = async () => {
       if (renderFrameId) {
         cancelAnimationFrame(renderFrameId);
         renderFrameId = null;
-      }
-
-      if (qualityRestoreTimer) {
-        clearTimeout(qualityRestoreTimer);
-        qualityRestoreTimer = null;
       }
 
       if (viewerRunning && typeof viewer.stop === "function") {
@@ -744,7 +703,6 @@ const initSplat = async () => {
           splatInView = entry.isIntersecting;
 
           if (splatInView) {
-            setSplatPixelRatio(restingPixelRatio);
             ensureViewerRunning();
             scheduleInitialLoadGrace();
             requestSplatRender({ force: true });
@@ -757,14 +715,9 @@ const initSplat = async () => {
 
       observer.observe(splatContainer);
 
-      window.addEventListener(
-        "scroll",
-        () => {
-          useMovingQuality();
-          requestSplatRender();
-        },
-        { passive: true },
-      );
+      window.addEventListener("scroll", () => requestSplatRender(), {
+        passive: true,
+      });
       window.addEventListener("resize", () => requestSplatRender({ force: true }), {
         passive: true,
       });
