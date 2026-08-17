@@ -2033,6 +2033,7 @@ const initStepNoteSplat = async () => {
 
     await viewer.addSplatScene(splatUrl, sceneOptions);
     viewer.start();
+    let viewerRunning = true;
     const scene = viewer.getSplatScene(0);
     stage.classList.remove("is-loading");
     status.hidden = true;
@@ -2055,13 +2056,23 @@ const initStepNoteSplat = async () => {
     let loopStart = performance.now();
     let currentQuaternion = initialRotation;
     let debugPanel = null;
+    let stageInView = false;
+    let expanded = !document.querySelector("#stepnote-project-details")?.hidden;
+    let animationFrameId = null;
 
-    stage.addEventListener("stepnote-playback-change", (event) => {
-      paused = Boolean(event.detail?.paused);
-      if (!paused) {
-        loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
+    const ensureViewerRunning = () => {
+      if (!viewerRunning) {
+        viewer.start();
+        viewerRunning = true;
       }
-    });
+    };
+
+    const stopViewer = () => {
+      if (viewerRunning) {
+        viewer.stop();
+        viewerRunning = false;
+      }
+    };
 
     const applyLoopTransform = (progress) => {
       const baseRotation = quaternionFromEulerDegrees(config.loopKeyframe);
@@ -2130,6 +2141,7 @@ const initStepNoteSplat = async () => {
           if (!paused) {
             loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
           }
+          syncAnimation();
         },
         onProgressChange: (progress) => {
           pausedProgress = Math.min(orbitEnd(), Math.max(orbitStart(), progress));
@@ -2147,36 +2159,78 @@ const initStepNoteSplat = async () => {
       console.log("[STEPNOTE SPLAT] Debug mode enabled:", config);
     }
 
-    const animate = (time) => {
-      const details = document.querySelector("#stepnote-project-details");
-      const inView = stage.getBoundingClientRect().bottom > 0 &&
-        stage.getBoundingClientRect().top < window.innerHeight;
-      const shouldUpdateLoop = DEBUG_STEPNOTE_SPLAT || inView;
+    const shouldAnimate = () =>
+      !paused && expanded && stageInView && !document.hidden;
 
-      if (!document.hidden && !details?.hidden && shouldUpdateLoop) {
-        const durationMs = Math.max(1, config.loopSeconds) * 1000;
-        if (!paused) {
-          const cycleLegs = config.pingPong ? 2 : 1;
-          playbackPhase = ((time - loopStart) / durationMs) % cycleLegs;
-        }
-        const progress = paused ? pausedProgress : progressFromPhase(playbackPhase);
-        pausedProgress = progress;
-        stage.dataset.orbitProgress = progress.toFixed(6);
-        const cameraPose = applyLoopTransform(progress);
-        const legProgress = config.pingPong
-          ? (playbackPhase <= 1 ? playbackPhase : 2 - playbackPhase)
-          : playbackPhase;
-        debugPanel?.updateProgress(progress, cameraPose, {
-          legProgress,
-          direction: paused ? null : playbackPhase <= 1 ? "forward" : "reverse",
-        });
+    const suspendAnimation = () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
 
-      requestAnimationFrame(animate);
+      stopViewer();
     };
 
+    const animate = (time) => {
+      animationFrameId = null;
+
+      if (!shouldAnimate()) {
+        suspendAnimation();
+        return;
+      }
+
+      const durationMs = Math.max(1, config.loopSeconds) * 1000;
+      const cycleLegs = config.pingPong ? 2 : 1;
+      playbackPhase = ((time - loopStart) / durationMs) % cycleLegs;
+      const progress = progressFromPhase(playbackPhase);
+      pausedProgress = progress;
+      stage.dataset.orbitProgress = progress.toFixed(6);
+      const cameraPose = applyLoopTransform(progress);
+      const legProgress = config.pingPong
+        ? (playbackPhase <= 1 ? playbackPhase : 2 - playbackPhase)
+        : playbackPhase;
+      debugPanel?.updateProgress(progress, cameraPose, {
+        legProgress,
+        direction: playbackPhase <= 1 ? "forward" : "reverse",
+      });
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    function syncAnimation() {
+      if (!shouldAnimate()) {
+        suspendAnimation();
+        return;
+      }
+
+      ensureViewerRunning();
+      loopStart = performance.now() - playbackPhase * config.loopSeconds * 1000;
+
+      if (animationFrameId === null) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    }
+
+    stage.addEventListener("stepnote-playback-change", (event) => {
+      paused = Boolean(event.detail?.paused);
+      syncAnimation();
+    });
+
+    stage.addEventListener("stepnote-visibility-change", (event) => {
+      expanded = Boolean(event.detail?.expanded);
+      syncAnimation();
+    });
+
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      stageInView = entry.isIntersecting;
+      syncAnimation();
+    });
+    visibilityObserver.observe(stage);
+
+    document.addEventListener("visibilitychange", syncAnimation);
+
     applyConfig();
-    requestAnimationFrame(animate);
+    requestAnimationFrame(syncAnimation);
   } catch (error) {
     stage.dataset.initialized = "false";
     stage.classList.remove("is-loading");
@@ -2214,6 +2268,9 @@ const initStepNoteProject = () => {
     toggle.closest(".stepnote-project")?.classList.toggle("is-expanded", expanded);
     details.hidden = !expanded;
     stage.hidden = !expanded;
+    stage.dispatchEvent(new CustomEvent("stepnote-visibility-change", {
+      detail: { expanded },
+    }));
 
     if (expanded) {
       initStepNoteSplat();
