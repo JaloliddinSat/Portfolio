@@ -1471,7 +1471,7 @@ body.debug-hero-transition {
   transform: translateY(-2px);
 }
 
-.stepnote-splat-stage {
+.stepnote-project > .stepnote-splat-stage {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -1482,8 +1482,8 @@ body.debug-hero-transition {
   pointer-events: none;
 }
 
-.stepnote-splat-viewer,
-.stepnote-splat-viewer canvas {
+.stepnote-project .stepnote-splat-viewer,
+.stepnote-project .stepnote-splat-viewer canvas {
   position: absolute;
   inset: 0;
   width: 100% !important;
@@ -1615,6 +1615,17 @@ body.debug-hero-transition {
 .contact-card > :not(.grid-panel-glow) {
   position: relative;
   z-index: 1;
+}
+
+.stepnote-project > .stepnote-splat-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.stepnote-project > .stepnote-splat-playback-toggle {
+  position: absolute;
+  z-index: 4;
 }
 
 .resume-item p:last-child {

@@ -2175,6 +2175,11 @@ const initStepNoteSplat = async () => {
     return;
   }
 
+  const { width, height } = stage.getBoundingClientRect();
+  if (width < 2 || height < 2) {
+    return;
+  }
+
   stage.dataset.initialized = "true";
   stage.classList.remove("has-error");
   stage.classList.add("is-loading");
@@ -2485,7 +2490,9 @@ const initStepNoteProject = () => {
       return;
     }
 
-    initStepNoteSplat();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => initStepNoteSplat());
+    });
   };
 
   if ("IntersectionObserver" in window) {
@@ -2507,6 +2514,18 @@ const initStepNoteProject = () => {
     }
   } else {
     bootSplat();
+  }
+
+  if ("ResizeObserver" in window) {
+    const resizeObserver = new ResizeObserver(() => {
+      if (stage.dataset.initialized === "true") {
+        resizeObserver.disconnect();
+        return;
+      }
+
+      bootSplat();
+    });
+    resizeObserver.observe(stage.closest(".stepnote-project") || stage);
   }
 };
 
