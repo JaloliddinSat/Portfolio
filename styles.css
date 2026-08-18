@@ -1041,6 +1041,7 @@ body.debug-hero-transition {
 
 .experience-title-main h3 {
   margin: 0;
+  font-size: calc(0.92rem + 1px);
 }
 
 .experience-company-link {
