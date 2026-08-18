@@ -1075,6 +1075,16 @@ body.debug-hero-transition {
   margin-bottom: 0;
 }
 
+.experience-video-placeholder {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  background: #363636;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
