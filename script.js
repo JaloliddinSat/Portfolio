@@ -2175,11 +2175,6 @@ const initStepNoteSplat = async () => {
     return;
   }
 
-  const { width, height } = (stage.closest(".stepnote-project") || stage).getBoundingClientRect();
-  if (width < 2 || height < 2) {
-    return;
-  }
-
   stage.dataset.initialized = "true";
   stage.classList.remove("has-error");
   stage.classList.add("is-loading");
@@ -2485,9 +2480,23 @@ const initStepNoteProject = () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => initStepNoteSplat());
-  });
+  const startSplat = () => {
+    if (stage.dataset.initialized === "true") {
+      return;
+    }
+
+    const card = stage.closest(".stepnote-project") || stage;
+    const { width, height } = card.getBoundingClientRect();
+
+    if (width < 2 || height < 2) {
+      requestAnimationFrame(startSplat);
+      return;
+    }
+
+    initStepNoteSplat();
+  };
+
+  requestAnimationFrame(startSplat);
 };
 
 const initHeroScrollTransition = () => {
