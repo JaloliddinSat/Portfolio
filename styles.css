@@ -1639,21 +1639,12 @@ body.debug-hero-transition {
   gap: 14px;
   padding: 26px;
   min-height: 180px;
-  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
 .project-card.project-showcase-card {
   display: block;
   padding: 0;
   min-height: auto;
-  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
-}
-
-.project-card:not(.stepnote-project):hover,
-.project-card.project-showcase-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(32, 32, 32, 0.9);
 }
 
 .project-card.featured {
