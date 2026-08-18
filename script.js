@@ -3030,10 +3030,8 @@ const initAsciiCurtain = () => {
   const backgroundGlyphColor = "#292929";
   let overlayStart = 0;
   let splatPixels = null;
-  let resumePixels = null;
   let terminalPixels = null;
   let splatRect = null;
-  let resumeRect = null;
   let terminalRect = null;
   let surfaceColorRegions = [];
   let foregroundColorRegions = [];
@@ -3216,7 +3214,6 @@ const initAsciiCurtain = () => {
       ".resume-item",
       ".project-card",
       ".project-list-card",
-      ".resume-panel",
       ".button",
       ".brand-mark",
     ];
@@ -3449,7 +3446,6 @@ const initAsciiCurtain = () => {
   const sampleColor = (x, y) =>
     sampleRegion(terminalPixels, terminalRect, x, y) ||
     sampleColorRegion(foregroundColorRegions, x, y) ||
-    sampleRegion(resumePixels, resumeRect, x, y) ||
     sampleColorRegion(surfaceColorRegions, x, y) ||
     sampleRegion(splatPixels, splatRect, x, y, "cover") ||
     backgroundGlyphColor;
@@ -3498,7 +3494,6 @@ const initAsciiCurtain = () => {
       width,
       height: window.innerHeight,
     };
-    resumeRect = getDocumentRect(document.querySelector(".resume-preview img"));
     renderTerminalPixels();
     buildColorRegions();
 
@@ -3673,13 +3668,9 @@ const initAsciiCurtain = () => {
 
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
-  Promise.all([
-    loadPixels("/splats/Color.png"),
-    loadPixels(document.querySelector(".resume-preview img")?.currentSrc),
-  ])
-    .then(([loadedSplatPixels, loadedResumePixels]) => {
+  loadPixels("/splats/Color.png")
+    .then((loadedSplatPixels) => {
       splatPixels = loadedSplatPixels;
-      resumePixels = loadedResumePixels;
     })
     .catch((error) => {
       console.warn("[ASCII] Pixel sampling fallback active:", error);
