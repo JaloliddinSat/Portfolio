@@ -14,7 +14,7 @@
   --radius-medium: 22px;
   --max-width: 1120px;
   --hero-scroll-distance: 240vh;
-  --hero-scroll-distance: 240dvh;
+  --hero-scroll-distance: 240lvh;
 }
 
 * {
@@ -35,7 +35,7 @@ body {
   position: relative;
   isolation: isolate;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100lvh;
   margin: 0;
   overflow-x: hidden;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -128,7 +128,7 @@ a {
   z-index: 9;
   width: 100vw;
   height: 100vh;
-  height: 100dvh;
+  height: 100lvh;
   pointer-events: none;
 }
 
@@ -277,7 +277,7 @@ a {
   position: relative;
   width: 100vw;
   height: calc(100vh + var(--hero-scroll-distance));
-  height: calc(100dvh + var(--hero-scroll-distance));
+  height: calc(100lvh + var(--hero-scroll-distance));
   margin-left: calc(50% - 50vw);
 }
 
@@ -289,9 +289,9 @@ a {
   top: 0;
   width: 100%;
   height: 100vh;
-  height: 100dvh;
+  height: 100lvh;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100lvh;
   margin-top: 0;
   margin-left: 0;
   overflow: hidden;
@@ -632,7 +632,7 @@ h3 {
   left: 0;
   right: 0;
   height: 100vh;
-  height: 100dvh;
+  height: 100lvh;
   z-index: 0;
   display: grid;
   place-items: center;

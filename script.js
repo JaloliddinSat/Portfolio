@@ -351,12 +351,15 @@ const getSplatUrl = () => {
   return appendSplatVersion(url);
 };
 
+const getHeroViewportHeight = () =>
+  heroScrollTrack?.querySelector(".hero")?.offsetHeight || window.innerHeight;
+
 const getScrollProgress = () => {
   if (!heroScrollTrack) {
     return 0;
   }
 
-  const scrollRange = heroScrollTrack.offsetHeight - window.innerHeight;
+  const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
 
   if (scrollRange <= 0) {
     return 1;
@@ -376,7 +379,7 @@ const getHeroTrackEndScrollY = () => {
     return window.scrollY;
   }
 
-  const scrollRange = heroScrollTrack.offsetHeight - window.innerHeight;
+  const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
 
   if (scrollRange <= 0) {
     return window.scrollY;
@@ -669,8 +672,10 @@ const initSplat = async () => {
     let renderStopTimer = null;
     let initialLoadTimer = null;
     let allowIdleStop = false;
+    const idleStopEnabled = !isMobile;
     let splatInView = false;
     let forceNextRender = true;
+    let lastViewportWidth = window.innerWidth;
 
     const stopViewer = () => {
       if (renderStopTimer) {
@@ -702,6 +707,11 @@ const initSplat = async () => {
     };
 
     const scheduleInitialLoadGrace = () => {
+      if (!idleStopEnabled) {
+        ensureViewerRunning();
+        return;
+      }
+
       if (allowIdleStop || initialLoadTimer) {
         return;
       }
@@ -716,6 +726,10 @@ const initSplat = async () => {
     };
 
     const stopViewerAfterIdle = (delay = 280) => {
+      if (!idleStopEnabled) {
+        return;
+      }
+
       if (renderStopTimer) {
         clearTimeout(renderStopTimer);
       }
@@ -813,9 +827,23 @@ const initSplat = async () => {
       window.addEventListener("scroll", () => requestSplatRender(), {
         passive: true,
       });
-      window.addEventListener("resize", () => requestSplatRender({ force: true }), {
-        passive: true,
-      });
+      window.addEventListener(
+        "resize",
+        () => {
+          const viewportWidth = window.innerWidth;
+          const widthChanged = Math.abs(viewportWidth - lastViewportWidth) > 1;
+          lastViewportWidth = viewportWidth;
+
+          // Mobile Safari changes only the viewport height as its toolbar moves.
+          // Stable lvh sizing means that event does not require a WebGL resize.
+          if (isMobile && !widthChanged) {
+            return;
+          }
+
+          requestSplatRender({ force: true });
+        },
+        { passive: true },
+      );
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           stopViewer();
