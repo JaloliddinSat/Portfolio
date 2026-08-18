@@ -1083,8 +1083,8 @@ body.debug-hero-transition {
 }
 
 .resume-item.stepnote-project {
-  padding: 34px 36px 38px;
-  border-color: transparent;
+  padding: 34px 36px 92px;
+  border-color: var(--line);
   background: transparent;
   box-shadow: none;
 }
@@ -1409,7 +1409,7 @@ body.debug-hero-transition {
   position: relative;
   overflow: hidden;
   min-height: 470px;
-  padding: 34px 36px 38px;
+  padding: 34px 36px 92px;
   isolation: isolate;
 }
 
@@ -1565,6 +1565,15 @@ body.debug-hero-transition {
   transform: translateY(-2px);
 }
 
+.stepnote-project-skills {
+  position: absolute;
+  left: 36px;
+  bottom: 24px;
+  z-index: 3;
+  width: min(57%, 520px);
+  margin: 0;
+}
+
 .stepnote-project > .stepnote-splat-stage {
   position: absolute;
   inset: 0;
@@ -1619,7 +1628,7 @@ body.debug-hero-transition {
 }
 
 .project-card.stepnote-project {
-  border-color: transparent;
+  border-color: var(--line);
   background: transparent;
   box-shadow: none;
 }
@@ -2187,9 +2196,10 @@ body.debug-hero-transition {
       linear-gradient(0deg, rgba(6, 6, 6, 0.34), transparent 42%);
   }
 
-  .stepnote-project {
+  .stepnote-project,
+  .resume-item.stepnote-project {
     min-height: 530px;
-    padding: 26px 22px 30px;
+    padding: 26px 22px 84px;
   }
 
   .stepnote-project-heading {
@@ -2212,6 +2222,13 @@ body.debug-hero-transition {
   .stepnote-project-copy {
     min-height: 0;
     justify-content: flex-start;
+  }
+
+  .stepnote-project-skills {
+    left: 22px;
+    right: 22px;
+    bottom: 20px;
+    width: auto;
   }
 
   .stepnote-splat-status {
