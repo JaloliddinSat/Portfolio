@@ -1,0 +1,20 @@
+---
+description: Deploy portfolio site to production after meaningful changes
+alwaysApply: true
+---
+
+# Portfolio deployment
+
+This site is hosted on **Cloudflare Pages** (`portfolio` project → `jalolsatimov.com`), connected to GitHub `main`.
+
+After completing portfolio changes the user wants live:
+
+1. Commit with a concise message (user deploy requests count as commit permission).
+2. Push to `origin main` to trigger the Cloudflare Pages Git deploy.
+3. Confirm deployment with `npx wrangler pages deployment list --project-name=portfolio` and report the active deployment.
+
+Do **not** use `wrangler pages deploy` for this repo — local-only files (e.g. `splats/*.ply`) exceed the 25 MiB upload limit.
+
+Bump the cache-bust query on `script.js` / `styles.css` in `index.html` when those files change.
+
+Only skip deploy if the user explicitly says not to publish yet.
