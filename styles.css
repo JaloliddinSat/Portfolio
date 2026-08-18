@@ -275,8 +275,9 @@ a {
 
 .portfolio-intro,
 .portfolio-projects > :first-child {
-  width: 100%;
-  max-width: none;
+  width: min(100%, 760px);
+  max-width: 760px;
+  padding-inline: 27px;
 }
 
 .about-section > :first-child {
@@ -987,12 +988,6 @@ body.debug-hero-transition {
   gap: 48px;
 }
 
-.portfolio-intro {
-  width: min(100%, 760px);
-  max-width: 760px;
-  padding-inline: 27px;
-}
-
 .portfolio-subsection {
   display: flex;
   flex-direction: column;
@@ -1279,7 +1274,9 @@ body.debug-hero-transition {
 }
 
 .project-list-card {
-  width: min(100%, 860px);
+  width: min(100%, 760px);
+  max-width: 760px;
+  margin-inline: auto;
   text-align: left;
 }
 
