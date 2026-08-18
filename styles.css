@@ -1610,8 +1610,8 @@ body.debug-hero-transition {
   will-change: transform, opacity;
 }
 
-.resume-item > :not(.grid-panel-glow),
-.project-card > :not(.grid-panel-glow),
+.resume-item:not(.stepnote-project) > :not(.grid-panel-glow),
+.project-card:not(.stepnote-project) > :not(.grid-panel-glow),
 .contact-card > :not(.grid-panel-glow) {
   position: relative;
   z-index: 1;

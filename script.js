@@ -2480,47 +2480,33 @@ const initStepNoteProject = () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  const tryInitSplat = () => {
+  const bootSplat = () => {
     if (stage.dataset.initialized === "true") {
-      return true;
-    }
-
-    const { width, height } = stage.getBoundingClientRect();
-
-    if (width < 2 || height < 2) {
-      return false;
+      return;
     }
 
     initStepNoteSplat();
-    return true;
   };
 
-  if (tryInitSplat()) {
-    return;
-  }
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
 
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (!entry.isIntersecting) {
-        return;
-      }
-
-      if (tryInitSplat()) {
+        bootSplat();
         observer.disconnect();
-      }
-    },
-    { rootMargin: "240px 0px", threshold: 0.01 },
-  );
-  observer.observe(stage);
+      },
+      { rootMargin: "240px 0px", threshold: 0.01 },
+    );
+    observer.observe(stage);
 
-  if ("ResizeObserver" in window) {
-    const resizeObserver = new ResizeObserver(() => {
-      if (tryInitSplat()) {
-        resizeObserver.disconnect();
-        observer.disconnect();
-      }
-    });
-    resizeObserver.observe(stage);
+    if (stage.getBoundingClientRect().top < window.innerHeight + 240) {
+      bootSplat();
+    }
+  } else {
+    bootSplat();
   }
 };
 
