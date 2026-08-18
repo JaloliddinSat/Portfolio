@@ -1115,7 +1115,12 @@ body.debug-hero-transition {
   object-position:
     var(--watonomous-video-crop-x, 50%)
     var(--watonomous-video-crop-y, 50%);
-  transform: scale(var(--watonomous-video-zoom, 1));
+  transform:
+    translate(
+      var(--watonomous-video-shift-x, 0%),
+      var(--watonomous-video-shift-y, 0%)
+    )
+    scale(var(--watonomous-video-zoom, 1));
   transform-origin: center;
 }
 

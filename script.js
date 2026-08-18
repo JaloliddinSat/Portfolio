@@ -253,16 +253,17 @@ const STEPNOTE_SPLAT_CONFIG = {
 
 const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
 
-// Production values captured with ?debugWatonomousVideo.
+// Add the final video path and paste exported debug values here when the clip is ready.
 const WATONOMOUS_VIDEO_CONFIG = {
-  src: "/assets/watonomous-video.mp4?v=2",
-  aspectRatio: 1.66,
+  src: "",
+  aspectRatio: 16 / 9,
   cropX: 50,
-  cropY: 51,
-  zoom: 1.81,
+  cropY: 50,
+  zoom: 1,
+  shiftX: 0,
+  shiftY: 0,
   trimStart: 0,
-  // The source asset was physically trimmed from 18.00s–58.28s during export.
-  trimEnd: 40.28,
+  trimEnd: null,
 };
 
 const WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY = "watonomousVideoDebugConfig";
@@ -3713,8 +3714,6 @@ const initWatonomousVideo = () => {
   let loopFrame = null;
   let localVideoUrl = null;
   let panel = null;
-  let videoInView = false;
-  let configuredVideoLoaded = false;
 
   if (DEBUG_WATONOMOUS_VIDEO) {
     try {
@@ -3738,6 +3737,8 @@ const initWatonomousVideo = () => {
     config.cropX = clamp(config.cropX, 0, 100);
     config.cropY = clamp(config.cropY, 0, 100);
     config.zoom = clamp(config.zoom, 1, 3);
+    config.shiftX = clamp(config.shiftX, -100, 100);
+    config.shiftY = clamp(config.shiftY, -100, 100);
     config.trimStart = duration > 0
       ? clamp(config.trimStart, 0, duration)
       : Math.max(0, Number(config.trimStart) || 0);
@@ -3763,6 +3764,8 @@ const initWatonomousVideo = () => {
     frame.style.setProperty("--watonomous-video-crop-x", `${config.cropX}%`);
     frame.style.setProperty("--watonomous-video-crop-y", `${config.cropY}%`);
     frame.style.setProperty("--watonomous-video-zoom", String(config.zoom));
+    frame.style.setProperty("--watonomous-video-shift-x", `${config.shiftX}%`);
+    frame.style.setProperty("--watonomous-video-shift-y", `${config.shiftY}%`);
   };
 
   const formatSeconds = (value) => `${Number(value || 0).toFixed(2)}s`;
@@ -3773,6 +3776,8 @@ const initWatonomousVideo = () => {
     cropX: Number(config.cropX.toFixed(1)),
     cropY: Number(config.cropY.toFixed(1)),
     zoom: Number(config.zoom.toFixed(2)),
+    shiftX: Number(config.shiftX.toFixed(1)),
+    shiftY: Number(config.shiftY.toFixed(1)),
     trimStart: Number(config.trimStart.toFixed(2)),
     trimEnd: Number((getTrimEnd() || 0).toFixed(2)),
   });
@@ -3798,6 +3803,8 @@ const initWatonomousVideo = () => {
       cropX: config.cropX,
       cropY: config.cropY,
       zoom: config.zoom,
+      shiftX: config.shiftX,
+      shiftY: config.shiftY,
       trimStart: config.trimStart,
       trimEnd: getTrimEnd(),
       timeline: video.currentTime || 0,
@@ -3814,7 +3821,7 @@ const initWatonomousVideo = () => {
       if (output) {
         if (key === "aspectRatio") {
           output.textContent = `${Number(value).toFixed(2)}:1`;
-        } else if (key === "cropX" || key === "cropY") {
+        } else if (key === "cropX" || key === "cropY" || key === "shiftX" || key === "shiftY") {
           output.textContent = `${Number(value).toFixed(0)}%`;
         } else if (key === "zoom") {
           output.textContent = `${Number(value).toFixed(2)}×`;
@@ -3869,11 +3876,10 @@ const initWatonomousVideo = () => {
   };
 
   const loadConfiguredVideo = () => {
-    if (!config.src || configuredVideoLoaded) {
+    if (!config.src) {
       return;
     }
 
-    configuredVideoLoaded = true;
     video.src = config.src;
     video.hidden = false;
     video.load();
@@ -3886,7 +3892,7 @@ const initWatonomousVideo = () => {
     applyCrop();
     refreshPanel();
 
-    if (!DEBUG_WATONOMOUS_VIDEO && videoInView) {
+    if (!DEBUG_WATONOMOUS_VIDEO) {
       video.play().catch(() => {});
     }
   });
@@ -3896,29 +3902,7 @@ const initWatonomousVideo = () => {
   video.addEventListener("seeked", refreshPanel);
 
   applyCrop();
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        videoInView = entry.isIntersecting;
-
-        if (videoInView) {
-          loadConfiguredVideo();
-
-          if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-            video.play().catch(() => {});
-          }
-        } else if (!video.paused) {
-          video.pause();
-        }
-      },
-      { rootMargin: "220px 0px", threshold: 0.01 },
-    );
-    observer.observe(frame);
-  } else {
-    videoInView = true;
-    loadConfiguredVideo();
-  }
+  loadConfiguredVideo();
 
   if (!DEBUG_WATONOMOUS_VIDEO) {
     return;
@@ -3956,6 +3940,16 @@ const initWatonomousVideo = () => {
       <label for="wat-video-zoom">Zoom</label>
       <input id="wat-video-zoom" type="range" min="1" max="3" step="0.01" data-video-control="zoom">
       <output data-video-output="zoom"></output>
+    </div>
+    <div class="watonomous-video-debug-control">
+      <label for="wat-video-shift-x">Shift X</label>
+      <input id="wat-video-shift-x" type="range" min="-100" max="100" step="1" data-video-control="shiftX">
+      <output data-video-output="shiftX"></output>
+    </div>
+    <div class="watonomous-video-debug-control">
+      <label for="wat-video-shift-y">Shift Y</label>
+      <input id="wat-video-shift-y" type="range" min="-100" max="100" step="1" data-video-control="shiftY">
+      <output data-video-output="shiftY"></output>
     </div>
     <div class="watonomous-video-debug-divider"></div>
     <div class="watonomous-video-debug-control">
@@ -3995,7 +3989,6 @@ const initWatonomousVideo = () => {
     }
 
     localVideoUrl = URL.createObjectURL(file);
-    configuredVideoLoaded = true;
     video.src = localVideoUrl;
     video.hidden = false;
     video.load();
