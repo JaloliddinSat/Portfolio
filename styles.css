@@ -1102,9 +1102,129 @@ body.debug-hero-transition {
   width: 100%;
   margin-top: 6px;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--watonomous-video-aspect, 16 / 9);
   border-radius: 14px;
   background: #363636;
+}
+
+.experience-video-placeholder video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position:
+    var(--watonomous-video-crop-x, 50%)
+    var(--watonomous-video-crop-y, 50%);
+  transform: scale(var(--watonomous-video-zoom, 1));
+  transform-origin: center;
+}
+
+.experience-video-placeholder video[hidden] {
+  display: none;
+}
+
+.watonomous-video-debug-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10020;
+  width: min(360px, calc(100vw - 36px));
+  max-height: calc(100lvh - 36px);
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+  color: #f5f5f5;
+  background: rgba(14, 14, 14, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.52);
+  font: 500 0.78rem/1.4 "Inter", system-ui, sans-serif;
+}
+
+.watonomous-video-debug-panel h2,
+.watonomous-video-debug-panel p {
+  margin-top: 0;
+}
+
+.watonomous-video-debug-panel h2 {
+  margin-bottom: 5px;
+  font-size: 0.95rem;
+}
+
+.watonomous-video-debug-caption,
+.watonomous-video-debug-status {
+  color: rgba(245, 245, 245, 0.58);
+  font-size: 0.7rem;
+}
+
+.watonomous-video-debug-file {
+  display: grid;
+  gap: 6px;
+  margin: 13px 0;
+  color: rgba(245, 245, 245, 0.78);
+  font-weight: 700;
+}
+
+.watonomous-video-debug-file input {
+  width: 100%;
+  color: rgba(245, 245, 245, 0.72);
+  font-size: 0.7rem;
+}
+
+.watonomous-video-debug-control {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 8px;
+  margin: 9px 0;
+}
+
+.watonomous-video-debug-control label {
+  color: rgba(245, 245, 245, 0.72);
+  font-weight: 700;
+}
+
+.watonomous-video-debug-control input[type="range"] {
+  width: 100%;
+  accent-color: #f5f5f5;
+}
+
+.watonomous-video-debug-control output {
+  color: rgba(245, 245, 245, 0.56);
+  font: 600 0.68rem/1.2 "JetBrains Mono", monospace;
+  text-align: right;
+}
+
+.watonomous-video-debug-divider {
+  height: 1px;
+  margin: 13px 0;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.watonomous-video-debug-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.watonomous-video-debug-actions button {
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  color: #f5f5f5;
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  font: 700 0.72rem/1.2 "Inter", system-ui, sans-serif;
+}
+
+.watonomous-video-debug-actions button:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.watonomous-video-debug-status {
+  min-height: 1em;
+  margin: 10px 0 0;
 }
 
 .project-grid {

@@ -38,7 +38,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260818-33" />
+    <link rel="stylesheet" href="styles.css?v=20260818-34" />
     <script type="importmap">
       {
         "imports": {
@@ -286,10 +286,20 @@
                 </p>
                 <div
                   class="experience-video-placeholder"
+                  id="watonomous-video-frame"
                   data-video-slot="watonomous"
                   role="img"
                   aria-label="Placeholder for a future WATonomous video clip"
-                ></div>
+                >
+                  <video
+                    id="watonomous-video"
+                    muted
+                    playsinline
+                    preload="metadata"
+                    aria-label="WATonomous project video"
+                    hidden
+                  ></video>
+                </div>
               </article>
             </div>
           </div>
@@ -421,6 +431,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260818-35"></script>
+    <script type="module" src="script.js?v=20260818-36"></script>
   </body>
 </html>
