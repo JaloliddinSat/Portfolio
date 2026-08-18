@@ -2268,7 +2268,7 @@ const initStepNoteSplat = async () => {
     let currentQuaternion = initialRotation;
     let debugPanel = null;
     let stageInView = false;
-    let expanded = !document.querySelector("#stepnote-project-details")?.hidden;
+    let expanded = true;
     let animationFrameId = null;
 
     const ensureViewerRunning = () => {
@@ -2452,12 +2452,10 @@ const initStepNoteSplat = async () => {
 };
 
 const initStepNoteProject = () => {
-  const toggle = document.querySelector(".stepnote-project-toggle");
   const playbackToggle = document.querySelector(".stepnote-splat-playback-toggle");
-  const details = document.querySelector("#stepnote-project-details");
   const stage = document.querySelector("#stepnote-splat-stage");
 
-  if (!toggle || !playbackToggle || !details || !stage) {
+  if (!playbackToggle || !stage) {
     return;
   }
 
@@ -2474,31 +2472,11 @@ const initStepNoteProject = () => {
     }));
   };
 
-  const setExpanded = (expanded) => {
-    toggle.setAttribute("aria-expanded", String(expanded));
-    toggle.closest(".stepnote-project")?.classList.toggle("is-expanded", expanded);
-    details.hidden = !expanded;
-    stage.hidden = !expanded;
-    stage.dispatchEvent(new CustomEvent("stepnote-visibility-change", {
-      detail: { expanded },
-    }));
-
-    if (expanded) {
-      initStepNoteSplat();
-    }
-  };
-
-  toggle.addEventListener("click", () => {
-    setExpanded(toggle.getAttribute("aria-expanded") !== "true");
-  });
-
   playbackToggle.addEventListener("click", () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  if (DEBUG_STEPNOTE_SPLAT) {
-    setExpanded(true);
-  }
+  initStepNoteSplat();
 };
 
 const initHeroScrollTransition = () => {
@@ -3230,7 +3208,7 @@ const initAsciiCurtain = () => {
       ".terminal-dot--maximize",
       ".resume-item",
       ".project-card",
-      ".project-list-card",
+      ".project-cards",
       ".button",
       ".brand-mark",
     ];

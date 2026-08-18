@@ -1273,26 +1273,20 @@ body.debug-hero-transition {
   width: min(100%, 860px);
 }
 
-.project-list-card {
+.project-cards {
+  display: grid;
+  gap: 18px;
   width: min(100%, 760px);
   max-width: 760px;
   margin-inline: auto;
+}
+
+.project-card {
+  width: 100%;
   text-align: left;
 }
 
-.project-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.project-list li + li {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-}
-
-.project-list a {
+.project-card:not(.stepnote-project) a {
   display: block;
   margin-bottom: 6px;
   color: var(--text);
@@ -1301,11 +1295,11 @@ body.debug-hero-transition {
   transition: color 180ms ease;
 }
 
-.project-list a:hover {
+.project-card:not(.stepnote-project) a:hover {
   color: var(--muted);
 }
 
-.project-list span {
+.project-card:not(.stepnote-project) span {
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -1313,19 +1307,9 @@ body.debug-hero-transition {
 .stepnote-project {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
-  isolation: isolate;
-  transition: min-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.stepnote-project:not(.is-expanded) {
-  overflow: visible;
-}
-
-.stepnote-project.is-expanded {
   min-height: 470px;
   padding: 34px 36px 38px;
+  isolation: isolate;
 }
 
 .stepnote-project::after {
@@ -1351,54 +1335,22 @@ body.debug-hero-transition {
       transparent 70%,
       rgba(6, 6, 6, 0.48) 100%
     );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 300ms ease;
-}
-
-.stepnote-project.is-expanded::after {
   opacity: 0.7;
+  pointer-events: none;
 }
 
-.stepnote-project-toggle {
+.stepnote-project-header {
   position: relative;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  color: var(--text);
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
-.stepnote-project-toggle-copy {
+.stepnote-project-heading {
   display: grid;
-  gap: 6px;
-}
-
-.stepnote-project-toggle-copy strong {
-  color: var(--text);
-  font-size: 1.1rem;
-  line-height: 1.35;
-  transition: color 180ms ease;
-}
-
-.stepnote-project.is-expanded .stepnote-project-toggle {
-  align-items: flex-start;
-}
-
-.stepnote-project.is-expanded .stepnote-project-toggle-copy {
   max-width: 620px;
   gap: 12px;
 }
 
-.stepnote-project.is-expanded .stepnote-project-toggle-copy strong {
+.stepnote-project-heading strong {
   max-width: 16ch;
   color: #fff;
   font-family: "Playfair Display", Georgia, serif;
@@ -1409,64 +1361,19 @@ body.debug-hero-transition {
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
 }
 
-.project-list .stepnote-project.is-expanded .stepnote-project-toggle-copy span {
+.stepnote-project-heading span {
   color: rgba(255, 255, 255, 0.62);
   font: 700 0.68rem/1.4 "JetBrains Mono", monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.stepnote-project-toggle:hover strong {
-  color: var(--muted);
-}
-
-.stepnote-project-toggle:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.stepnote-project-toggle:focus-visible {
-  outline: 1px solid rgba(255, 255, 255, 0.32);
-  outline-offset: 6px;
-  border-radius: 12px;
-}
-
-.project-list .stepnote-project-toggle-icon {
-  display: grid;
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 1.25rem;
-  font-weight: 400;
-  line-height: 1;
-  transition: transform 260ms ease, background 180ms ease, border-color 180ms ease;
-}
-
-.stepnote-project-toggle[aria-expanded="true"] .stepnote-project-toggle-icon {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-  transform: rotate(45deg);
-}
-
-.stepnote-project.is-expanded .stepnote-project-toggle-icon {
-  width: 40px;
-  height: 40px;
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(8, 8, 8, 0.22);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
 .stepnote-splat-playback-toggle {
   position: absolute;
   top: 34px;
-  right: 88px;
+  right: 36px;
   z-index: 4;
-  display: none;
+  display: grid;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -1479,10 +1386,6 @@ body.debug-hero-transition {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-
-.stepnote-project.is-expanded .stepnote-splat-playback-toggle {
-  display: grid;
 }
 
 .stepnote-splat-playback-toggle:hover {
@@ -1516,19 +1419,6 @@ body.debug-hero-transition {
   z-index: 3;
   width: min(57%, 520px);
   margin-top: 34px;
-  animation: stepnote-details-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes stepnote-details-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .stepnote-project-copy {
@@ -1551,7 +1441,7 @@ body.debug-hero-transition {
   text-shadow: 0 2px 22px rgba(0, 0, 0, 0.5);
 }
 
-.project-list .stepnote-app-store-link {
+.stepnote-app-store-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1567,7 +1457,7 @@ body.debug-hero-transition {
   transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
 }
 
-.project-list .stepnote-app-store-link:hover {
+.stepnote-app-store-link:hover {
   border-color: rgba(255, 255, 255, 0.32);
   color: var(--text);
   background: rgba(255, 255, 255, 0.13);
@@ -2171,21 +2061,21 @@ body.debug-hero-transition {
       linear-gradient(0deg, rgba(6, 6, 6, 0.34), transparent 42%);
   }
 
-  .stepnote-project.is-expanded {
+  .stepnote-project {
     min-height: 530px;
     padding: 26px 22px 30px;
   }
 
-  .stepnote-project.is-expanded .stepnote-project-toggle-copy {
-    max-width: calc(100% - 104px);
+  .stepnote-project-heading {
+    max-width: calc(100% - 56px);
   }
 
   .stepnote-splat-playback-toggle {
     top: 26px;
-    right: 74px;
+    right: 22px;
   }
 
-  .stepnote-project.is-expanded .stepnote-project-toggle-copy strong {
+  .stepnote-project-heading strong {
     font-size: clamp(1.7rem, 7.5vw, 1.95rem);
   }
 

@@ -38,7 +38,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260818-43" />
+    <link rel="stylesheet" href="styles.css?v=20260818-44" />
     <script type="importmap">
       {
         "imports": {
@@ -364,84 +364,80 @@
             <div>
               <p class="subsection-title">Projects</p>
             </div>
-            <article class="resume-item project-list-card" aria-label="Personal projects">
-              <ul class="project-list">
-                <li class="stepnote-project">
-                  <button
-                    class="stepnote-project-toggle"
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="stepnote-project-details"
-                  >
-                    <span class="stepnote-project-toggle-copy">
-                      <strong>StepNote: Notetaking with AI Feedback</strong>
-                      <span>AI study workspace · Available on the App Store</span>
-                    </span>
-                    <span class="stepnote-project-toggle-icon" aria-hidden="true">+</span>
-                  </button>
-                  <button
-                    class="stepnote-splat-playback-toggle"
-                    type="button"
-                    aria-label="Pause StepNote animation"
-                    aria-pressed="false"
-                  >
-                    <svg viewBox="0 0 20 20" aria-hidden="true">
-                      <path class="stepnote-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
-                      <path class="stepnote-play-icon" d="M6.5 4.25v11.5L15 10z" />
-                    </svg>
-                  </button>
-                  <div
-                    class="stepnote-splat-stage"
-                    id="stepnote-splat-stage"
-                    data-splat-src="https://raw.githubusercontent.com/JaloliddinSat/Portfolio/1cf01ff/splats/StepNote.ksplat"
-                    aria-label="Rotating StepNote 3D splat"
-                    hidden
-                  >
-                    <div class="stepnote-splat-viewer" id="stepnote-splat-viewer"></div>
-                    <p class="stepnote-splat-status" id="stepnote-splat-status">
-                      StepNote 3D preview
+            <div class="project-cards">
+              <article
+                class="resume-item project-card stepnote-project is-expanded"
+                aria-label="StepNote project"
+              >
+                <div class="stepnote-project-header">
+                  <div class="stepnote-project-heading">
+                    <strong>StepNote: Notetaking with AI Feedback</strong>
+                    <span>AI study workspace · Available on the App Store</span>
+                  </div>
+                </div>
+                <button
+                  class="stepnote-splat-playback-toggle"
+                  type="button"
+                  aria-label="Pause StepNote animation"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path class="stepnote-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
+                    <path class="stepnote-play-icon" d="M6.5 4.25v11.5L15 10z" />
+                  </svg>
+                </button>
+                <div
+                  class="stepnote-splat-stage"
+                  id="stepnote-splat-stage"
+                  data-splat-src="https://raw.githubusercontent.com/JaloliddinSat/Portfolio/1cf01ff/splats/StepNote.ksplat"
+                  aria-label="Rotating StepNote 3D splat"
+                >
+                  <div class="stepnote-splat-viewer" id="stepnote-splat-viewer"></div>
+                  <p class="stepnote-splat-status" id="stepnote-splat-status">
+                    StepNote 3D preview
+                  </p>
+                </div>
+                <div class="stepnote-project-details" id="stepnote-project-details">
+                  <div class="stepnote-project-copy">
+                    <p>
+                      StepNote is an AI study app that lets students upload problems,
+                      work them out by hand, and get real-time step-by-step feedback
+                      without immediately revealing the answer.
                     </p>
+                    <a
+                      class="stepnote-app-store-link"
+                      href="https://apps.apple.com/us/app/stepnote-ai-study-workspace/id6767399609"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View on the App Store
+                    </a>
                   </div>
-                  <div class="stepnote-project-details" id="stepnote-project-details" hidden>
-                    <div class="stepnote-project-copy">
-                      <p>
-                        StepNote is an AI study app that lets students upload problems,
-                        work them out by hand, and get real-time step-by-step feedback
-                        without immediately revealing the answer.
-                      </p>
-                      <a
-                        class="stepnote-app-store-link"
-                        href="https://apps.apple.com/us/app/stepnote-ai-study-workspace/id6767399609"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View on the App Store
-                      </a>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/JaloliddinSat/Portfolio.git"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Portfolio Website
-                  </a>
-                  <span>github.com/JaloliddinSat/Portfolio</span>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/JaloliddinSat/reddit-sentiment-scanner.git"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Reddit Sentiment Scanner (Hype Scanner)
-                  </a>
-                  <span>github.com/JaloliddinSat/reddit-sentiment-scanner</span>
-                </li>
-              </ul>
-            </article>
+                </div>
+              </article>
+
+              <article class="resume-item project-card" aria-label="Portfolio Website project">
+                <a
+                  href="https://github.com/JaloliddinSat/Portfolio.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Portfolio Website
+                </a>
+                <span>github.com/JaloliddinSat/Portfolio</span>
+              </article>
+
+              <article class="resume-item project-card" aria-label="Reddit Sentiment Scanner project">
+                <a
+                  href="https://github.com/JaloliddinSat/reddit-sentiment-scanner.git"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Reddit Sentiment Scanner (Hype Scanner)
+                </a>
+                <span>github.com/JaloliddinSat/reddit-sentiment-scanner</span>
+              </article>
+            </div>
           </div>
         </section>
 
@@ -487,6 +483,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260818-40"></script>
+    <script type="module" src="script.js?v=20260818-44"></script>
   </body>
 </html>
