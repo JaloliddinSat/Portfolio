@@ -186,6 +186,9 @@ const DEBUG_STEPNOTE_SPLAT = new URLSearchParams(window.location.search).has(
 const DEBUG_STEPNOTE_SPLAT_ASSET = new URLSearchParams(window.location.search).get(
   "stepNoteSplat",
 );
+const DEBUG_HERO_TRANSITION = new URLSearchParams(window.location.search).has(
+  "debugHeroTransition",
+);
 
 const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
@@ -2529,6 +2532,176 @@ const initHeroScrollTransition = () => {
   update();
 };
 
+const initHeroTransitionDebug = () => {
+  if (!DEBUG_HERO_TRANSITION) {
+    return;
+  }
+
+  const hero = document.querySelector(".hero");
+  const aboutSection = document.querySelector("#about");
+
+  if (!heroScrollTrack || !hero || !aboutSection) {
+    return;
+  }
+
+  const STORAGE_KEY = "heroAboutTransitionStart";
+  const SLIDE_DURATION = 0.12;
+  const clamp = (value, min = 0, max = 1) =>
+    Math.min(max, Math.max(min, value));
+  const smoothstep = (value) => {
+    const t = clamp(value);
+
+    return t * t * (3 - 2 * t);
+  };
+  const readSavedStart = () => {
+    try {
+      const storedValue = window.localStorage.getItem(STORAGE_KEY);
+
+      if (storedValue === null) {
+        return 0.78;
+      }
+
+      const saved = Number(storedValue);
+
+      return Number.isFinite(saved) ? clamp(saved, 0.05, 0.95) : 0.78;
+    } catch (error) {
+      console.warn("[HERO TRANSITION DEBUG] Saved value could not be read:", error);
+      return 0.78;
+    }
+  };
+
+  let transitionStart = readSavedStart();
+  let previewFrame = null;
+
+  document.body.classList.add("debug-hero-transition");
+  aboutSection.classList.add("hero-about-preview");
+
+  const panel = document.createElement("aside");
+  panel.className = "hero-transition-debug-panel";
+  panel.setAttribute("aria-label", "Hero to About transition controls");
+  panel.innerHTML = `
+    <div class="hero-transition-debug-heading">
+      <div>
+        <strong>Hero → About</strong>
+        <span>Transition lab</span>
+      </div>
+      <button type="button" data-debug-close aria-label="Close debug panel">×</button>
+    </div>
+    <label>
+      <span>Hero progress <output data-progress-output>0.0%</output></span>
+      <input data-progress type="range" min="0" max="100" step="0.1" value="0" />
+    </label>
+    <label>
+      <span>About starts entering <output data-start-output>${(transitionStart * 100).toFixed(1)}%</output></span>
+      <input data-start type="range" min="5" max="95" step="0.1" value="${(transitionStart * 100).toFixed(1)}" />
+    </label>
+    <p class="hero-transition-debug-range" data-range-output></p>
+    <div class="hero-transition-debug-actions">
+      <button type="button" data-play>Play preview</button>
+      <button type="button" data-reset>Reset</button>
+      <button type="button" data-copy>Copy value</button>
+    </div>
+    <p class="hero-transition-debug-status" data-status aria-live="polite"></p>
+  `;
+  document.body.appendChild(panel);
+
+  const progressInput = panel.querySelector("[data-progress]");
+  const startInput = panel.querySelector("[data-start]");
+  const progressOutput = panel.querySelector("[data-progress-output]");
+  const startOutput = panel.querySelector("[data-start-output]");
+  const rangeOutput = panel.querySelector("[data-range-output]");
+  const status = panel.querySelector("[data-status]");
+
+  const getScrollRange = () =>
+    Math.max(1, heroScrollTrack.offsetHeight - hero.offsetHeight);
+  const scrollToProgress = (progress) => {
+    const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+
+    window.scrollTo({
+      top: trackTop + clamp(progress) * getScrollRange(),
+      behavior: "instant",
+    });
+  };
+  const updateRangeText = () => {
+    const end = Math.min(1, transitionStart + SLIDE_DURATION);
+
+    startOutput.value = `${(transitionStart * 100).toFixed(1)}%`;
+    rangeOutput.textContent = `Slides from ${(transitionStart * 100).toFixed(1)}% to ${(end * 100).toFixed(1)}%.`;
+  };
+  const updatePreview = () => {
+    previewFrame = null;
+    const progress = getScrollProgress();
+    const end = Math.min(1, transitionStart + SLIDE_DURATION);
+    const reveal = smoothstep((progress - transitionStart) / Math.max(0.001, end - transitionStart));
+
+    aboutSection.style.setProperty("--about-preview-y", `${((1 - reveal) * 100).toFixed(3)}%`);
+    aboutSection.style.pointerEvents = reveal > 0.98 ? "auto" : "none";
+    aboutSection.setAttribute("aria-hidden", reveal > 0.01 ? "false" : "true");
+    progressInput.value = (progress * 100).toFixed(1);
+    progressOutput.value = `${(progress * 100).toFixed(1)}%`;
+  };
+  const requestPreviewUpdate = () => {
+    if (previewFrame === null) {
+      previewFrame = requestAnimationFrame(updatePreview);
+    }
+  };
+  const saveStart = () => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(transitionStart));
+    } catch (error) {
+      console.warn("[HERO TRANSITION DEBUG] Value could not be saved:", error);
+    }
+  };
+
+  progressInput.addEventListener("input", () => {
+    scrollToProgress(Number(progressInput.value) / 100);
+    requestPreviewUpdate();
+  });
+
+  startInput.addEventListener("input", () => {
+    transitionStart = clamp(Number(startInput.value) / 100, 0.05, 0.95);
+    saveStart();
+    updateRangeText();
+    requestPreviewUpdate();
+  });
+
+  panel.querySelector("[data-play]").addEventListener("click", async () => {
+    const previewStart = Math.max(0, transitionStart - 0.06);
+    const previewEnd = Math.min(1, transitionStart + SLIDE_DURATION + 0.04);
+    const range = getScrollRange();
+    const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+
+    scrollToProgress(previewStart);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await smoothScrollTo(trackTop + previewEnd * range, 2400);
+  });
+
+  panel.querySelector("[data-reset]").addEventListener("click", () => {
+    scrollToProgress(Math.max(0, transitionStart - 0.08));
+    requestPreviewUpdate();
+  });
+
+  panel.querySelector("[data-copy]").addEventListener("click", async () => {
+    const value = `${(transitionStart * 100).toFixed(1)}%`;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      status.textContent = `Copied ${value}`;
+    } catch (error) {
+      status.textContent = `Use ${value}`;
+    }
+  });
+
+  panel.querySelector("[data-debug-close]").addEventListener("click", () => {
+    panel.hidden = true;
+  });
+
+  window.addEventListener("scroll", requestPreviewUpdate, { passive: true });
+  window.addEventListener("resize", requestPreviewUpdate, { passive: true });
+  updateRangeText();
+  updatePreview();
+};
+
 const initMobileDockNavigation = () => {
   const mobileQuery = window.matchMedia("(max-width: 700px)");
   const dockLinks = [...document.querySelectorAll(".site-header a[href^=\"#\"]")];
@@ -3319,6 +3492,7 @@ const initHeroMotion = () => {
 };
 
 initHeroScrollTransition();
+initHeroTransitionDebug();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
