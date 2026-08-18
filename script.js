@@ -215,9 +215,10 @@ const HERO_DEPTH_CONFIG = {
   revealStart: 0.08,
   revealEnd: 0.3,
   collapseStart: 0.3,
-  collapseEnd: 0.7,
+  collapseEnd: 0.96,
   near: 0.28,
   far: 1.4,
+  recedeDistance: 1.3,
 };
 
 // Production values captured with ?debugStepNoteSplat.
@@ -531,6 +532,9 @@ const installHeroDepthShader = (splatMesh) => {
   material.uniforms.heroDepthCollapse = { value: 0 };
   material.uniforms.heroDepthNear = { value: HERO_DEPTH_CONFIG.near };
   material.uniforms.heroDepthFar = { value: HERO_DEPTH_CONFIG.far };
+  material.uniforms.heroDepthRecedeDistance = {
+    value: HERO_DEPTH_CONFIG.recedeDistance,
+  };
 
   material.vertexShader = material.vertexShader
     .replace(
@@ -550,14 +554,15 @@ const installHeroDepthShader = (splatMesh) => {
        uniform float heroDepthMix;
        uniform float heroDepthCollapse;
        uniform float heroDepthNear;
-       uniform float heroDepthFar;`,
+       uniform float heroDepthFar;
+       uniform float heroDepthRecedeDistance;`,
     )
     .replace(
       "vec3 color = vColor.rgb;",
       `float depthRange = max(0.0001, heroDepthFar - heroDepthNear);
-       float depthValue = clamp((vHeroCameraDepth - heroDepthNear) / depthRange, 0.0, 1.0);
+       float recededCameraDepth = vHeroCameraDepth + heroDepthCollapse * heroDepthRecedeDistance;
+       float depthValue = clamp((recededCameraDepth - heroDepthNear) / depthRange, 0.0, 1.0);
        depthValue = pow(depthValue, 0.55);
-       depthValue = mix(depthValue, 1.0, heroDepthCollapse);
        vec3 depthColor = vec3(1.0 - depthValue);
        vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);`,
     );
@@ -2488,11 +2493,10 @@ const initHeroScrollTransition = () => {
     const progress = getScrollProgress();
     const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
     const introOverlay = 1 - fadeBetween(progress, 0.08, 0.28);
-    const collapseOverlay = fadeBetween(progress, 0.5, 0.78);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
     hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
-    hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
+    hero.style.setProperty("--hero-collapse-overlay", "0");
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
