@@ -1585,8 +1585,13 @@ body.debug-hero-transition {
     padding: 9px;
     overflow: hidden auto;
     border-radius: 22px;
-    background: rgba(17, 17, 17, 0.8);
+    contain: layout paint style;
+    background: rgba(17, 17, 17, 0.96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     box-shadow: 16px 20px 55px rgba(0, 0, 0, 0.3);
+    backface-visibility: hidden;
+    will-change: width, transform, opacity;
     opacity: 0;
     transform: translate(calc(-100% - 28px), -50%);
     transition:

@@ -2486,7 +2486,6 @@ const initStepNoteProject = () => {
 const initHeroScrollTransition = () => {
   const hero = document.querySelector(".hero");
   const heroCopy = document.querySelector(".hero-copy");
-  const siteHeader = document.querySelector(".site-header");
 
   if (!hero || !heroCopy) {
     return;
@@ -2519,13 +2518,6 @@ const initHeroScrollTransition = () => {
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
-    if (siteHeader) {
-      const pastSplat = progress >= 1;
-      const mobileDock = window.matchMedia("(max-width: 700px)").matches;
-      const headerVisible = mobileDock || pastSplat;
-      siteHeader.classList.toggle("is-visible", headerVisible);
-      siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
-    }
   };
 
   const onScroll = () => {
@@ -2625,6 +2617,8 @@ const initHeroAboutTransition = () => {
     ? readSavedVignetteEnd()
     : HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
   let previewFrame = null;
+  let desktopHeaderVisible = false;
+  let appliedHeaderVisibility = null;
 
   document.body.classList.toggle("debug-hero-transition", DEBUG_HERO_TRANSITION);
 
@@ -2732,10 +2726,20 @@ const initHeroAboutTransition = () => {
 
     if (siteHeader) {
       const mobileDock = window.matchMedia("(max-width: 700px)").matches;
-      const headerVisible = mobileDock || reveal > 0.6 || progress >= 1;
 
-      siteHeader.classList.toggle("is-visible", headerVisible);
-      siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
+      if (progress >= 1 || reveal > 0.65) {
+        desktopHeaderVisible = true;
+      } else if (reveal < 0.35) {
+        desktopHeaderVisible = false;
+      }
+
+      const headerVisible = mobileDock || desktopHeaderVisible;
+
+      if (headerVisible !== appliedHeaderVisibility) {
+        appliedHeaderVisibility = headerVisible;
+        siteHeader.classList.toggle("is-visible", headerVisible);
+        siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
+      }
     }
   };
   const requestPreviewUpdate = () => {
