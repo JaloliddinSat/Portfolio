@@ -333,7 +333,7 @@ a {
 
 .subsection-title {
   width: 100%;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   color: rgba(245, 245, 245, 0.58);
   font-family: "Inter", system-ui, sans-serif;
   font-size: 0.9rem;
@@ -1002,6 +1002,10 @@ body.debug-hero-transition {
   text-align: center;
   gap: 28px;
   width: 100%;
+}
+
+.portfolio-subsection.portfolio-projects {
+  gap: 18px;
 }
 
 .portfolio-section .portfolio-subsection .portfolio-list {
