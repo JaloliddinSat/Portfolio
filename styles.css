@@ -996,13 +996,18 @@ body.debug-hero-transition {
   width: 100%;
 }
 
-.portfolio-list {
+.portfolio-section .portfolio-subsection .portfolio-list {
   display: grid;
   gap: 18px;
   width: min(100%, 760px);
+  max-width: 760px;
+  margin-inline: auto;
 }
 
 .portfolio-entry {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
   text-align: left;
 }
 
