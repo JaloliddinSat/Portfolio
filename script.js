@@ -212,10 +212,10 @@ const SPLAT_CONFIG = {
 // The depth transition is evaluated inside the existing splat shader. This keeps
 // the effect to one draw pass: no depth render target, second scene, or CPU readback.
 const HERO_DEPTH_CONFIG = {
-  revealStart: 0.16,
-  revealEnd: 0.46,
-  collapseStart: 0.48,
-  collapseEnd: 0.88,
+  revealStart: 0.08,
+  revealEnd: 0.3,
+  collapseStart: 0.3,
+  collapseEnd: 0.7,
   near: 0.28,
   far: 1.4,
 };
@@ -2394,8 +2394,8 @@ const initHeroScrollTransition = () => {
     return;
   }
 
-  const COPY_FADE_START = 0.34;
-  const COPY_FADE_END = 0.47;
+  const COPY_FADE_START = 0.18;
+  const COPY_FADE_END = 0.3;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
@@ -2412,8 +2412,8 @@ const initHeroScrollTransition = () => {
     ticking = false;
     const progress = getScrollProgress();
     const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
-    const introOverlay = 1 - fadeBetween(progress, 0.16, 0.42);
-    const collapseOverlay = fadeBetween(progress, 0.68, 0.94);
+    const introOverlay = 1 - fadeBetween(progress, 0.08, 0.28);
+    const collapseOverlay = fadeBetween(progress, 0.5, 0.78);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
     hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
