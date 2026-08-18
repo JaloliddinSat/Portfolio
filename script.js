@@ -2543,8 +2543,9 @@ const initHeroScrollTransition = () => {
 const initHeroAboutTransition = () => {
   const hero = document.querySelector(".hero");
   const aboutSection = document.querySelector("#about");
+  const siteContent = document.querySelector("#site-content-transition");
 
-  if (!heroScrollTrack || !hero || !aboutSection) {
+  if (!heroScrollTrack || !hero || !aboutSection || !siteContent) {
     return;
   }
 
@@ -2700,10 +2701,30 @@ const initHeroAboutTransition = () => {
     const progress = getScrollProgress();
     const end = Math.min(1, transitionStart + speedToDuration(transitionSpeed));
     const reveal = smoothstep((progress - transitionStart) / Math.max(0.001, end - transitionStart));
+    const scrollRange = getScrollRange();
+    const viewportHeight = hero.offsetHeight;
+    const overlap = viewportHeight + (1 - end) * scrollRange;
+    const preEntryOffset = Math.max(
+      0,
+      viewportHeight - (end - transitionStart) * scrollRange,
+    );
+    const entryOffset = preEntryOffset * (1 - reveal);
+    const contentTop = clamp(
+      (end - progress) * scrollRange + entryOffset,
+      0,
+      viewportHeight,
+    );
 
-    aboutSection.style.setProperty("--about-preview-y", `${((1 - reveal) * 100).toFixed(3)}%`);
-    aboutSection.style.pointerEvents = reveal > 0.98 ? "auto" : "none";
-    aboutSection.setAttribute("aria-hidden", reveal > 0.01 ? "false" : "true");
+    siteContent.style.marginTop = `${-overlap.toFixed(3)}px`;
+    siteContent.style.setProperty(
+      "--site-content-entry-y",
+      `${entryOffset.toFixed(3)}px`,
+    );
+    siteContent.style.pointerEvents = reveal > 0.01 ? "auto" : "none";
+    hero.style.setProperty(
+      "--hero-content-clip-bottom",
+      `${(viewportHeight - contentTop).toFixed(3)}px`,
+    );
     progressInput.value = (progress * 100).toFixed(1);
     progressOutput.value = `${(progress * 100).toFixed(1)}%`;
 
@@ -2828,7 +2849,9 @@ const initHeroAboutTransition = () => {
   updatePreview();
 
   if (window.location.hash === "#about") {
-    requestAnimationFrame(() => {
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+
+    const landOnAbout = () => requestAnimationFrame(() => {
       const transitionEnd = Math.min(
         1,
         transitionStart + speedToDuration(transitionSpeed),
@@ -2836,7 +2859,14 @@ const initHeroAboutTransition = () => {
 
       scrollToProgress(transitionEnd);
       requestPreviewUpdate();
+      history.replaceState(null, "", "#about");
     });
+
+    if (document.readyState === "complete") {
+      landOnAbout();
+    } else {
+      window.addEventListener("load", landOnAbout, { once: true });
+    }
   }
 };
 

@@ -285,6 +285,7 @@ a {
   --hero-copy-opacity: 1;
   --hero-intro-overlay: 1;
   --hero-collapse-overlay: 0;
+  --hero-content-clip-bottom: 0px;
   position: sticky;
   top: 0;
   width: 100%;
@@ -295,6 +296,7 @@ a {
   margin-top: 0;
   margin-left: 0;
   overflow: hidden;
+  clip-path: inset(0 0 var(--hero-content-clip-bottom) 0);
   display: flex;
   align-items: flex-start;
   perspective: 1200px;
@@ -739,27 +741,14 @@ body.debug-hero-transition {
   overscroll-behavior-y: none;
 }
 
-.hero-about-transition {
-  position: sticky;
-  top: 0;
+.site-content-transition {
+  --site-content-entry-y: 43.12lvh;
+  position: relative;
   z-index: 8;
   width: 100%;
-  height: 100vh;
-  height: 100lvh;
-  min-height: 0;
-  margin: -100vh 0 0;
-  margin-top: -100lvh;
-  overflow-y: auto;
-  padding:
-    max(70px, env(safe-area-inset-top))
-    max(24px, env(safe-area-inset-right))
-    max(70px, env(safe-area-inset-bottom))
-    max(24px, env(safe-area-inset-left));
-  background:
-    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.05), transparent 32rem),
-    linear-gradient(145deg, #0a0a0a, #151515 62%, #111111);
-  box-shadow: 0 -30px 90px rgba(0, 0, 0, 0.5);
-  transform: translate3d(0, var(--about-preview-y, 100%), 0);
+  margin-top: -160.96vh;
+  margin-top: -160.96lvh;
+  transform: translate3d(0, var(--site-content-entry-y), 0);
   will-change: transform;
 }
 
