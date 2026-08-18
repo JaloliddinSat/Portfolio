@@ -2175,7 +2175,7 @@ const initStepNoteSplat = async () => {
     return;
   }
 
-  const { width, height } = stage.getBoundingClientRect();
+  const { width, height } = (stage.closest(".stepnote-project") || stage).getBoundingClientRect();
   if (width < 2 || height < 2) {
     return;
   }
@@ -2463,8 +2463,9 @@ const initStepNoteSplat = async () => {
 const initStepNoteProject = () => {
   const playbackToggle = document.querySelector(".stepnote-splat-playback-toggle");
   const stage = document.querySelector("#stepnote-splat-stage");
+  const card = stage?.closest(".stepnote-project");
 
-  if (!playbackToggle || !stage) {
+  if (!playbackToggle || !stage || !card) {
     return;
   }
 
@@ -2485,48 +2486,45 @@ const initStepNoteProject = () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  const bootSplat = () => {
+  const startSplat = () => {
     if (stage.dataset.initialized === "true") {
       return;
     }
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => initStepNoteSplat());
-    });
+    initStepNoteSplat();
+  };
+
+  const isNearViewport = () => {
+    const rect = card.getBoundingClientRect();
+    return rect.bottom > -320 && rect.top < window.innerHeight + 320;
+  };
+
+  const maybeStart = () => {
+    if (!isNearViewport()) {
+      return;
+    }
+
+    startSplat();
   };
 
   if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) {
-          return;
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          startSplat();
+          observer.disconnect();
         }
-
-        bootSplat();
-        observer.disconnect();
       },
-      { rootMargin: "240px 0px", threshold: 0.01 },
+      { rootMargin: "320px 0px", threshold: 0 },
     );
-    observer.observe(stage);
-
-    if (stage.getBoundingClientRect().top < window.innerHeight + 240) {
-      bootSplat();
-    }
-  } else {
-    bootSplat();
+    observer.observe(card);
   }
 
-  if ("ResizeObserver" in window) {
-    const resizeObserver = new ResizeObserver(() => {
-      if (stage.dataset.initialized === "true") {
-        resizeObserver.disconnect();
-        return;
-      }
-
-      bootSplat();
-    });
-    resizeObserver.observe(stage.closest(".stepnote-project") || stage);
-  }
+  maybeStart();
+  window.addEventListener("scroll", maybeStart, { passive: true });
+  window.addEventListener("resize", maybeStart, { passive: true });
+  window.addEventListener("hashchange", maybeStart);
+  window.addEventListener("load", maybeStart);
 };
 
 const initHeroScrollTransition = () => {
