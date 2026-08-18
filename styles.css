@@ -317,27 +317,27 @@ a {
 .section-title {
   width: 100%;
   margin: 0 0 12px;
-  color: rgba(245, 245, 245, 0.7);
-  font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  color: rgba(245, 245, 245, 0.58);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: -0.045em;
+  letter-spacing: 0.075em;
   line-height: 1;
   text-align: left;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .subsection-title {
   width: 100%;
   margin: 0 0 16px;
-  color: rgba(245, 245, 245, 0.7);
-  font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(1.25rem, 1.6vw, 1.55rem);
+  color: rgba(245, 245, 245, 0.58);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  letter-spacing: 0.075em;
+  line-height: 1;
   text-align: left;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .eyebrow {
@@ -1530,8 +1530,8 @@ body.debug-hero-transition {
 
 .contact-section > .section-title {
   margin-bottom: 0;
-  color: rgba(245, 245, 245, 0.7);
-  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  color: rgba(245, 245, 245, 0.58);
+  font-size: 0.9rem;
   text-align: left;
 }
 
