@@ -3740,6 +3740,7 @@ const initConfiguredVideoFrame = ({
   let loopFrame = null;
   let localVideoUrl = null;
   let panel = null;
+  let isInView = false;
 
   if (debugEnabled && storageKey) {
     try {
@@ -3885,6 +3886,10 @@ const initConfiguredVideoFrame = ({
   const enforceLoop = () => {
     loopFrame = null;
 
+    if (video.ended && shouldAutoplay()) {
+      restartClip();
+    }
+
     if (video.paused || duration <= 0) {
       refreshPanel();
       return;
@@ -3892,8 +3897,17 @@ const initConfiguredVideoFrame = ({
 
     const trimEnd = getTrimEnd();
 
-    if (video.currentTime < config.trimStart || video.currentTime >= trimEnd - 0.025) {
-      video.currentTime = config.trimStart;
+    if (
+      video.ended ||
+      video.currentTime < config.trimStart ||
+      video.currentTime >= trimEnd - 0.05
+    ) {
+      restartClip();
+    }
+
+    if (video.paused) {
+      refreshPanel();
+      return;
     }
 
     refreshPanel();
@@ -3906,11 +3920,64 @@ const initConfiguredVideoFrame = ({
     }
   };
 
+  const stopLoopWatcher = () => {
+    if (loopFrame !== null) {
+      window.cancelAnimationFrame(loopFrame);
+      loopFrame = null;
+    }
+  };
+
+  const shouldAutoplay = () =>
+    !debugEnabled &&
+    isInView &&
+    !document.hidden &&
+    Boolean(config.src || video.src) &&
+    duration > 0;
+
+  const restartClip = () => {
+    const trimEnd = getTrimEnd();
+
+    if (duration <= 0 || trimEnd <= config.trimStart) {
+      return;
+    }
+
+    video.currentTime = config.trimStart;
+
+    if (shouldAutoplay() && video.paused) {
+      video.play().catch(() => {});
+    }
+  };
+
+  const playIfVisible = () => {
+    if (!shouldAutoplay()) {
+      return;
+    }
+
+    if (video.currentTime < config.trimStart || video.currentTime >= getTrimEnd()) {
+      video.currentTime = config.trimStart;
+    }
+
+    video.play().catch(() => {});
+  };
+
+  const pauseForOptimization = () => {
+    if (debugEnabled) {
+      return;
+    }
+
+    stopLoopWatcher();
+
+    if (!video.paused) {
+      video.pause();
+    }
+  };
+
   const loadConfiguredVideo = () => {
     if (!config.src) {
       return;
     }
 
+    video.loop = false;
     video.src = config.src;
     video.hidden = false;
     video.load();
@@ -3922,15 +3989,59 @@ const initConfiguredVideoFrame = ({
     video.currentTime = config.trimStart;
     applyCrop();
     refreshPanel();
+    playIfVisible();
+  });
 
-    if (!debugEnabled) {
-      video.play().catch(() => {});
+  video.addEventListener("ended", () => {
+    if (shouldAutoplay()) {
+      restartClip();
+      return;
     }
+
+    refreshPanel();
   });
 
   video.addEventListener("play", startLoopWatcher);
-  video.addEventListener("pause", refreshPanel);
+  video.addEventListener("pause", () => {
+    stopLoopWatcher();
+    refreshPanel();
+  });
   video.addEventListener("seeked", refreshPanel);
+
+  if (debugEnabled) {
+    isInView = true;
+  } else if ("IntersectionObserver" in window) {
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        isInView = Boolean(entry?.isIntersecting);
+
+        if (isInView) {
+          playIfVisible();
+          return;
+        }
+
+        pauseForOptimization();
+      },
+      { threshold: 0.05 },
+    );
+
+    visibilityObserver.observe(frame);
+  } else {
+    isInView = true;
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (debugEnabled) {
+      return;
+    }
+
+    if (document.hidden) {
+      pauseForOptimization();
+      return;
+    }
+
+    playIfVisible();
+  });
 
   applyCrop();
   loadConfiguredVideo();
