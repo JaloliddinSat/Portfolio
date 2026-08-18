@@ -255,7 +255,7 @@ const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
 
 // Production values captured with ?debugWatonomousVideo.
 const WATONOMOUS_VIDEO_CONFIG = {
-  src: "/assets/watonomous-video.mp4?v=1",
+  src: "/assets/watonomous-video.mp4?v=2",
   aspectRatio: 1.66,
   cropX: 50,
   cropY: 51,
