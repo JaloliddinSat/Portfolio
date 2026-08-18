@@ -516,6 +516,13 @@ const smoothstepRange = (value, start, end) => {
   return t * t * (3 - 2 * t);
 };
 
+const easeOutCubicRange = (value, start, end) => {
+  const range = Math.max(0.0001, end - start);
+  const t = Math.min(1, Math.max(0, (value - start) / range));
+
+  return 1 - (1 - t) ** 3;
+};
+
 const installHeroDepthShader = (splatMesh) => {
   const material = splatMesh?.material;
 
@@ -576,7 +583,7 @@ const installHeroDepthShader = (splatMesh) => {
       HERO_DEPTH_CONFIG.revealStart,
       HERO_DEPTH_CONFIG.revealEnd,
     );
-    const depthCollapse = smoothstepRange(
+    const depthCollapse = easeOutCubicRange(
       rawProgress,
       HERO_DEPTH_CONFIG.collapseStart,
       HERO_DEPTH_CONFIG.collapseEnd,
