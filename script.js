@@ -224,6 +224,14 @@ const HERO_DEPTH_CONFIG = {
   recedeDistance: 1.3,
 };
 
+const HERO_ABOUT_TRANSITION_CONFIG = {
+  start: 0.509,
+  speed: 1,
+  vignetteFadeEnd: 0.45,
+};
+
+let heroVignetteFadeEnd = HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
+
 // Production values captured with ?debugStepNoteSplat.
 const STEPNOTE_SPLAT_CONFIG = {
   cameraPosition: [0.15, -0.3, -0.32],
@@ -2502,7 +2510,7 @@ const initHeroScrollTransition = () => {
     ticking = false;
     const progress = getScrollProgress();
     const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
-    const introOverlay = 1 - fadeBetween(progress, 0.08, 0.28);
+    const introOverlay = 1 - fadeBetween(progress, 0.08, heroVignetteFadeEnd);
     const collapseOverlay = fadeBetween(progress, 0.5, 0.98);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
@@ -2532,11 +2540,7 @@ const initHeroScrollTransition = () => {
   update();
 };
 
-const initHeroTransitionDebug = () => {
-  if (!DEBUG_HERO_TRANSITION) {
-    return;
-  }
-
+const initHeroAboutTransition = () => {
   const hero = document.querySelector(".hero");
   const aboutSection = document.querySelector("#about");
 
@@ -2546,6 +2550,7 @@ const initHeroTransitionDebug = () => {
 
   const STORAGE_KEY = "heroAboutTransitionStart";
   const SPEED_STORAGE_KEY = "heroAboutTransitionSpeed";
+  const VIGNETTE_STORAGE_KEY = "heroVignetteFadeEnd";
   const clamp = (value, min = 0, max = 1) =>
     Math.min(max, Math.max(min, value));
   const smoothstep = (value) => {
@@ -2558,15 +2563,17 @@ const initHeroTransitionDebug = () => {
       const storedValue = window.localStorage.getItem(STORAGE_KEY);
 
       if (storedValue === null) {
-        return 0.78;
+        return HERO_ABOUT_TRANSITION_CONFIG.start;
       }
 
       const saved = Number(storedValue);
 
-      return Number.isFinite(saved) ? clamp(saved, 0.05, 0.95) : 0.78;
+      return Number.isFinite(saved)
+        ? clamp(saved, 0.05, 0.95)
+        : HERO_ABOUT_TRANSITION_CONFIG.start;
     } catch (error) {
       console.warn("[HERO TRANSITION DEBUG] Saved value could not be read:", error);
-      return 0.78;
+      return HERO_ABOUT_TRANSITION_CONFIG.start;
     }
   };
   const readSavedSpeed = () => {
@@ -2574,25 +2581,51 @@ const initHeroTransitionDebug = () => {
       const storedValue = window.localStorage.getItem(SPEED_STORAGE_KEY);
 
       if (storedValue === null) {
-        return 6;
+        return HERO_ABOUT_TRANSITION_CONFIG.speed;
       }
 
       const saved = Number(storedValue);
 
-      return Number.isFinite(saved) ? clamp(saved, 1, 10) : 6;
+      return Number.isFinite(saved)
+        ? clamp(saved, 1, 10)
+        : HERO_ABOUT_TRANSITION_CONFIG.speed;
     } catch (error) {
       console.warn("[HERO TRANSITION DEBUG] Saved speed could not be read:", error);
-      return 6;
+      return HERO_ABOUT_TRANSITION_CONFIG.speed;
+    }
+  };
+  const readSavedVignetteEnd = () => {
+    try {
+      const storedValue = window.localStorage.getItem(VIGNETTE_STORAGE_KEY);
+
+      if (storedValue === null) {
+        return HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
+      }
+
+      const saved = Number(storedValue);
+
+      return Number.isFinite(saved)
+        ? clamp(saved, 0.12, 0.8)
+        : HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
+    } catch (error) {
+      console.warn("[HERO TRANSITION DEBUG] Vignette value could not be read:", error);
+      return HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
     }
   };
   const speedToDuration = (speed) => 0.26 - clamp(speed, 1, 10) * 0.023;
 
-  let transitionStart = readSavedStart();
-  let transitionSpeed = readSavedSpeed();
+  let transitionStart = DEBUG_HERO_TRANSITION
+    ? readSavedStart()
+    : HERO_ABOUT_TRANSITION_CONFIG.start;
+  let transitionSpeed = DEBUG_HERO_TRANSITION
+    ? readSavedSpeed()
+    : HERO_ABOUT_TRANSITION_CONFIG.speed;
+  heroVignetteFadeEnd = DEBUG_HERO_TRANSITION
+    ? readSavedVignetteEnd()
+    : HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
   let previewFrame = null;
 
-  document.body.classList.add("debug-hero-transition");
-  aboutSection.classList.add("hero-about-preview");
+  document.body.classList.toggle("debug-hero-transition", DEBUG_HERO_TRANSITION);
 
   const panel = document.createElement("aside");
   panel.className = "hero-transition-debug-panel";
@@ -2617,22 +2650,29 @@ const initHeroTransitionDebug = () => {
       <span>Slide speed <output data-speed-output>${transitionSpeed.toFixed(1)} / 10</output></span>
       <input data-speed type="range" min="1" max="10" step="0.1" value="${transitionSpeed.toFixed(1)}" />
     </label>
+    <label>
+      <span>Vignette disappears <output data-vignette-output>${(heroVignetteFadeEnd * 100).toFixed(1)}%</output></span>
+      <input data-vignette type="range" min="12" max="80" step="0.1" value="${(heroVignetteFadeEnd * 100).toFixed(1)}" />
+    </label>
     <p class="hero-transition-debug-range" data-range-output></p>
     <div class="hero-transition-debug-actions">
       <button type="button" data-play>Play preview</button>
       <button type="button" data-reset>Reset</button>
-      <button type="button" data-copy>Copy value</button>
+      <button type="button" data-copy>Copy config</button>
     </div>
     <p class="hero-transition-debug-status" data-status aria-live="polite"></p>
   `;
   document.body.appendChild(panel);
+  panel.hidden = !DEBUG_HERO_TRANSITION;
 
   const progressInput = panel.querySelector("[data-progress]");
   const startInput = panel.querySelector("[data-start]");
   const speedInput = panel.querySelector("[data-speed]");
+  const vignetteInput = panel.querySelector("[data-vignette]");
   const progressOutput = panel.querySelector("[data-progress-output]");
   const startOutput = panel.querySelector("[data-start-output]");
   const speedOutput = panel.querySelector("[data-speed-output]");
+  const vignetteOutput = panel.querySelector("[data-vignette-output]");
   const rangeOutput = panel.querySelector("[data-range-output]");
   const status = panel.querySelector("[data-status]");
 
@@ -2652,6 +2692,7 @@ const initHeroTransitionDebug = () => {
 
     startOutput.value = `${(transitionStart * 100).toFixed(1)}%`;
     speedOutput.value = `${transitionSpeed.toFixed(1)} / 10`;
+    vignetteOutput.value = `${(heroVignetteFadeEnd * 100).toFixed(1)}%`;
     rangeOutput.textContent = `Slides from ${(transitionStart * 100).toFixed(1)}% to ${(end * 100).toFixed(1)}% (${(slideDuration * 100).toFixed(1)}% of hero scroll).`;
   };
   const updatePreview = () => {
@@ -2665,6 +2706,16 @@ const initHeroTransitionDebug = () => {
     aboutSection.setAttribute("aria-hidden", reveal > 0.01 ? "false" : "true");
     progressInput.value = (progress * 100).toFixed(1);
     progressOutput.value = `${(progress * 100).toFixed(1)}%`;
+
+    const siteHeader = document.querySelector(".site-header");
+
+    if (siteHeader) {
+      const mobileDock = window.matchMedia("(max-width: 700px)").matches;
+      const headerVisible = mobileDock || reveal > 0.6 || progress >= 1;
+
+      siteHeader.classList.toggle("is-visible", headerVisible);
+      siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
+    }
   };
   const requestPreviewUpdate = () => {
     if (previewFrame === null) {
@@ -2683,6 +2734,13 @@ const initHeroTransitionDebug = () => {
       window.localStorage.setItem(SPEED_STORAGE_KEY, String(transitionSpeed));
     } catch (error) {
       console.warn("[HERO TRANSITION DEBUG] Speed could not be saved:", error);
+    }
+  };
+  const saveVignetteEnd = () => {
+    try {
+      window.localStorage.setItem(VIGNETTE_STORAGE_KEY, String(heroVignetteFadeEnd));
+    } catch (error) {
+      console.warn("[HERO TRANSITION DEBUG] Vignette value could not be saved:", error);
     }
   };
 
@@ -2705,6 +2763,13 @@ const initHeroTransitionDebug = () => {
     requestPreviewUpdate();
   });
 
+  vignetteInput.addEventListener("input", () => {
+    heroVignetteFadeEnd = clamp(Number(vignetteInput.value) / 100, 0.12, 0.8);
+    saveVignetteEnd();
+    updateRangeText();
+    window.dispatchEvent(new Event("scroll"));
+  });
+
   panel.querySelector("[data-play]").addEventListener("click", async () => {
     const previewStart = Math.max(0, transitionStart - 0.06);
     const previewEnd = Math.min(
@@ -2725,7 +2790,7 @@ const initHeroTransitionDebug = () => {
   });
 
   panel.querySelector("[data-copy]").addEventListener("click", async () => {
-    const value = `${(transitionStart * 100).toFixed(1)}%`;
+    const value = `start ${(transitionStart * 100).toFixed(1)}%, speed ${transitionSpeed.toFixed(1)}/10, vignette ${(heroVignetteFadeEnd * 100).toFixed(1)}%`;
 
     try {
       await navigator.clipboard.writeText(value);
@@ -2739,10 +2804,40 @@ const initHeroTransitionDebug = () => {
     panel.hidden = true;
   });
 
+  document.querySelectorAll('a[href="#about"]').forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      event.preventDefault();
+      const transitionEnd = Math.min(
+        1,
+        transitionStart + speedToDuration(transitionSpeed),
+      );
+      const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+
+      await smoothScrollTo(trackTop + transitionEnd * getScrollRange(), 900);
+      history.replaceState(null, "", "#about");
+    });
+  });
+
   window.addEventListener("scroll", requestPreviewUpdate, { passive: true });
   window.addEventListener("resize", requestPreviewUpdate, { passive: true });
   updateRangeText();
   updatePreview();
+
+  if (window.location.hash === "#about") {
+    requestAnimationFrame(() => {
+      const transitionEnd = Math.min(
+        1,
+        transitionStart + speedToDuration(transitionSpeed),
+      );
+
+      scrollToProgress(transitionEnd);
+      requestPreviewUpdate();
+    });
+  }
 };
 
 const initMobileDockNavigation = () => {
@@ -3535,7 +3630,7 @@ const initHeroMotion = () => {
 };
 
 initHeroScrollTransition();
-initHeroTransitionDebug();
+initHeroAboutTransition();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
