@@ -2333,8 +2333,10 @@ const initHeroScrollTransition = () => {
 
     if (siteHeader) {
       const pastSplat = progress >= 1;
-      siteHeader.classList.toggle("is-visible", pastSplat);
-      siteHeader.setAttribute("aria-hidden", pastSplat ? "false" : "true");
+      const mobileDock = window.matchMedia("(max-width: 700px)").matches;
+      const headerVisible = mobileDock || pastSplat;
+      siteHeader.classList.toggle("is-visible", headerVisible);
+      siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
     }
   };
 
@@ -2348,6 +2350,73 @@ const initHeroScrollTransition = () => {
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
   update();
+};
+
+const initMobileDockNavigation = () => {
+  const mobileQuery = window.matchMedia("(max-width: 700px)");
+  const dockLinks = [...document.querySelectorAll(".site-header a[href^=\"#\"]")];
+  const targets = dockLinks.flatMap((link) => {
+    const selector = link.getAttribute("href");
+    const target = selector === "#top"
+      ? document.querySelector("#hero-scroll-track")
+      : document.querySelector(selector);
+
+    return target ? [{ link, target }] : [];
+  });
+
+  if (!targets.length || !("IntersectionObserver" in window)) {
+    return;
+  }
+
+  const visibleTargets = new Set();
+  const setActiveLink = (activeLink) => {
+    dockLinks.forEach((link) => {
+      if (link === activeLink && mobileQuery.matches) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  };
+
+  const updateActiveLink = () => {
+    if (!mobileQuery.matches) {
+      setActiveLink(null);
+      return;
+    }
+
+    const viewportCenter = window.innerHeight / 2;
+    const candidates = targets
+      .filter(({ target }) => visibleTargets.has(target))
+      .map((item) => ({ ...item, rect: item.target.getBoundingClientRect() }));
+    const centered = candidates
+      .filter(({ rect }) => rect.top <= viewportCenter && rect.bottom >= viewportCenter)
+      .sort((a, b) => b.rect.top - a.rect.top);
+    const active = centered[0] || candidates.sort(
+      (a, b) =>
+        Math.abs(a.rect.top - viewportCenter) -
+        Math.abs(b.rect.top - viewportCenter),
+    )[0];
+
+    setActiveLink(active?.link || null);
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        visibleTargets.add(entry.target);
+      } else {
+        visibleTargets.delete(entry.target);
+      }
+    });
+    updateActiveLink();
+  });
+
+  targets.forEach(({ target }) => observer.observe(target));
+  dockLinks.forEach((link) => {
+    link.addEventListener("click", () => setActiveLink(link));
+  });
+  mobileQuery.addEventListener?.("change", updateActiveLink);
 };
 
 const initAsciiCurtain = () => {
@@ -3074,6 +3143,7 @@ const initHeroMotion = () => {
 };
 
 initHeroScrollTransition();
+initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
 initHeroMotion();
