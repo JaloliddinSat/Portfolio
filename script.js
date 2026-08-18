@@ -209,6 +209,17 @@ const SPLAT_CONFIG = {
   scrollEndAt: 0.18,
 };
 
+// The depth transition is evaluated inside the existing splat shader. This keeps
+// the effect to one draw pass: no depth render target, second scene, or CPU readback.
+const HERO_DEPTH_CONFIG = {
+  revealStart: 0.16,
+  revealEnd: 0.46,
+  collapseStart: 0.48,
+  collapseEnd: 0.88,
+  near: 0.35,
+  far: 5.25,
+};
+
 // Production values captured with ?debugStepNoteSplat.
 const STEPNOTE_SPLAT_CONFIG = {
   cameraPosition: [0.15, -0.3, -0.32],
@@ -494,6 +505,85 @@ const easeScrollProgress = (progress) => {
   return t * 0.6 + smooth * 0.4;
 };
 
+const smoothstepRange = (value, start, end) => {
+  const range = Math.max(0.0001, end - start);
+  const t = Math.min(1, Math.max(0, (value - start) / range));
+
+  return t * t * (3 - 2 * t);
+};
+
+const installHeroDepthShader = (splatMesh) => {
+  const material = splatMesh?.material;
+
+  if (
+    !material?.isShaderMaterial ||
+    !material.vertexShader?.includes("gl_Position = quadPos;") ||
+    !material.fragmentShader?.includes("vec3 color = vColor.rgb;")
+  ) {
+    console.warn("[SPLAT DEPTH] Compatible splat shader was not found.");
+    return null;
+  }
+
+  material.uniforms.heroDepthMix = { value: 0 };
+  material.uniforms.heroDepthCollapse = { value: 0 };
+  material.uniforms.heroDepthNear = { value: HERO_DEPTH_CONFIG.near };
+  material.uniforms.heroDepthFar = { value: HERO_DEPTH_CONFIG.far };
+
+  material.vertexShader = material.vertexShader
+    .replace(
+      "varying vec4 vColor;",
+      "varying vec4 vColor; varying float vHeroCameraDepth;",
+    )
+    .replace(
+      "gl_Position = quadPos;",
+      "vHeroCameraDepth = max(0.0, -viewCenter.z); gl_Position = quadPos;",
+    );
+
+  material.fragmentShader = material.fragmentShader
+    .replace(
+      "varying vec4 vColor;",
+      `varying vec4 vColor;
+       varying float vHeroCameraDepth;
+       uniform float heroDepthMix;
+       uniform float heroDepthCollapse;
+       uniform float heroDepthNear;
+       uniform float heroDepthFar;`,
+    )
+    .replace(
+      "vec3 color = vColor.rgb;",
+      `float depthRange = max(0.0001, heroDepthFar - heroDepthNear);
+       float depthValue = clamp((vHeroCameraDepth - heroDepthNear) / depthRange, 0.0, 1.0);
+       depthValue = depthValue * depthValue * (3.0 - 2.0 * depthValue);
+       depthValue = mix(depthValue, 1.0, heroDepthCollapse);
+       vec3 depthColor = vec3(1.0 - depthValue);
+       vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);`,
+    );
+
+  material.needsUpdate = true;
+  splatContainer?.setAttribute("data-depth-effect", "ready");
+
+  return (rawProgress) => {
+    const depthMix = smoothstepRange(
+      rawProgress,
+      HERO_DEPTH_CONFIG.revealStart,
+      HERO_DEPTH_CONFIG.revealEnd,
+    );
+    const depthCollapse = smoothstepRange(
+      rawProgress,
+      HERO_DEPTH_CONFIG.collapseStart,
+      HERO_DEPTH_CONFIG.collapseEnd,
+    );
+
+    material.uniforms.heroDepthMix.value = depthMix;
+    material.uniforms.heroDepthCollapse.value = depthCollapse;
+    splatContainer?.style.setProperty("--hero-depth-mix", depthMix.toFixed(4));
+    splatContainer?.style.setProperty(
+      "--hero-depth-collapse",
+      depthCollapse.toFixed(4),
+    );
+  };
+};
+
 const getAnimationProgress = (rawScrollProgress, scrollEndAt = 1) =>
   easeScrollProgress(mapScrollProgress(rawScrollProgress, scrollEndAt));
 
@@ -566,6 +656,8 @@ const initSplat = async () => {
     await viewer.addSplatScene(splatUrl, sceneOptions);
 
     console.log("[SPLAT] Scene added successfully.");
+
+    const updateHeroDepthShader = installHeroDepthShader(viewer.getSplatMesh());
 
     viewer.start();
     let viewerRunning = true;
@@ -661,7 +753,8 @@ const initSplat = async () => {
       forceNextRender = false;
       lastScrollY = window.scrollY;
 
-      const progress = easeScrollProgress(getScrollProgress());
+      const rawProgress = getScrollProgress();
+      const progress = easeScrollProgress(rawProgress);
       const { position, lookAt } = computeScrollPosition(
         progress,
         SPLAT_CONFIG.cameraStart,
@@ -677,6 +770,8 @@ const initSplat = async () => {
         );
         viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
       }
+
+      updateHeroDepthShader?.(rawProgress);
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();

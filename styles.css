@@ -674,11 +674,22 @@ h3 {
 }
 
 .splat-viewer {
+  --hero-depth-mix: 0;
+  --hero-depth-collapse: 0;
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background: url("/splats/Color.png") center / cover no-repeat;
+}
+
+.splat-viewer[data-depth-effect="ready"] {
+  background:
+    linear-gradient(
+      rgb(7 10 19 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28)),
+      rgb(7 10 19 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28))
+    ),
+    url("/splats/Color.png") center / cover no-repeat;
 }
 
 .splat-viewer canvas {
