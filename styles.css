@@ -1097,6 +1097,45 @@ body.debug-hero-transition {
   margin-bottom: 0;
 }
 
+.experience-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-entry p + .experience-skills {
+  margin-top: 0;
+}
+
+.experience-video-placeholder + .experience-skills {
+  margin-top: 12px;
+}
+
+.experience-skill-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(245, 245, 245, 0.78);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.experience-skill-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
 .experience-video-placeholder {
   display: block;
   width: 100%;
