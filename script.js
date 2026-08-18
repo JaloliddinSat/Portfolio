@@ -340,13 +340,8 @@ const appendSplatVersion = (url) => {
 };
 
 const getSplatUrl = () => {
-  const mobile = window.matchMedia("(max-width: 700px)").matches;
-  const productionUrl = mobile
-    ? splatContainer?.dataset.mobileSplatSrc
-    : splatContainer?.dataset.splatSrc;
-  const localUrl = mobile
-    ? splatContainer?.dataset.localMobileSplatSrc
-    : splatContainer?.dataset.localSplatSrc;
+  const productionUrl = splatContainer?.dataset.splatSrc;
+  const localUrl = splatContainer?.dataset.localSplatSrc;
   const isLocalhost = ["localhost", "127.0.0.1"].includes(
     window.location.hostname,
   );
@@ -633,7 +628,8 @@ const initSplat = async () => {
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
       dynamicScene: true,
-      halfPrecisionCovariancesOnGPU: isMobile,
+      halfPrecisionCovariancesOnGPU: false,
+      freeIntermediateSplatData: true,
       ignoreDevicePixelRatio: isMobile,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
