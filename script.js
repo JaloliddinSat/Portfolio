@@ -277,7 +277,7 @@ const WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY = "watonomousVideoDebugConfig";
 
 // Production values captured with ?debugProjectVideo=<id>.
 const PROJECT_VIDEO_CONFIGS = {
-  "portfolio-website": {
+  behaviourly: {
     src: "",
     aspectRatio: 16 / 9,
     cropX: 50,
