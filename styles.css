@@ -266,7 +266,11 @@ a {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 2px;
+  gap: 0;
+}
+
+.about-section .section-title {
+  margin-bottom: 0;
 }
 
 .about-list {
@@ -329,7 +333,7 @@ a {
 
 .subsection-title {
   width: 100%;
-  margin: 0 0 2px;
+  margin: 0 0 16px;
   color: rgba(245, 245, 245, 0.58);
   font-family: "Inter", system-ui, sans-serif;
   font-size: 0.9rem;
@@ -996,7 +1000,7 @@ body.debug-hero-transition {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 2px;
+  gap: 28px;
   width: 100%;
 }
 
