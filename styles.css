@@ -1462,7 +1462,30 @@ body.debug-hero-transition {
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
 }
 
-.stepnote-project-heading span {
+.stepnote-project-heading a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.stepnote-project-heading a:hover {
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.stepnote-project-heading .project-showcase-link-icon {
+  display: inline;
+  margin-left: 0.12em;
+  color: inherit;
+  font: inherit;
+  font-size: 0.55em;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+  opacity: 0.72;
+  vertical-align: 0.18em;
+}
+
+.stepnote-project-heading span:not(.project-showcase-link-icon) {
   color: rgba(255, 255, 255, 0.62);
   font: 700 0.68rem/1.4 "JetBrains Mono", monospace;
   letter-spacing: 0.12em;
