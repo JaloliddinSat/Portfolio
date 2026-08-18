@@ -253,15 +253,16 @@ const STEPNOTE_SPLAT_CONFIG = {
 
 const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
 
-// Add the final video path and paste exported debug values here when the clip is ready.
+// Production values captured with ?debugWatonomousVideo.
 const WATONOMOUS_VIDEO_CONFIG = {
-  src: "",
-  aspectRatio: 16 / 9,
+  src: "/assets/watonomous-video.mp4?v=1",
+  aspectRatio: 1.66,
   cropX: 50,
-  cropY: 50,
-  zoom: 1,
+  cropY: 51,
+  zoom: 1.81,
   trimStart: 0,
-  trimEnd: null,
+  // The source asset was physically trimmed from 18.00s–58.28s during export.
+  trimEnd: 40.28,
 };
 
 const WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY = "watonomousVideoDebugConfig";
@@ -3712,6 +3713,8 @@ const initWatonomousVideo = () => {
   let loopFrame = null;
   let localVideoUrl = null;
   let panel = null;
+  let videoInView = false;
+  let configuredVideoLoaded = false;
 
   if (DEBUG_WATONOMOUS_VIDEO) {
     try {
@@ -3866,10 +3869,11 @@ const initWatonomousVideo = () => {
   };
 
   const loadConfiguredVideo = () => {
-    if (!config.src) {
+    if (!config.src || configuredVideoLoaded) {
       return;
     }
 
+    configuredVideoLoaded = true;
     video.src = config.src;
     video.hidden = false;
     video.load();
@@ -3882,7 +3886,7 @@ const initWatonomousVideo = () => {
     applyCrop();
     refreshPanel();
 
-    if (!DEBUG_WATONOMOUS_VIDEO) {
+    if (!DEBUG_WATONOMOUS_VIDEO && videoInView) {
       video.play().catch(() => {});
     }
   });
@@ -3892,7 +3896,29 @@ const initWatonomousVideo = () => {
   video.addEventListener("seeked", refreshPanel);
 
   applyCrop();
-  loadConfiguredVideo();
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        videoInView = entry.isIntersecting;
+
+        if (videoInView) {
+          loadConfiguredVideo();
+
+          if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            video.play().catch(() => {});
+          }
+        } else if (!video.paused) {
+          video.pause();
+        }
+      },
+      { rootMargin: "220px 0px", threshold: 0.01 },
+    );
+    observer.observe(frame);
+  } else {
+    videoInView = true;
+    loadConfiguredVideo();
+  }
 
   if (!DEBUG_WATONOMOUS_VIDEO) {
     return;
@@ -3969,6 +3995,7 @@ const initWatonomousVideo = () => {
     }
 
     localVideoUrl = URL.createObjectURL(file);
+    configuredVideoLoaded = true;
     video.src = localVideoUrl;
     video.hidden = false;
     video.load();
