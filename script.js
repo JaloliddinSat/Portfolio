@@ -2476,6 +2476,8 @@ const initHeroScrollTransition = () => {
   const hero = document.querySelector(".hero");
   const heroCopy = document.querySelector(".hero-copy");
   const siteHeader = document.querySelector(".site-header");
+  const aboutSection = document.querySelector("#about");
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
   if (!hero || !heroCopy) {
     return;
@@ -2493,7 +2495,36 @@ const initHeroScrollTransition = () => {
   const fadeBetween = (progress, start, end) =>
     smoothstep((progress - start) / (end - start));
 
+  const mixChannel = (start, end, progress) =>
+    Math.round(start + (end - start) * progress);
+
+  const mixThemeColor = (start, end, progress) => {
+    const channels = start.map((channel, index) =>
+      mixChannel(channel, end[index], progress),
+    );
+
+    return `rgb(${channels.join(", ")})`;
+  };
+
   let ticking = false;
+  let activeThemeColor = "";
+
+  const updateBrowserTheme = (progress) => {
+    const blackoutProgress = fadeBetween(progress, 0.5, 0.98);
+    const aboutTop = aboutSection?.getBoundingClientRect().top ?? window.innerHeight;
+    const aboutProgress = smoothstep(1 - aboutTop / Math.max(1, window.innerHeight));
+    const heroColor = mixThemeColor([10, 10, 10], [0, 0, 0], blackoutProgress);
+    const nextColor = mixThemeColor([0, 0, 0], [17, 17, 17], aboutProgress);
+    const color = aboutProgress > 0 ? nextColor : heroColor;
+
+    if (color === activeThemeColor) {
+      return;
+    }
+
+    activeThemeColor = color;
+    themeColorMeta?.setAttribute("content", color);
+    document.documentElement.style.backgroundColor = color;
+  };
 
   const update = () => {
     ticking = false;
@@ -2505,6 +2536,7 @@ const initHeroScrollTransition = () => {
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
     hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
     hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
+    updateBrowserTheme(progress);
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
