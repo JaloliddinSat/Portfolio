@@ -227,7 +227,7 @@ const HERO_DEPTH_CONFIG = {
 const HERO_ABOUT_TRANSITION_CONFIG = {
   start: 0.509,
   speed: 1,
-  vignetteFadeEnd: 0.45,
+  vignetteFadeEnd: 0.8,
 };
 
 let heroVignetteFadeEnd = HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
