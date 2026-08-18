@@ -3015,7 +3015,6 @@ const initDesktopSidebar = () => {
 
 const initAsciiCurtain = () => {
   const canvas = document.querySelector("#ascii-curtain");
-  const toggle = document.querySelector("#ascii-toggle");
 
   if (!canvas || !heroScrollTrack) {
     return;
@@ -3037,7 +3036,7 @@ const initAsciiCurtain = () => {
   let foregroundColorRegions = [];
   let liveSplatCaptured = false;
   let liveSplatCapturePending = false;
-  let asciiEnabled = true;
+  const asciiEnabled = true;
   let asciiCanvasHasContent = false;
   let asciiScrollFrame = null;
 
@@ -3464,7 +3463,7 @@ const initAsciiCurtain = () => {
     const easedProgress =
       linearProgress * linearProgress * (3 - 2 * linearProgress);
 
-    canvas.style.opacity = easedProgress.toFixed(3);
+    canvas.style.opacity = (easedProgress * 0.12).toFixed(3);
   };
 
   const resize = () => {
@@ -3620,54 +3619,11 @@ const initAsciiCurtain = () => {
     draw();
   };
 
-  const setAsciiEnabled = (enabled, persist = true) => {
-    asciiEnabled = enabled;
-    canvas.hidden = !enabled;
-
-    if (toggle) {
-      const label = enabled
-        ? "Disable ASCII screen effect"
-        : "Enable ASCII screen effect";
-      toggle.setAttribute("aria-pressed", enabled ? "false" : "true");
-      toggle.setAttribute("aria-label", label);
-      toggle.title = label;
-    }
-
-    if (persist) {
-      try {
-        window.localStorage.setItem("asciiEffectDisabled", enabled ? "0" : "1");
-      } catch (error) {
-        console.warn("[ASCII] Preference could not be saved:", error);
-      }
-    }
-
-    if (enabled) {
-      resize();
-      draw();
-    } else {
-      if (asciiScrollFrame !== null) {
-        cancelAnimationFrame(asciiScrollFrame);
-        asciiScrollFrame = null;
-      }
-
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      asciiCanvasHasContent = false;
-    }
-  };
-
-  toggle?.addEventListener("click", () => {
-    setAsciiEnabled(!asciiEnabled);
-  });
-
-  try {
-    setAsciiEnabled(window.localStorage.getItem("asciiEffectDisabled") !== "1", false);
-  } catch (error) {
-    console.warn("[ASCII] Preference could not be read:", error);
-    setAsciiEnabled(true, false);
-  }
-
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
+  canvas.hidden = false;
+  resize();
+  draw();
   loadPixels("/splats/Color.png")
     .then((loadedSplatPixels) => {
       splatPixels = loadedSplatPixels;
