@@ -9,7 +9,7 @@ const initGridCursorGlow = () => {
     return;
   }
 
-  const panelSelector = ".resume-item, .project-card, .contact-card";
+  const panelSelector = ".resume-item, .project-card";
   const panels = document.querySelectorAll(panelSelector);
   const cursorGlow = document.createElement("canvas");
   const glowRadius = 100;
