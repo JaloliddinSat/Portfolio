@@ -191,7 +191,7 @@ const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
 
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
-const SPLAT_ASSET_VERSION = 2;
+const SPLAT_ASSET_VERSION = 3;
 
 const SPLAT_CONFIG = {
   cameraStart: {
@@ -340,8 +340,13 @@ const appendSplatVersion = (url) => {
 };
 
 const getSplatUrl = () => {
-  const productionUrl = splatContainer?.dataset.splatSrc;
-  const localUrl = splatContainer?.dataset.localSplatSrc;
+  const mobile = window.matchMedia("(max-width: 700px)").matches;
+  const productionUrl = mobile
+    ? splatContainer?.dataset.mobileSplatSrc
+    : splatContainer?.dataset.splatSrc;
+  const localUrl = mobile
+    ? splatContainer?.dataset.localMobileSplatSrc
+    : splatContainer?.dataset.localSplatSrc;
   const isLocalhost = ["localhost", "127.0.0.1"].includes(
     window.location.hostname,
   );
@@ -612,6 +617,7 @@ const initSplat = async () => {
     console.log("[SPLAT] Renderer loaded:", GaussianSplats3D);
 
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
+    const manualRendering = isMobile;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
     const initialCameraPosition = [...SPLAT_CONFIG.cameraStart.position];
@@ -623,13 +629,17 @@ const initSplat = async () => {
       initialCameraPosition,
       initialCameraLookAt,
       useBuiltInControls: false,
+      selfDrivenMode: !manualRendering,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
       dynamicScene: true,
+      halfPrecisionCovariancesOnGPU: isMobile,
       ignoreDevicePixelRatio: isMobile,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
-      sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
+      sceneRevealMode: isMobile
+        ? GaussianSplats3D.SceneRevealMode.Instant
+        : GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
@@ -642,7 +652,7 @@ const initSplat = async () => {
     viewer.renderer.setPixelRatio(splatPixelRatio);
 
     const sceneOptions = {
-      progressiveLoad: true,
+      progressiveLoad: !manualRendering,
       showLoadingUI: false,
       splatAlphaRemovalThreshold: SPLAT_CONFIG.alphaThreshold,
       scale: [splatScale, splatScale, splatScale],
@@ -662,7 +672,9 @@ const initSplat = async () => {
 
     const updateHeroDepthShader = installHeroDepthShader(viewer.getSplatMesh());
 
-    viewer.start();
+    if (!manualRendering) {
+      viewer.start();
+    }
     let viewerRunning = true;
 
     setStatus("ready");
@@ -676,6 +688,7 @@ const initSplat = async () => {
     let splatInView = false;
     let forceNextRender = true;
     let lastViewportWidth = window.innerWidth;
+    let pendingManualSort = null;
 
     const stopViewer = () => {
       if (renderStopTimer) {
@@ -693,7 +706,9 @@ const initSplat = async () => {
         renderFrameId = null;
       }
 
-      if (viewerRunning && typeof viewer.stop === "function") {
+      if (manualRendering) {
+        viewerRunning = false;
+      } else if (viewerRunning && typeof viewer.stop === "function") {
         viewer.stop();
         viewerRunning = false;
       }
@@ -701,8 +716,43 @@ const initSplat = async () => {
 
     const ensureViewerRunning = () => {
       if (!viewerRunning) {
-        viewer.start();
+        if (!manualRendering) {
+          viewer.start();
+        }
         viewerRunning = true;
+      }
+    };
+
+    const renderManualViewerFrame = () => {
+      if (
+        !manualRendering ||
+        !viewerRunning ||
+        document.hidden ||
+        !splatInView
+      ) {
+        return;
+      }
+
+      viewer.update();
+
+      if (viewer.shouldRender()) {
+        viewer.render();
+      }
+
+      viewer.renderNextFrame = false;
+
+      const activeSort = viewer.sortRunning ? viewer.sortPromise : null;
+      if (activeSort && activeSort !== pendingManualSort) {
+        pendingManualSort = activeSort;
+        activeSort.finally(() => {
+          if (pendingManualSort === activeSort) {
+            pendingManualSort = null;
+          }
+
+          if (viewerRunning && splatInView && !document.hidden) {
+            requestSplatRender({ force: true });
+          }
+        });
       }
     };
 
@@ -789,6 +839,7 @@ const initSplat = async () => {
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();
+      renderManualViewerFrame();
       stopViewerAfterIdle();
     };
 
