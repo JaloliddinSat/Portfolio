@@ -266,7 +266,7 @@ a {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
+  gap: 2px;
 }
 
 .about-list {
@@ -329,7 +329,7 @@ a {
 
 .subsection-title {
   width: 100%;
-  margin: 0 0 16px;
+  margin: 0 0 2px;
   color: rgba(245, 245, 245, 0.58);
   font-family: "Inter", system-ui, sans-serif;
   font-size: 0.9rem;
@@ -984,7 +984,11 @@ body.debug-hero-transition {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 20px;
+  gap: 2px;
+}
+
+.portfolio-section > .portfolio-projects {
+  margin-top: 18px;
 }
 
 .portfolio-subsection {
@@ -992,7 +996,7 @@ body.debug-hero-transition {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 28px;
+  gap: 2px;
   width: 100%;
 }
 
