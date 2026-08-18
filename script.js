@@ -516,11 +516,11 @@ const smoothstepRange = (value, start, end) => {
   return t * t * (3 - 2 * t);
 };
 
-const easeOutCubicRange = (value, start, end) => {
+const easeOutPowerRange = (value, start, end, exponent = 0.65) => {
   const range = Math.max(0.0001, end - start);
   const t = Math.min(1, Math.max(0, (value - start) / range));
 
-  return 1 - (1 - t) ** 3;
+  return t ** exponent;
 };
 
 const installHeroDepthShader = (splatMesh) => {
@@ -583,7 +583,7 @@ const installHeroDepthShader = (splatMesh) => {
       HERO_DEPTH_CONFIG.revealStart,
       HERO_DEPTH_CONFIG.revealEnd,
     );
-    const depthCollapse = easeOutCubicRange(
+    const depthCollapse = easeOutPowerRange(
       rawProgress,
       HERO_DEPTH_CONFIG.collapseStart,
       HERO_DEPTH_CONFIG.collapseEnd,
@@ -2500,10 +2500,11 @@ const initHeroScrollTransition = () => {
     const progress = getScrollProgress();
     const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
     const introOverlay = 1 - fadeBetween(progress, 0.08, 0.28);
+    const collapseOverlay = fadeBetween(progress, 0.5, 0.98);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
     hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
-    hero.style.setProperty("--hero-collapse-overlay", "0");
+    hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
