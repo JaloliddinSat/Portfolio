@@ -3463,7 +3463,7 @@ const initAsciiCurtain = () => {
     const easedProgress =
       linearProgress * linearProgress * (3 - 2 * linearProgress);
 
-    canvas.style.opacity = (easedProgress * 0.12).toFixed(3);
+    canvas.style.opacity = (easedProgress * 0.2).toFixed(3);
   };
 
   const resize = () => {
