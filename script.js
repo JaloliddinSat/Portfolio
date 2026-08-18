@@ -2937,6 +2937,78 @@ const initMobileDockNavigation = () => {
   mobileQuery.addEventListener?.("change", updateActiveLink);
 };
 
+const initDesktopSidebar = () => {
+  const sidebar = document.querySelector(".site-header");
+  const toggle = document.querySelector("#sidebar-toggle");
+  const toggleLabel = toggle?.querySelector("[data-sidebar-toggle-label]");
+  const desktopQuery = window.matchMedia("(min-width: 701px)");
+  const storageKey = "desktopSidebarExpanded";
+
+  if (!sidebar || !toggle) {
+    return;
+  }
+
+  const readSavedState = () => {
+    try {
+      return window.localStorage.getItem(storageKey) === "1";
+    } catch (error) {
+      console.warn("[SIDEBAR] Preference could not be read:", error);
+      return false;
+    }
+  };
+
+  let expanded = readSavedState();
+
+  const applyState = ({ persist = false } = {}) => {
+    const desktopExpanded = desktopQuery.matches && expanded;
+    const action = desktopExpanded ? "Collapse" : "Expand";
+
+    sidebar.classList.toggle("is-expanded", desktopExpanded);
+    toggle.setAttribute("aria-expanded", String(desktopExpanded));
+    toggle.setAttribute("aria-label", `${action} navigation`);
+    toggle.title = `${action} navigation`;
+
+    if (toggleLabel) {
+      toggleLabel.textContent = `${action} menu`;
+    }
+
+    if (persist) {
+      try {
+        window.localStorage.setItem(storageKey, expanded ? "1" : "0");
+      } catch (error) {
+        console.warn("[SIDEBAR] Preference could not be saved:", error);
+      }
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    expanded = !expanded;
+    applyState({ persist: true });
+  });
+
+  sidebar.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener("click", () => {
+      if (!desktopQuery.matches || !expanded) {
+        return;
+      }
+
+      expanded = false;
+      applyState({ persist: true });
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && desktopQuery.matches && expanded) {
+      expanded = false;
+      applyState({ persist: true });
+      toggle.focus();
+    }
+  });
+
+  desktopQuery.addEventListener("change", () => applyState());
+  applyState();
+};
+
 const initAsciiCurtain = () => {
   const canvas = document.querySelector("#ascii-curtain");
   const toggle = document.querySelector("#ascii-toggle");
@@ -3661,6 +3733,7 @@ const initHeroMotion = () => {
 
 initHeroScrollTransition();
 initHeroAboutTransition();
+initDesktopSidebar();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();

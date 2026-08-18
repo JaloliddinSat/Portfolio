@@ -39,7 +39,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260818-18" />
+    <link rel="stylesheet" href="styles.css?v=20260818-19" />
     <script type="importmap">
       {
         "imports": {
@@ -49,10 +49,25 @@
     </script>
   </head>
   <body>
-    <header class="site-header" aria-hidden="true">
+    <header class="site-header" id="site-navigation" aria-hidden="true">
       <div class="header-controls">
+        <button
+          class="sidebar-toggle"
+          id="sidebar-toggle"
+          type="button"
+          aria-label="Expand navigation"
+          aria-controls="site-navigation"
+          aria-expanded="false"
+          title="Expand navigation"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="m7.5 4.5 5.5 5.5-5.5 5.5" />
+          </svg>
+          <span class="sidebar-item-label" data-sidebar-toggle-label>Expand menu</span>
+        </button>
         <a class="brand" href="#top" aria-label="Back to top">
           <span class="brand-mark" aria-hidden="true">↑</span>
+          <span class="sidebar-item-label">Go to top</span>
         </a>
         <button
           class="ascii-toggle"
@@ -66,6 +81,7 @@
             <path class="ascii-toggle-hash" d="M7.5 3.5 6 16.5m7-13-1.5 13M3.5 8h13m-13 4h13" />
             <path class="ascii-toggle-slash" d="m4 4 12 12" />
           </svg>
+          <span class="sidebar-item-label">ASCII effect</span>
         </button>
       </div>
 
@@ -404,6 +420,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260818-30"></script>
+    <script type="module" src="script.js?v=20260818-31"></script>
   </body>
 </html>
