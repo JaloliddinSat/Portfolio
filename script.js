@@ -262,15 +262,15 @@ const WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY = "watonomousVideoDebugConfig";
 // Production values captured with ?debugProjectVideo=<id>.
 const PROJECT_VIDEO_CONFIGS = {
   behaviourly: {
-    src: "",
-    aspectRatio: 16 / 9,
+    src: "/assets/behaviourly-video.mp4",
+    aspectRatio: 1.7778,
     cropX: 50,
     cropY: 50,
     zoom: 1,
     shiftX: 0,
     shiftY: 0,
     trimStart: 0,
-    trimEnd: null,
+    trimEnd: 16.56,
   },
   "reddit-sentiment-scanner": {
     src: "",
