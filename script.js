@@ -308,7 +308,6 @@ const cloneKeyframes = (keyframes) => ({
 const splatContainer = document.querySelector("#splat-viewer");
 const splatError = document.querySelector("#splat-error");
 const heroScrollTrack = document.querySelector("#hero-scroll-track");
-const spatialMotionToggle = document.querySelector("#spatial-motion-toggle");
 
 const setStatus = (state, message = "") => {
   if (splatError) {
@@ -580,73 +579,6 @@ const initSplat = async () => {
     let allowIdleStop = false;
     let splatInView = false;
     let forceNextRender = true;
-    let baseCameraPosition = [...SPLAT_CONFIG.cameraStart.position];
-    let baseCameraLookAt = [...SPLAT_CONFIG.cameraStart.lookAt];
-    let spatialMotionEnabled = false;
-    let orientationListening = false;
-    let neutralOrientation = null;
-    let targetSpatialYaw = 0;
-    let targetSpatialPitch = 0;
-    let currentSpatialYaw = 0;
-    let currentSpatialPitch = 0;
-    let spatialFrameId = null;
-
-    const normalizeVector = (vector) => {
-      const length = Math.hypot(vector[0], vector[1], vector[2]) || 1;
-      return vector.map((component) => component / length);
-    };
-
-    const crossVector = (a, b) => [
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0],
-    ];
-
-    const rotateVectorAroundAxis = (vector, axis, angle) => {
-      const [x, y, z] = vector;
-      const [ax, ay, az] = normalizeVector(axis);
-      const cosine = Math.cos(angle);
-      const sine = Math.sin(angle);
-      const dot = x * ax + y * ay + z * az;
-
-      return [
-        x * cosine + (ay * z - az * y) * sine + ax * dot * (1 - cosine),
-        y * cosine + (az * x - ax * z) * sine + ay * dot * (1 - cosine),
-        z * cosine + (ax * y - ay * x) * sine + az * dot * (1 - cosine),
-      ];
-    };
-
-    const applyCameraRotation = () => {
-      if (!viewer.camera) {
-        return;
-      }
-
-      let direction = [
-        baseCameraLookAt[0] - baseCameraPosition[0],
-        baseCameraLookAt[1] - baseCameraPosition[1],
-        baseCameraLookAt[2] - baseCameraPosition[2],
-      ];
-
-      if (currentSpatialYaw || currentSpatialPitch) {
-        const cameraUp = [0, -1, 0];
-        direction = rotateVectorAroundAxis(direction, cameraUp, currentSpatialYaw);
-        const cameraRight = normalizeVector(
-          crossVector(normalizeVector(direction), cameraUp),
-        );
-        direction = rotateVectorAroundAxis(
-          direction,
-          cameraRight,
-          currentSpatialPitch,
-        );
-      }
-
-      viewer.camera.position.set(...baseCameraPosition);
-      viewer.camera.lookAt(
-        baseCameraPosition[0] + direction[0],
-        baseCameraPosition[1] + direction[1],
-        baseCameraPosition[2] + direction[2],
-      );
-    };
 
     const stopViewer = () => {
       if (renderStopTimer) {
@@ -662,11 +594,6 @@ const initSplat = async () => {
       if (renderFrameId) {
         cancelAnimationFrame(renderFrameId);
         renderFrameId = null;
-      }
-
-      if (spatialFrameId) {
-        cancelAnimationFrame(spatialFrameId);
-        spatialFrameId = null;
       }
 
       if (viewerRunning && typeof viewer.stop === "function") {
@@ -742,9 +669,14 @@ const initSplat = async () => {
         SPLAT_CONFIG.lookAtTiming ?? 1,
       );
 
-      baseCameraPosition = position;
-      baseCameraLookAt = lookAt;
-      applyCameraRotation();
+      if (viewer.camera) {
+        viewer.camera.position.set(
+          position[0],
+          position[1],
+          position[2],
+        );
+        viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+      }
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();
@@ -763,187 +695,12 @@ const initSplat = async () => {
       renderFrameId = requestAnimationFrame(renderSplatForScroll);
     };
 
-    const renderSpatialFrame = () => {
-      spatialFrameId = null;
-
-      if (!spatialMotionEnabled || !splatInView || document.hidden) {
-        return;
-      }
-
-      const smoothing = 0.14;
-      currentSpatialYaw += (targetSpatialYaw - currentSpatialYaw) * smoothing;
-      currentSpatialPitch +=
-        (targetSpatialPitch - currentSpatialPitch) * smoothing;
-
-      if (Math.abs(targetSpatialYaw - currentSpatialYaw) < 0.0002) {
-        currentSpatialYaw = targetSpatialYaw;
-      }
-      if (Math.abs(targetSpatialPitch - currentSpatialPitch) < 0.0002) {
-        currentSpatialPitch = targetSpatialPitch;
-      }
-
-      applyCameraRotation();
-      ensureViewerRunning();
-      viewer.forceRenderNextFrame?.();
-      stopViewerAfterIdle(320);
-
-      if (
-        currentSpatialYaw !== targetSpatialYaw ||
-        currentSpatialPitch !== targetSpatialPitch
-      ) {
-        spatialFrameId = requestAnimationFrame(renderSpatialFrame);
-      }
-    };
-
-    const requestSpatialRender = () => {
-      if (spatialFrameId === null && spatialMotionEnabled && splatInView) {
-        spatialFrameId = requestAnimationFrame(renderSpatialFrame);
-      }
-    };
-
-    const wrapAngle = (angle) => ((angle + 180) % 360 + 360) % 360 - 180;
-    const applyDeadZone = (value, deadZone = 0.6) => {
-      if (Math.abs(value) <= deadZone) {
-        return 0;
-      }
-
-      return value - Math.sign(value) * deadZone;
-    };
-
-    const handleDeviceOrientation = (event) => {
-      if (event.beta === null || event.gamma === null) {
-        return;
-      }
-
-      if (!neutralOrientation) {
-        neutralOrientation = { beta: event.beta, gamma: event.gamma };
-        return;
-      }
-
-      const deltaBeta = wrapAngle(event.beta - neutralOrientation.beta);
-      const deltaGamma = wrapAngle(event.gamma - neutralOrientation.gamma);
-      const screenAngle =
-        ((screen.orientation?.angle ?? window.orientation ?? 0) + 360) % 360;
-      let horizontal = deltaGamma;
-      let vertical = deltaBeta;
-
-      if (screenAngle === 90) {
-        horizontal = deltaBeta;
-        vertical = -deltaGamma;
-      } else if (screenAngle === 180) {
-        horizontal = -deltaGamma;
-        vertical = -deltaBeta;
-      } else if (screenAngle === 270) {
-        horizontal = -deltaBeta;
-        vertical = deltaGamma;
-      }
-
-      const degreesToRadians = Math.PI / 180;
-      const nextYaw = Math.max(
-        -6,
-        Math.min(6, applyDeadZone(horizontal) * 0.42),
-      ) * degreesToRadians;
-      const nextPitch = Math.max(
-        -4,
-        Math.min(4, applyDeadZone(vertical) * 0.3),
-      ) * degreesToRadians;
-
-      if (
-        Math.abs(nextYaw - targetSpatialYaw) < 0.0008 &&
-        Math.abs(nextPitch - targetSpatialPitch) < 0.0008
-      ) {
-        return;
-      }
-
-      targetSpatialYaw = nextYaw;
-      targetSpatialPitch = nextPitch;
-      requestSpatialRender();
-    };
-
-    const syncOrientationListener = () => {
-      const shouldListen =
-        spatialMotionEnabled && splatInView && !document.hidden;
-
-      if (shouldListen === orientationListening) {
-        return;
-      }
-
-      orientationListening = shouldListen;
-
-      if (shouldListen) {
-        neutralOrientation = null;
-        window.addEventListener("deviceorientation", handleDeviceOrientation, {
-          passive: true,
-        });
-      } else {
-        window.removeEventListener("deviceorientation", handleDeviceOrientation);
-        neutralOrientation = null;
-        targetSpatialYaw = 0;
-        targetSpatialPitch = 0;
-        currentSpatialYaw = 0;
-        currentSpatialPitch = 0;
-
-        if (spatialFrameId) {
-          cancelAnimationFrame(spatialFrameId);
-          spatialFrameId = null;
-        }
-      }
-    };
-
-    const setSpatialMotionEnabled = (enabled) => {
-      spatialMotionEnabled = enabled;
-      spatialMotionToggle?.setAttribute("aria-pressed", String(enabled));
-      if (spatialMotionToggle) {
-        spatialMotionToggle.textContent = enabled
-          ? "Spatial motion on"
-          : "Enable spatial motion";
-        spatialMotionToggle.setAttribute(
-          "aria-label",
-          enabled ? "Disable spatial motion" : "Enable spatial motion",
-        );
-      }
-      syncOrientationListener();
-      requestSplatRender({ force: true });
-    };
-
-    const canUseSpatialMotion =
-      isMobile &&
-      "DeviceOrientationEvent" in window &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (spatialMotionToggle && canUseSpatialMotion) {
-      spatialMotionToggle.hidden = false;
-      spatialMotionToggle.addEventListener("click", async () => {
-        if (spatialMotionEnabled) {
-          setSpatialMotionEnabled(false);
-          return;
-        }
-
-        try {
-          const requestPermission = window.DeviceOrientationEvent.requestPermission;
-          const permission = typeof requestPermission === "function"
-            ? await requestPermission.call(window.DeviceOrientationEvent)
-            : "granted";
-
-          if (permission === "granted") {
-            setSpatialMotionEnabled(true);
-          } else {
-            spatialMotionToggle.textContent = "Motion access denied";
-          }
-        } catch (error) {
-          console.warn("[SPLAT] Device orientation permission failed:", error);
-          spatialMotionToggle.textContent = "Motion unavailable";
-        }
-      });
-    }
-
     if (DEBUG_SPLAT) {
       initDebugMode(viewer, isMobile);
     } else {
       const observer = new IntersectionObserver(
         ([entry]) => {
           splatInView = entry.isIntersecting;
-          syncOrientationListener();
 
           if (splatInView) {
             ensureViewerRunning();
@@ -965,7 +722,6 @@ const initSplat = async () => {
         passive: true,
       });
       document.addEventListener("visibilitychange", () => {
-        syncOrientationListener();
         if (document.hidden) {
           stopViewer();
         } else {

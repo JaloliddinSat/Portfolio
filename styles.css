@@ -411,15 +411,6 @@ h3 {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.spatial-motion-toggle[hidden] {
-  display: none;
-}
-
-.spatial-motion-toggle[aria-pressed="true"] {
-  border-color: rgba(141, 216, 255, 0.48);
-  background: rgba(141, 216, 255, 0.14);
-}
-
 .hero-content {
   position: relative;
   z-index: 2;
