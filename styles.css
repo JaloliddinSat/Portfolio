@@ -1082,6 +1082,13 @@ body.debug-hero-transition {
   box-shadow: none;
 }
 
+.resume-item.stepnote-project {
+  padding: 34px 36px 38px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .portfolio-entry p {
   margin: 0 0 14px;
   color: var(--muted);
@@ -1517,7 +1524,13 @@ body.debug-hero-transition {
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
 }
 
-.project-card {
+.project-card.stepnote-project {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.project-card:not(.stepnote-project) {
   display: grid;
   align-content: start;
   gap: 14px;
@@ -1526,7 +1539,7 @@ body.debug-hero-transition {
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
-.project-card:hover {
+.project-card:not(.stepnote-project):hover {
   transform: translateY(-6px);
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(32, 32, 32, 0.9);

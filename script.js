@@ -2193,7 +2193,11 @@ const initStepNoteSplat = async () => {
     if (!assetResponse.ok) {
       throw new Error(`StepNote splat asset returned ${assetResponse.status}.`);
     }
+  } catch (error) {
+    console.warn("[STEPNOTE SPLAT] Asset preflight skipped:", error);
+  }
 
+  try {
     const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
     let config = cloneStepNoteSplatConfig();
@@ -2476,7 +2480,48 @@ const initStepNoteProject = () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  initStepNoteSplat();
+  const tryInitSplat = () => {
+    if (stage.dataset.initialized === "true") {
+      return true;
+    }
+
+    const { width, height } = stage.getBoundingClientRect();
+
+    if (width < 2 || height < 2) {
+      return false;
+    }
+
+    initStepNoteSplat();
+    return true;
+  };
+
+  if (tryInitSplat()) {
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting) {
+        return;
+      }
+
+      if (tryInitSplat()) {
+        observer.disconnect();
+      }
+    },
+    { rootMargin: "240px 0px", threshold: 0.01 },
+  );
+  observer.observe(stage);
+
+  if ("ResizeObserver" in window) {
+    const resizeObserver = new ResizeObserver(() => {
+      if (tryInitSplat()) {
+        resizeObserver.disconnect();
+        observer.disconnect();
+      }
+    });
+    resizeObserver.observe(stage);
+  }
 };
 
 const initHeroScrollTransition = () => {
