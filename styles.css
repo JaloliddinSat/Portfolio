@@ -243,6 +243,12 @@ a {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.nav-separator {
+  display: block;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .nav-icon {
   display: none;
   width: 21px;
@@ -1012,14 +1018,22 @@ body.debug-hero-transition {
 }
 
 .experience-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.experience-title-main {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 14px;
+  min-width: 0;
 }
 
-.experience-title-row h3 {
+.experience-title-main h3 {
   margin: 0;
 }
 
@@ -1057,6 +1071,14 @@ body.debug-hero-transition {
   color: var(--muted);
   font-size: 0.92rem;
   font-weight: 600;
+}
+
+.experience-date {
+  color: rgba(245, 245, 245, 0.52);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  white-space: nowrap;
 }
 
 .resume-item.portfolio-entry {
@@ -1728,6 +1750,12 @@ body.debug-hero-transition {
     justify-content: flex-start;
   }
 
+  .nav-separator {
+    width: calc(100% - 22px);
+    height: 1px;
+    margin: 5px 11px;
+  }
+
   .sidebar-toggle,
   .brand,
   .ascii-toggle,
@@ -1849,7 +1877,7 @@ body.debug-hero-transition {
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 50%;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
     gap: 7px;
     width: min(calc(100% - 20px), 430px);
@@ -1867,7 +1895,7 @@ body.debug-hero-transition {
   }
 
   .header-controls {
-    gap: 5px;
+    display: none;
   }
 
   .brand-mark,
@@ -1926,9 +1954,17 @@ body.debug-hero-transition {
 
   .nav-links {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 1px repeat(3, minmax(0, 1fr));
     gap: 3px;
     width: 100%;
+  }
+
+  .nav-separator {
+    width: 1px;
+    height: 28px;
+    margin: 0;
+    align-self: center;
+    justify-self: center;
   }
 
   .nav-links a {
@@ -1953,6 +1989,11 @@ body.debug-hero-transition {
 }
 
 @media (max-width: 560px) {
+  .experience-title-row {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
   .page-shell {
     width: min(100% - 28px, var(--max-width));
   }

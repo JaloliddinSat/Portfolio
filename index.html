@@ -38,7 +38,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260818-32" />
+    <link rel="stylesheet" href="styles.css?v=20260818-33" />
     <script type="importmap">
       {
         "imports": {
@@ -94,12 +94,42 @@
           </svg>
           <span class="nav-label">Portfolio</span>
         </a>
-        <a href="#contact" aria-label="Contact me" title="Contact me">
+        <span class="nav-separator" aria-hidden="true"></span>
+        <a
+          href="mailto:jsatimov@uwaterloo.ca"
+          aria-label="Email jsatimov@uwaterloo.ca"
+          title="Email"
+        >
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
             <path d="m5 7 7 6 7-6" />
           </svg>
-          <span class="nav-label">Contact me</span>
+          <span class="nav-label">Email</span>
+        </a>
+        <a
+          href="https://www.linkedin.com/in/jalolsatimov/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="LinkedIn"
+          title="LinkedIn"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <path d="M8 10v6M8 7.5v.1M11.5 16v-6m0 2.7c.55-1.8 4.5-2.5 4.5 1V16" />
+          </svg>
+          <span class="nav-label">LinkedIn</span>
+        </a>
+        <a
+          href="https://github.com/JaloliddinSat"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8.5 19.5c-4 .9-4-2-5-2.5m10 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.5-1.3-3.4.1-.3.6-1.7-.1-3.4 0 0-1.1-.4-3.6 1.3a12.4 12.4 0 0 0-6.5 0C4.7 3.1 3.6 3.5 3.6 3.5c-.7 1.7-.2 3.1-.1 3.4-.8.9-1.3 2-1.3 3.4 0 4.8 2.9 5.9 5.7 6.2-.5.5-.6 1.1-.5 2V22" />
+          </svg>
+          <span class="nav-label">GitHub</span>
         </a>
       </nav>
     </header>
@@ -204,19 +234,22 @@
             <div class="portfolio-list">
               <article class="resume-item portfolio-entry">
                 <div class="experience-title-row">
-                  <h3>
-                    <a
-                      class="experience-company-link"
-                      href="https://tradexim.ca/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      TradExim (e-TradeFTZ)
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  </h3>
-                  <span class="experience-title-separator" aria-hidden="true">·</span>
-                  <span class="experience-role">Full-stack internship</span>
+                  <div class="experience-title-main">
+                    <h3>
+                      <a
+                        class="experience-company-link"
+                        href="https://tradexim.ca/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        TradExim (e-TradeFTZ)
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    </h3>
+                    <span class="experience-title-separator" aria-hidden="true">·</span>
+                    <span class="experience-role">Full-stack internship</span>
+                  </div>
+                  <span class="experience-date">May 2026 — Aug 2026</span>
                 </div>
                 <p>
                   Rebuilt and shipped 15+ production pages for TradExim, integrating Firebase
@@ -228,19 +261,22 @@
 
               <article class="resume-item portfolio-entry">
                 <div class="experience-title-row">
-                  <h3>
-                    <a
-                      class="experience-company-link"
-                      href="https://www.watonomous.ca/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      WATonomous
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  </h3>
-                  <span class="experience-title-separator" aria-hidden="true">·</span>
-                  <span class="experience-role">Autonomy Software Developer</span>
+                  <div class="experience-title-main">
+                    <h3>
+                      <a
+                        class="experience-company-link"
+                        href="https://www.watonomous.ca/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        WATonomous
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    </h3>
+                    <span class="experience-title-separator" aria-hidden="true">·</span>
+                    <span class="experience-role">Autonomy Software Developer</span>
+                  </div>
+                  <span class="experience-date">June 2026 — Present</span>
                 </div>
                 <p>
                   Developed ROS2/C++ costmap functionality for an autonomous vehicle stack,
