@@ -278,6 +278,7 @@ a {
 
 .about-section > :first-child {
   width: min(100%, 760px);
+  padding-inline: 27px;
 }
 
 .resume-panel {
@@ -316,9 +317,9 @@ a {
 .section-title {
   width: 100%;
   margin: 0 0 12px;
-  color: var(--text);
+  color: rgba(245, 245, 245, 0.7);
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 1;
@@ -329,9 +330,9 @@ a {
 .subsection-title {
   width: 100%;
   margin: 0 0 16px;
-  color: var(--text);
+  color: rgba(245, 245, 245, 0.7);
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-size: clamp(1.25rem, 1.6vw, 1.55rem);
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.05;
@@ -1529,8 +1530,8 @@ body.debug-hero-transition {
 
 .contact-section > .section-title {
   margin-bottom: 0;
-  color: #ffffff;
-  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  color: rgba(245, 245, 245, 0.7);
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
   text-align: left;
 }
 
