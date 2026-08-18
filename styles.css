@@ -1138,41 +1138,51 @@ body.debug-hero-transition {
   flex: 0 0 16px;
 }
 
-.experience-video-placeholder {
+.experience-video-placeholder,
+.project-video-frame {
   display: block;
   width: 100%;
   margin-top: 6px;
   overflow: hidden;
-  aspect-ratio: var(--watonomous-video-aspect, 16 / 9);
+  aspect-ratio: var(
+    --project-video-aspect,
+    var(--watonomous-video-aspect, 16 / 9)
+  );
   border-radius: 14px;
   background: #363636;
 }
 
-.experience-video-placeholder video {
+.project-showcase-media .project-video-frame {
+  margin-top: 0;
+}
+
+.experience-video-placeholder video,
+.project-video-frame video {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position:
-    var(--watonomous-video-crop-x, 50%)
-    var(--watonomous-video-crop-y, 50%);
+    var(--project-video-crop-x, var(--watonomous-video-crop-x, 50%))
+    var(--project-video-crop-y, var(--watonomous-video-crop-y, 50%));
   transform:
     translate(
-      var(--watonomous-video-shift-x, 0%),
-      var(--watonomous-video-shift-y, 0%)
+      var(--project-video-shift-x, var(--watonomous-video-shift-x, 0%)),
+      var(--project-video-shift-y, var(--watonomous-video-shift-y, 0%))
     )
-    scale(var(--watonomous-video-zoom, 1));
+    scale(var(--project-video-zoom, var(--watonomous-video-zoom, 1)));
   transform-origin: center;
 }
 
-.experience-video-placeholder video[hidden] {
+.experience-video-placeholder video[hidden],
+.project-video-frame video[hidden] {
   display: none;
 }
 
 .watonomous-video-debug-panel {
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  bottom: calc(18px + var(--video-debug-panel-offset, 0px));
   z-index: 10020;
   width: min(360px, calc(100vw - 36px));
   max-height: calc(100lvh - 36px);
@@ -1293,7 +1303,7 @@ body.debug-hero-transition {
   text-align: left;
 }
 
-.project-card:not(.stepnote-project) a {
+.project-card:not(.stepnote-project):not(.project-showcase-card) a {
   display: block;
   margin-bottom: 6px;
   color: var(--text);
@@ -1302,13 +1312,97 @@ body.debug-hero-transition {
   transition: color 180ms ease;
 }
 
-.project-card:not(.stepnote-project) a:hover {
+.project-card:not(.stepnote-project):not(.project-showcase-card) a:hover {
   color: var(--muted);
 }
 
-.project-card:not(.stepnote-project) span {
+.project-card:not(.stepnote-project):not(.project-showcase-card) span {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.project-showcase-card {
+  padding: 0;
+  gap: 0;
+  min-height: auto;
+}
+
+.project-showcase-media {
+  padding: 18px 18px 0;
+}
+
+.project-showcase-media .project-video-frame {
+  margin-top: 0;
+}
+
+.project-showcase-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px 22px 22px;
+}
+
+.project-showcase-tagline {
+  margin: 0;
+  color: rgba(245, 245, 245, 0.52);
+  font-size: 0.92rem;
+  font-style: italic;
+}
+
+.project-showcase-title {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.42rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.project-showcase-title a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.project-showcase-title a:hover {
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.project-showcase-link-icon {
+  font-size: 0.92em;
+  line-height: 1;
+  opacity: 0.72;
+}
+
+.project-showcase-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.project-showcase-skills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-showcase-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(245, 245, 245, 0.78);
+  font-size: 0.84rem;
+}
+
+.project-showcase-skill-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 
 .stepnote-project {
@@ -1530,7 +1624,7 @@ body.debug-hero-transition {
   box-shadow: none;
 }
 
-.project-card:not(.stepnote-project) {
+.project-card:not(.stepnote-project):not(.project-showcase-card) {
   display: grid;
   align-content: start;
   gap: 14px;
@@ -1539,7 +1633,15 @@ body.debug-hero-transition {
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
-.project-card:not(.stepnote-project):hover {
+.project-card.project-showcase-card {
+  display: block;
+  padding: 0;
+  min-height: auto;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.project-card:not(.stepnote-project):hover,
+.project-card.project-showcase-card:hover {
   transform: translateY(-6px);
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(32, 32, 32, 0.9);

@@ -192,6 +192,13 @@ const DEBUG_HERO_TRANSITION = new URLSearchParams(window.location.search).has(
 const DEBUG_WATONOMOUS_VIDEO = new URLSearchParams(window.location.search).has(
   "debugWatonomousVideo",
 );
+const DEBUG_PROJECT_VIDEO_PARAM = new URLSearchParams(window.location.search).get(
+  "debugProjectVideo",
+);
+const DEBUG_PROJECT_VIDEO =
+  DEBUG_PROJECT_VIDEO_PARAM !== null && DEBUG_PROJECT_VIDEO_PARAM !== "false";
+const DEBUG_PROJECT_VIDEO_ID =
+  DEBUG_PROJECT_VIDEO && DEBUG_PROJECT_VIDEO_PARAM ? DEBUG_PROJECT_VIDEO_PARAM : null;
 
 const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
@@ -267,6 +274,36 @@ const WATONOMOUS_VIDEO_CONFIG = {
 };
 
 const WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY = "watonomousVideoDebugConfig";
+
+// Production values captured with ?debugProjectVideo=<id>.
+const PROJECT_VIDEO_CONFIGS = {
+  "portfolio-website": {
+    src: "",
+    aspectRatio: 16 / 9,
+    cropX: 50,
+    cropY: 50,
+    zoom: 1,
+    shiftX: 0,
+    shiftY: 0,
+    trimStart: 0,
+    trimEnd: null,
+  },
+  "reddit-sentiment-scanner": {
+    src: "",
+    aspectRatio: 16 / 9,
+    cropX: 50,
+    cropY: 50,
+    zoom: 1,
+    shiftX: 0,
+    shiftY: 0,
+    trimStart: 0,
+    trimEnd: null,
+  },
+};
+
+const PROJECT_VIDEO_DEBUG_STORAGE_PREFIX = "projectVideoDebugConfig:";
+
+let videoDebugPanelStackIndex = 0;
 
 const lerpVec3 = (a, b, t) => [
   a[0] + (b[0] - a[0]) * t,
@@ -3698,32 +3735,37 @@ const initHeroMotion = () => {
   requestAnimationFrame(floatLoop);
 };
 
-const initWatonomousVideo = () => {
-  const frame = document.querySelector("#watonomous-video-frame");
-  const video = document.querySelector("#watonomous-video");
-
+const initConfiguredVideoFrame = ({
+  frame,
+  video,
+  defaults,
+  debugEnabled = false,
+  storageKey,
+  debugTitle,
+  formatExportSnippet,
+  exportAssetSrc,
+  logPrefix = "[Project video]",
+  idPrefix = "project-video",
+}) => {
   if (!frame || !video) {
     return;
   }
 
-  const defaults = { ...WATONOMOUS_VIDEO_CONFIG };
   let config = { ...defaults };
   let duration = 0;
   let loopFrame = null;
   let localVideoUrl = null;
   let panel = null;
 
-  if (DEBUG_WATONOMOUS_VIDEO) {
+  if (debugEnabled && storageKey) {
     try {
-      const saved = JSON.parse(
-        window.localStorage.getItem(WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY) || "null",
-      );
+      const saved = JSON.parse(window.localStorage.getItem(storageKey) || "null");
 
       if (saved && typeof saved === "object") {
         config = { ...config, ...saved, src: defaults.src };
       }
     } catch (error) {
-      console.warn("[WATonomous video] Saved debug config could not be read:", error);
+      console.warn(`${logPrefix} Saved debug config could not be read:`, error);
     }
   }
 
@@ -3758,18 +3800,26 @@ const initWatonomousVideo = () => {
 
   const applyCrop = () => {
     normalizeConfig();
-    frame.style.setProperty("--watonomous-video-aspect", String(config.aspectRatio));
-    frame.style.setProperty("--watonomous-video-crop-x", `${config.cropX}%`);
-    frame.style.setProperty("--watonomous-video-crop-y", `${config.cropY}%`);
-    frame.style.setProperty("--watonomous-video-zoom", String(config.zoom));
-    frame.style.setProperty("--watonomous-video-shift-x", `${config.shiftX}%`);
-    frame.style.setProperty("--watonomous-video-shift-y", `${config.shiftY}%`);
+
+    const properties = {
+      aspect: String(config.aspectRatio),
+      "crop-x": `${config.cropX}%`,
+      "crop-y": `${config.cropY}%`,
+      zoom: String(config.zoom),
+      "shift-x": `${config.shiftX}%`,
+      "shift-y": `${config.shiftY}%`,
+    };
+
+    Object.entries(properties).forEach(([name, value]) => {
+      frame.style.setProperty(`--project-video-${name}`, value);
+      frame.style.setProperty(`--watonomous-video-${name}`, value);
+    });
   };
 
   const formatSeconds = (value) => `${Number(value || 0).toFixed(2)}s`;
 
   const buildExportConfig = () => ({
-    src: "/assets/watonomous-video.mp4",
+    src: exportAssetSrc ?? defaults.src ?? "",
     aspectRatio: Number(config.aspectRatio.toFixed(4)),
     cropX: Number(config.cropX.toFixed(1)),
     cropY: Number(config.cropY.toFixed(1)),
@@ -3780,8 +3830,7 @@ const initWatonomousVideo = () => {
     trimEnd: Number((getTrimEnd() || 0).toFixed(2)),
   });
 
-  const formatExportSnippet = () =>
-    `const WATONOMOUS_VIDEO_CONFIG = ${JSON.stringify(buildExportConfig(), null, 2)};`;
+  const exportSnippet = () => formatExportSnippet(buildExportConfig);
 
   const setStatus = (message) => {
     const status = panel?.querySelector("[data-video-debug-status]");
@@ -3890,7 +3939,7 @@ const initWatonomousVideo = () => {
     applyCrop();
     refreshPanel();
 
-    if (!DEBUG_WATONOMOUS_VIDEO) {
+    if (!debugEnabled) {
       video.play().catch(() => {});
     }
   });
@@ -3902,16 +3951,21 @@ const initWatonomousVideo = () => {
   applyCrop();
   loadConfiguredVideo();
 
-  if (!DEBUG_WATONOMOUS_VIDEO) {
+  if (!debugEnabled) {
     return;
   }
 
-  document.body.classList.add("debug-watonomous-video");
+  document.body.classList.add("debug-project-video");
   panel = document.createElement("aside");
   panel.className = "watonomous-video-debug-panel";
-  panel.setAttribute("aria-label", "WATonomous video editor");
+  panel.style.setProperty(
+    "--video-debug-panel-offset",
+    `${videoDebugPanelStackIndex * 440}px`,
+  );
+  videoDebugPanelStackIndex += 1;
+  panel.setAttribute("aria-label", debugTitle);
   panel.innerHTML = `
-    <h2>WATonomous video editor</h2>
+    <h2>${debugTitle}</h2>
     <p class="watonomous-video-debug-caption">Choose a video from this device. Crop and trim values are non-destructive and will be applied by the production player.</p>
     <label class="watonomous-video-debug-file">
       Local video
@@ -3920,49 +3974,49 @@ const initWatonomousVideo = () => {
     <p class="watonomous-video-debug-caption" data-video-duration>Choose a local video to begin.</p>
     <div class="watonomous-video-debug-divider"></div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-aspect">Aspect</label>
-      <input id="wat-video-aspect" type="range" min="0.5" max="2.4" step="0.01" data-video-control="aspectRatio">
+      <label for="${idPrefix}-aspect">Aspect</label>
+      <input id="${idPrefix}-aspect" type="range" min="0.5" max="2.4" step="0.01" data-video-control="aspectRatio">
       <output data-video-output="aspectRatio"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-x">Crop X</label>
-      <input id="wat-video-x" type="range" min="0" max="100" step="1" data-video-control="cropX">
+      <label for="${idPrefix}-x">Crop X</label>
+      <input id="${idPrefix}-x" type="range" min="0" max="100" step="1" data-video-control="cropX">
       <output data-video-output="cropX"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-y">Crop Y</label>
-      <input id="wat-video-y" type="range" min="0" max="100" step="1" data-video-control="cropY">
+      <label for="${idPrefix}-y">Crop Y</label>
+      <input id="${idPrefix}-y" type="range" min="0" max="100" step="1" data-video-control="cropY">
       <output data-video-output="cropY"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-zoom">Zoom</label>
-      <input id="wat-video-zoom" type="range" min="1" max="3" step="0.01" data-video-control="zoom">
+      <label for="${idPrefix}-zoom">Zoom</label>
+      <input id="${idPrefix}-zoom" type="range" min="1" max="3" step="0.01" data-video-control="zoom">
       <output data-video-output="zoom"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-shift-x">Shift X</label>
-      <input id="wat-video-shift-x" type="range" min="-100" max="100" step="1" data-video-control="shiftX">
+      <label for="${idPrefix}-shift-x">Shift X</label>
+      <input id="${idPrefix}-shift-x" type="range" min="-100" max="100" step="1" data-video-control="shiftX">
       <output data-video-output="shiftX"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-shift-y">Shift Y</label>
-      <input id="wat-video-shift-y" type="range" min="-100" max="100" step="1" data-video-control="shiftY">
+      <label for="${idPrefix}-shift-y">Shift Y</label>
+      <input id="${idPrefix}-shift-y" type="range" min="-100" max="100" step="1" data-video-control="shiftY">
       <output data-video-output="shiftY"></output>
     </div>
     <div class="watonomous-video-debug-divider"></div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-start">Trim start</label>
-      <input id="wat-video-start" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="trimStart">
+      <label for="${idPrefix}-start">Trim start</label>
+      <input id="${idPrefix}-start" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="trimStart">
       <output data-video-output="trimStart"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-end">Trim end</label>
-      <input id="wat-video-end" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="trimEnd">
+      <label for="${idPrefix}-end">Trim end</label>
+      <input id="${idPrefix}-end" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="trimEnd">
       <output data-video-output="trimEnd"></output>
     </div>
     <div class="watonomous-video-debug-control">
-      <label for="wat-video-time">Timeline</label>
-      <input id="wat-video-time" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="timeline">
+      <label for="${idPrefix}-time">Timeline</label>
+      <input id="${idPrefix}-time" type="range" min="0" max="0" step="0.01" data-duration-range data-video-control="timeline">
       <output data-video-output="timeline"></output>
     </div>
     <div class="watonomous-video-debug-actions">
@@ -4042,23 +4096,20 @@ const initWatonomousVideo = () => {
 
   panel.querySelector('[data-video-action="copy"]').addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(formatExportSnippet());
+      await navigator.clipboard.writeText(exportSnippet());
       setStatus("Config copied. Paste it into script.js when the video is added.");
     } catch (error) {
-      console.warn("[WATonomous video] Clipboard unavailable:", error);
+      console.warn(`${logPrefix} Clipboard unavailable:`, error);
       setStatus("Clipboard unavailable. Use Save settings for now.");
     }
   });
 
   panel.querySelector('[data-video-action="save"]').addEventListener("click", () => {
     try {
-      window.localStorage.setItem(
-        WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY,
-        JSON.stringify(buildExportConfig()),
-      );
+      window.localStorage.setItem(storageKey, JSON.stringify(buildExportConfig()));
       setStatus("Crop and trim settings saved in this browser.");
     } catch (error) {
-      console.warn("[WATonomous video] Config could not be saved:", error);
+      console.warn(`${logPrefix} Config could not be saved:`, error);
       setStatus("Settings could not be saved.");
     }
   });
@@ -4078,6 +4129,52 @@ const initWatonomousVideo = () => {
   refreshPanel();
 };
 
+const initWatonomousVideo = () => {
+  initConfiguredVideoFrame({
+    frame: document.querySelector("#watonomous-video-frame"),
+    video: document.querySelector("#watonomous-video"),
+    defaults: WATONOMOUS_VIDEO_CONFIG,
+    debugEnabled: DEBUG_WATONOMOUS_VIDEO,
+    storageKey: WATONOMOUS_VIDEO_DEBUG_STORAGE_KEY,
+    debugTitle: "WATonomous video editor",
+    exportAssetSrc: "/assets/watonomous-video.mp4",
+    formatExportSnippet: (buildExportConfig) =>
+      `const WATONOMOUS_VIDEO_CONFIG = ${JSON.stringify(buildExportConfig(), null, 2)};`,
+    logPrefix: "[WATonomous video]",
+    idPrefix: "wat-video",
+  });
+};
+
+const initProjectShowcaseVideos = () => {
+  document.querySelectorAll("[data-project-video]").forEach((frame) => {
+    const projectId = frame.dataset.projectVideo;
+    const defaults = PROJECT_VIDEO_CONFIGS[projectId];
+    const video = frame.querySelector("video");
+
+    if (!defaults || !video) {
+      return;
+    }
+
+    const debugEnabled =
+      DEBUG_PROJECT_VIDEO &&
+      (!DEBUG_PROJECT_VIDEO_ID || DEBUG_PROJECT_VIDEO_ID === projectId);
+
+    initConfiguredVideoFrame({
+      frame,
+      video,
+      defaults,
+      debugEnabled,
+      storageKey: `${PROJECT_VIDEO_DEBUG_STORAGE_PREFIX}${projectId}`,
+      debugTitle: `${projectId} video editor`,
+      exportAssetSrc: `/assets/${projectId}-video.mp4`,
+      formatExportSnippet: (buildExportConfig) =>
+        `"${projectId}": ${JSON.stringify(buildExportConfig(), null, 2)},`,
+      logPrefix: `[${projectId} video]`,
+      idPrefix: `${projectId}-video`,
+    });
+  });
+};
+
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
@@ -4088,4 +4185,5 @@ initHeroMotion();
 initGridCursorGlow();
 initStepNoteProject();
 initWatonomousVideo();
+initProjectShowcaseVideos();
 initSplat();
