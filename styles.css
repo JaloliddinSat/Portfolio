@@ -269,12 +269,15 @@ a {
   width: min(100%, 760px);
 }
 
-.about-section > :first-child,
 .resume-section > :first-child,
 .portfolio-intro,
 .portfolio-subsection > :first-child {
   width: 100%;
   max-width: none;
+}
+
+.about-section > :first-child {
+  width: min(100%, 760px);
 }
 
 .resume-panel {
@@ -869,6 +872,12 @@ body.debug-hero-transition {
   letter-spacing: 0;
   text-transform: lowercase;
   transition: color 180ms ease;
+}
+
+.resume-item.about-item {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .about-item .about-email:hover {
