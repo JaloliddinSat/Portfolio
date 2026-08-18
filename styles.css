@@ -982,7 +982,9 @@ body.debug-hero-transition {
 }
 
 .portfolio-intro {
-  max-width: 720px;
+  width: min(100%, 760px);
+  max-width: 760px;
+  padding-inline: 27px;
 }
 
 .portfolio-subsection {
@@ -997,7 +999,11 @@ body.debug-hero-transition {
 .portfolio-list {
   display: grid;
   gap: 18px;
-  width: min(100%, 860px);
+  width: min(100%, 760px);
+}
+
+.portfolio-entry {
+  text-align: left;
 }
 
 .portfolio-entry h3 {
