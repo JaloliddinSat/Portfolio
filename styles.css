@@ -1004,6 +1004,12 @@ body.debug-hero-transition {
   margin-bottom: 14px;
 }
 
+.resume-item.portfolio-entry {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .portfolio-entry p {
   margin: 0 0 14px;
   color: var(--muted);
