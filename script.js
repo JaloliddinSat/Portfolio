@@ -2463,9 +2463,8 @@ const initStepNoteSplat = async () => {
 const initStepNoteProject = () => {
   const playbackToggle = document.querySelector(".stepnote-splat-playback-toggle");
   const stage = document.querySelector("#stepnote-splat-stage");
-  const card = stage?.closest(".stepnote-project");
 
-  if (!playbackToggle || !stage || !card) {
+  if (!playbackToggle || !stage) {
     return;
   }
 
@@ -2486,45 +2485,9 @@ const initStepNoteProject = () => {
     setPlaybackPaused(playbackToggle.getAttribute("aria-pressed") !== "true");
   });
 
-  const startSplat = () => {
-    if (stage.dataset.initialized === "true") {
-      return;
-    }
-
-    initStepNoteSplat();
-  };
-
-  const isNearViewport = () => {
-    const rect = card.getBoundingClientRect();
-    return rect.bottom > -320 && rect.top < window.innerHeight + 320;
-  };
-
-  const maybeStart = () => {
-    if (!isNearViewport()) {
-      return;
-    }
-
-    startSplat();
-  };
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          startSplat();
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "320px 0px", threshold: 0 },
-    );
-    observer.observe(card);
-  }
-
-  maybeStart();
-  window.addEventListener("scroll", maybeStart, { passive: true });
-  window.addEventListener("resize", maybeStart, { passive: true });
-  window.addEventListener("hashchange", maybeStart);
-  window.addEventListener("load", maybeStart);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => initStepNoteSplat());
+  });
 };
 
 const initHeroScrollTransition = () => {
