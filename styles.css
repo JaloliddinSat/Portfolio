@@ -13,7 +13,7 @@
   --radius-large: 32px;
   --radius-medium: 22px;
   --max-width: 1120px;
-  --hero-scroll-distance: 420svh;
+  --hero-scroll-distance: 320svh;
 }
 
 * {
@@ -277,9 +277,8 @@ a {
 
 .hero {
   --hero-copy-opacity: 1;
-  --hero-toc-opacity: 0;
-  --hero-toc-shift: 16px;
-  --splat-panel: 0;
+  --hero-intro-overlay: 1;
+  --hero-collapse-overlay: 0;
   position: sticky;
   top: 0;
   width: 100%;
@@ -645,7 +644,7 @@ h3 {
 
 .splat-stage::before {
   z-index: 1;
-  opacity: calc(1 - var(--splat-panel));
+  opacity: var(--hero-intro-overlay);
   background:
     linear-gradient(
       to right,
@@ -663,7 +662,7 @@ h3 {
 
 .splat-stage::after {
   z-index: 2;
-  opacity: var(--splat-panel);
+  opacity: var(--hero-collapse-overlay);
   background:
     radial-gradient(
       ellipse 108% 96% at 50% 48%,

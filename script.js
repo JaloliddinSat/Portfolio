@@ -216,8 +216,8 @@ const HERO_DEPTH_CONFIG = {
   revealEnd: 0.46,
   collapseStart: 0.48,
   collapseEnd: 0.88,
-  near: 0.35,
-  far: 5.25,
+  near: 0.28,
+  far: 1.4,
 };
 
 // Production values captured with ?debugStepNoteSplat.
@@ -553,7 +553,7 @@ const installHeroDepthShader = (splatMesh) => {
       "vec3 color = vColor.rgb;",
       `float depthRange = max(0.0001, heroDepthFar - heroDepthNear);
        float depthValue = clamp((vHeroCameraDepth - heroDepthNear) / depthRange, 0.0, 1.0);
-       depthValue = depthValue * depthValue * (3.0 - 2.0 * depthValue);
+       depthValue = pow(depthValue, 0.55);
        depthValue = mix(depthValue, 1.0, heroDepthCollapse);
        vec3 depthColor = vec3(1.0 - depthValue);
        vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);`,
@@ -2388,17 +2388,14 @@ const initStepNoteProject = () => {
 const initHeroScrollTransition = () => {
   const hero = document.querySelector(".hero");
   const heroCopy = document.querySelector(".hero-copy");
-  const heroToc = document.querySelector(".hero-toc");
   const siteHeader = document.querySelector(".site-header");
 
-  if (!hero || !heroCopy || !heroToc) {
+  if (!hero || !heroCopy) {
     return;
   }
 
   const COPY_FADE_START = 0.34;
   const COPY_FADE_END = 0.47;
-  const TOC_FADE_START = 0.48;
-  const TOC_FADE_END = 0.61;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
@@ -2415,16 +2412,14 @@ const initHeroScrollTransition = () => {
     ticking = false;
     const progress = getScrollProgress();
     const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
-    const tocOpacity = fadeBetween(progress, TOC_FADE_START, TOC_FADE_END);
+    const introOverlay = 1 - fadeBetween(progress, 0.16, 0.42);
+    const collapseOverlay = fadeBetween(progress, 0.68, 0.94);
 
     hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
-    hero.style.setProperty("--hero-toc-opacity", String(tocOpacity));
-    hero.style.setProperty("--hero-toc-shift", `${(1 - tocOpacity) * 16}px`);
-    hero.style.setProperty("--splat-panel", String(tocOpacity));
+    hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
+    hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
 
     heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
-    heroToc.style.pointerEvents = tocOpacity > 0.4 ? "auto" : "none";
-    heroToc.setAttribute("aria-hidden", tocOpacity < 0.5 ? "true" : "false");
 
     if (siteHeader) {
       const pastSplat = progress >= 1;
@@ -3194,7 +3189,6 @@ const initAsciiCurtain = () => {
 const initHeroMotion = () => {
   const motionTargets = [
     { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 8 },
-    { element: document.querySelector(".hero-toc"), phase: 1.4, float: 2, tilt: 6 },
   ].filter(({ element }) => element);
 
   if (
