@@ -1964,6 +1964,10 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   text-align: center;
 }
 
+.contact-cta-mobile {
+  display: none;
+}
+
 .contact-icons {
   display: flex;
   align-items: center;
@@ -2346,18 +2350,88 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
     white-space: nowrap;
   }
 
-  .hero-scroll-note,
   .hero-actions {
     display: none;
+  }
+
+  .hero-text {
+    max-width: 18.5rem;
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+
+  .education-program {
+    font-size: 0.98rem;
+  }
+
+  .education-program-comma {
+    display: none;
+  }
+
+  .education-program-focus {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .experience-title-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .experience-title-main {
+    flex-wrap: nowrap;
+    gap: 5px;
+  }
+
+  .experience-title-main h3 {
+    flex: 0 1 auto;
+    white-space: nowrap;
+  }
+
+  .experience-role {
+    flex: 0 1 auto;
+    font-size: 0.64rem;
+    white-space: nowrap;
+  }
+
+  .experience-date {
+    justify-self: start;
+  }
+
+  .portfolio-entry .experience-skills {
+    gap: 6px;
+  }
+
+  .portfolio-entry .experience-skill-pill {
+    gap: 5px;
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
+  .portfolio-entry .experience-skill-icon {
+    width: 12px;
+    height: 12px;
+    flex-basis: 12px;
+  }
+
+  .contact-cta-desktop,
+  .contact-icons {
+    display: none;
+  }
+
+  .contact-cta-mobile {
+    display: block;
+    max-width: 22rem;
+    font-size: 0.98rem;
+    line-height: 1.6;
   }
 }
 
 @media (max-width: 560px) {
-  .experience-title-row {
-    grid-template-columns: 1fr;
-    gap: 7px;
-  }
-
   .page-shell {
     width: min(100% - 28px, var(--max-width));
   }
