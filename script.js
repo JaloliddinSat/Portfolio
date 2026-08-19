@@ -494,6 +494,141 @@ const smoothScrollTo = (targetY, duration) => {
   });
 };
 
+const initMobileHeroAutoScroll = () => {
+  const aboutSection = document.querySelector("#about");
+  const mobileQuery = window.matchMedia("(max-width: 700px)");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  if (!aboutSection) {
+    return;
+  }
+
+  let touching = false;
+  let gestureStartY = 0;
+  let armedDown = false;
+  let animating = false;
+  let frame = 0;
+
+  const getTargetY = () => {
+    const header = document.querySelector(".site-header");
+    const dockReserve = (header?.getBoundingClientRect().height || 56) + 16;
+    const extra = Math.max(
+      0,
+      aboutSection.offsetHeight - (window.innerHeight - dockReserve),
+    );
+
+    return getHeroTrackEndScrollY() + extra;
+  };
+
+  const stop = () => {
+    animating = false;
+    armedDown = false;
+
+    if (frame) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    }
+
+    document.documentElement.style.scrollBehavior = "";
+  };
+
+  const start = () => {
+    if (
+      animating ||
+      !mobileQuery.matches ||
+      reducedMotion.matches ||
+      getScrollProgress() >= 0.985
+    ) {
+      return;
+    }
+
+    const targetY = getTargetY();
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+
+    if (distance < 32) {
+      return;
+    }
+
+    animating = true;
+    const duration = Math.min(4200, Math.max(1600, (distance / 640) * 1000));
+    const startedAt = performance.now();
+    document.documentElement.style.scrollBehavior = "auto";
+
+    const step = (now) => {
+      if (!animating) {
+        return;
+      }
+
+      const t = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - (1 - t) * (1 - t);
+
+      window.scrollTo(0, startY + distance * eased);
+
+      if (t < 1) {
+        frame = requestAnimationFrame(step);
+        return;
+      }
+
+      stop();
+    };
+
+    frame = requestAnimationFrame(step);
+  };
+
+  window.addEventListener(
+    "touchstart",
+    () => {
+      if (!mobileQuery.matches) {
+        return;
+      }
+
+      touching = true;
+      gestureStartY = window.scrollY;
+      armedDown = false;
+
+      if (animating) {
+        stop();
+      }
+    },
+    { passive: true },
+  );
+
+  window.addEventListener(
+    "touchmove",
+    () => {
+      if (!touching || !mobileQuery.matches) {
+        return;
+      }
+
+      const delta = window.scrollY - gestureStartY;
+
+      if (delta > 12) {
+        armedDown = true;
+      } else if (delta < -12) {
+        armedDown = false;
+        stop();
+      }
+    },
+    { passive: true },
+  );
+
+  const onTouchDone = () => {
+    if (!mobileQuery.matches) {
+      return;
+    }
+
+    touching = false;
+
+    if (armedDown) {
+      start();
+    }
+  };
+
+  window.addEventListener("touchend", onTouchDone, { passive: true });
+  window.addEventListener("touchcancel", onTouchDone, { passive: true });
+};
+
 const initHeroActionLinks = () => {
   const links = document.querySelectorAll(".hero-actions .button[href^=\"#\"]");
 
@@ -4381,6 +4516,7 @@ initThemeToggle();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
+initMobileHeroAutoScroll();
 initHeroMotion();
 initGridCursorGlow();
 initStepNoteProject();

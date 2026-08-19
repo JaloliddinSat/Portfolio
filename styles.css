@@ -1003,6 +1003,11 @@ body.debug-hero-transition {
   line-height: 1.72;
 }
 
+.about-summary strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .about-detail {
   margin: 0 0 10px;
   color: var(--muted);
@@ -1059,7 +1064,7 @@ body.debug-hero-transition {
 }
 
 .education-program {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--text) 46%, var(--muted));
   font-size: 0.98rem;
   line-height: 1.55;
 }
