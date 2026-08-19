@@ -2360,6 +2360,11 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
     line-height: 1.45;
   }
 
+  .hero-scroll-note {
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+
   .education-program {
     font-size: 0.98rem;
   }
@@ -2426,8 +2431,8 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   .contact-cta-mobile {
     display: block;
     max-width: 22rem;
-    font-size: 0.98rem;
-    line-height: 1.6;
+    font-size: 0.78rem;
+    line-height: 1.55;
   }
 }
 
