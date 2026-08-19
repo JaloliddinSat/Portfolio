@@ -1,6 +1,6 @@
 splats/*.ply
 *.ply
-assets/WAT2.mov
+assets/*.mov
 
 .DS_Store
 GaussianSplats3D/

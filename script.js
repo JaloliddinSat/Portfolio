@@ -279,15 +279,15 @@ const PROJECT_VIDEO_CONFIGS = {
     trimEnd: 16.56,
   },
   "job-dashboard": {
-    src: "",
-    aspectRatio: 16 / 9,
+    src: "/assets/job-dashboard-video.mp4",
+    aspectRatio: 2.31,
     cropX: 50,
-    cropY: 50,
-    zoom: 1,
+    cropY: 43,
+    zoom: 1.02,
     shiftX: 0,
-    shiftY: 0,
-    trimStart: 0,
-    trimEnd: null,
+    shiftY: -2,
+    trimStart: 4.41,
+    trimEnd: 33.11,
   },
 };
 
