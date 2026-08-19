@@ -503,44 +503,18 @@ const initMobileHeroAutoScroll = () => {
   }
 
   const SETTLE_DELAY_MS = 160;
-  const FINISH_DELAY_MS = 240;
   const MIN_VERTICAL_GESTURE = 24;
   const MIN_ASSIST_DISTANCE = 32;
-  const ASSISTED_REVEAL_PROGRESS = 0.84;
   let state = "idle";
   let gestureStart = null;
   let downwardIntent = false;
   let quietTimer = 0;
+  let assistFrame = 0;
 
   // Native scrolling owns the gesture and momentum. The assist only starts
   // after the browser reports (or appears to have reached) a settled position.
-  const getAssistTargetY = () => {
-    const heroHeight = getHeroViewportHeight();
-    const scrollRange = heroScrollTrack.offsetHeight - heroHeight;
-
-    if (scrollRange <= 0) {
-      return window.scrollY;
-    }
-
-    const trackTop =
-      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
-    const transitionStart = HERO_ABOUT_TRANSITION_CONFIG.start;
-    const transitionSpeed = Math.min(
-      10,
-      Math.max(1, HERO_ABOUT_TRANSITION_CONFIG.speed),
-    );
-    const transitionDuration =
-      0.26 - transitionSpeed * 0.023;
-    const transitionEnd = Math.min(1, transitionStart + transitionDuration);
-    const targetProgress =
-      transitionStart +
-      (transitionEnd - transitionStart) * ASSISTED_REVEAL_PROGRESS;
-
-    return Math.min(
-      getHeroTrackEndScrollY(),
-      trackTop + targetProgress * scrollRange,
-    );
-  };
+  const getAssistDuration = (distance) =>
+    Math.min(2100, Math.max(1200, distance * 0.95));
 
   const clearQuietTimer = () => {
     if (quietTimer) {
@@ -551,27 +525,29 @@ const initMobileHeroAutoScroll = () => {
 
   const finishAssist = () => {
     clearQuietTimer();
+
+    if (assistFrame) {
+      cancelAnimationFrame(assistFrame);
+      assistFrame = 0;
+    }
+
+    document.documentElement.style.scrollBehavior = "";
     state = "idle";
     gestureStart = null;
     downwardIntent = false;
   };
 
   const stopActiveAssist = () => {
+    if (assistFrame) {
+      cancelAnimationFrame(assistFrame);
+      assistFrame = 0;
+    }
+
     if (state !== "assisting") {
       return;
     }
 
-    const root = document.documentElement;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    const currentY = window.scrollY;
-
-    root.style.scrollBehavior = "auto";
-    window.scrollTo({ top: currentY, behavior: "instant" });
-    requestAnimationFrame(() => {
-      if (root.style.scrollBehavior === "auto") {
-        root.style.scrollBehavior = previousScrollBehavior;
-      }
-    });
+    document.documentElement.style.scrollBehavior = "";
   };
 
   const cancelAssist = () => {
@@ -599,20 +575,41 @@ const initMobileHeroAutoScroll = () => {
       return;
     }
 
-    const targetY = getAssistTargetY();
+    const targetY = getHeroTrackEndScrollY();
+    const distance = targetY - window.scrollY;
 
-    if (targetY - window.scrollY < MIN_ASSIST_DISTANCE) {
+    if (distance < MIN_ASSIST_DISTANCE) {
       finishAssist();
       return;
     }
 
     state = "assisting";
-    window.scrollTo({
-      top: targetY,
-      behavior: "smooth",
-    });
+    const startY = window.scrollY;
+    const duration = getAssistDuration(distance);
+    const startedAt = performance.now();
+    const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
+    document.documentElement.style.scrollBehavior = "auto";
 
-    quietTimer = window.setTimeout(finishAssist, FINISH_DELAY_MS);
+    const step = (now) => {
+      if (state !== "assisting") {
+        return;
+      }
+
+      const t = Math.min(1, (now - startedAt) / duration);
+
+      window.scrollTo(0, startY + distance * easeOut(t));
+
+      if (t < 1) {
+        assistFrame = requestAnimationFrame(step);
+        return;
+      }
+
+      assistFrame = 0;
+      document.documentElement.style.scrollBehavior = "";
+      finishAssist();
+    };
+
+    assistFrame = requestAnimationFrame(step);
   };
 
   const scheduleQuietCheck = () => {
@@ -620,8 +617,6 @@ const initMobileHeroAutoScroll = () => {
 
     if (state === "settling") {
       quietTimer = window.setTimeout(startAssist, SETTLE_DELAY_MS);
-    } else if (state === "assisting") {
-      quietTimer = window.setTimeout(finishAssist, FINISH_DELAY_MS);
     }
   };
 
@@ -632,8 +627,6 @@ const initMobileHeroAutoScroll = () => {
     () => {
       if (state === "settling") {
         startAssist();
-      } else if (state === "assisting") {
-        finishAssist();
       }
     },
     { passive: true },
