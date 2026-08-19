@@ -2430,9 +2430,12 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .contact-cta-mobile {
     display: block;
-    max-width: 22rem;
+    width: min(100%, 760px);
+    max-width: 760px;
+    padding-inline: 27px;
     font-size: 0.78rem;
     line-height: 1.55;
+    text-align: left;
   }
 }
 
