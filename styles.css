@@ -1338,10 +1338,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   display: none;
 }
 
-.project-video-frame-image {
-  background: #f4f0e6;
-}
-
 .project-video-frame img {
   display: block;
   width: 100%;

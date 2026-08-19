@@ -278,7 +278,7 @@ const PROJECT_VIDEO_CONFIGS = {
     trimStart: 0,
     trimEnd: 16.56,
   },
-  "reddit-sentiment-scanner": {
+  "job-dashboard": {
     src: "",
     aspectRatio: 16 / 9,
     cropX: 50,

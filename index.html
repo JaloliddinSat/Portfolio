@@ -37,7 +37,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260819-80" />
+    <link rel="stylesheet" href="styles.css?v=20260819-81" />
     <script type="importmap">
       {
         "imports": {
@@ -698,21 +698,15 @@
 
               <article
                 class="resume-item project-card project-showcase-card"
-                aria-label="Reddit Sentiment Scanner project"
+                aria-label="Job Dashboard project"
               >
                 <div class="project-showcase-media">
                   <div
-                    class="project-video-frame project-video-frame-image"
-                    aria-label="Reddit Sentiment Scanner preview"
+                    class="project-video-frame"
+                    data-project-video="job-dashboard"
+                    aria-label="Job Dashboard preview"
                   >
-                    <img
-                      src="/assets/reddit-sentiment-scanner.png"
-                      alt="Reddit Scanner growth table showing ticker mentions, sentiment, and growth"
-                      width="1600"
-                      height="900"
-                      loading="lazy"
-                      decoding="async"
-                    >
+                    <video muted playsinline preload="metadata" hidden></video>
                     <button
                       class="media-playback-toggle"
                       type="button"
@@ -727,46 +721,95 @@
                   </div>
                 </div>
                 <div class="project-showcase-body">
-                  <p class="project-showcase-tagline">Reddit sentiment analysis for stock hype</p>
+                  <p class="project-showcase-tagline">Job feed and outreach engine</p>
                   <h3 class="project-showcase-title">
                     <a
-                      href="https://github.com/JaloliddinSat/reddit-sentiment-scanner"
+                      href="https://jobdashboard.jalolsatimov.com/"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Reddit Sentiment Scanner
+                      Job Dashboard
                       <span class="project-showcase-link-icon" aria-hidden="true">↗</span>
                     </a>
                   </h3>
                   <p class="project-showcase-description">
-                    A Python tool that scans Reddit discussions to surface sentiment trends and
-                    hype signals around stocks, helping filter noise from actionable community
-                    signals.
+                    A job hunting workspace that scans GitHub repos, LinkedIn, and Indeed every ten
+                    minutes, filters the results into one panel so postings can be applied to within
+                    the hour, and includes a People tab that surfaces LinkedIn profiles and their
+                    work emails for coffee chat outreach.
                   </p>
-                  <ul class="project-showcase-skills" aria-label="Reddit Sentiment Scanner technologies">
+                  <ul class="project-showcase-skills" aria-label="Job Dashboard technologies">
                     <li class="project-showcase-skill">
                       <img
                         class="project-showcase-skill-icon"
-                        src="/assets/skills/python.svg"
+                        src="/assets/skills/typescript.svg"
                         alt=""
                         width="18"
                         height="18"
                         loading="lazy"
                         decoding="async"
                       >
-                      Python
+                      TypeScript
                     </li>
                     <li class="project-showcase-skill">
                       <img
                         class="project-showcase-skill-icon"
-                        src="/assets/skills/github.svg"
+                        src="/assets/skills/react.svg"
                         alt=""
                         width="18"
                         height="18"
                         loading="lazy"
                         decoding="async"
                       >
-                      GitHub
+                      React
+                    </li>
+                    <li class="project-showcase-skill">
+                      <img
+                        class="project-showcase-skill-icon"
+                        src="/assets/skills/cloudflareworkers.svg"
+                        alt=""
+                        width="18"
+                        height="18"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      Cloudflare Workers
+                    </li>
+                    <li class="project-showcase-skill">
+                      <img
+                        class="project-showcase-skill-icon"
+                        src="/assets/skills/sqlite.svg"
+                        alt=""
+                        width="18"
+                        height="18"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      Cloudflare D1
+                    </li>
+                    <li class="project-showcase-skill">
+                      <img
+                        class="project-showcase-skill-icon"
+                        src="/assets/skills/nodedotjs.svg"
+                        alt=""
+                        width="18"
+                        height="18"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      Node.js
+                    </li>
+                    <li class="project-showcase-skill">
+                      <img
+                        class="project-showcase-skill-icon"
+                        src="/assets/skills/playwright.svg"
+                        alt=""
+                        width="18"
+                        height="18"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      Playwright
                     </li>
                   </ul>
                 </div>
@@ -821,6 +864,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260818-72"></script>
+    <script type="module" src="script.js?v=20260819-73"></script>
   </body>
 </html>
