@@ -3002,9 +3002,10 @@ const initDesktopSidebar = () => {
 
   let expanded = false;
   let hoverTimer = null;
+  let pointerInside = false;
 
   const applyState = () => {
-    const desktopExpanded = desktopQuery.matches && expanded;
+    const desktopExpanded = desktopQuery.matches && expanded && pointerInside;
 
     sidebar.classList.toggle("is-expanded", desktopExpanded);
   };
@@ -3021,51 +3022,30 @@ const initDesktopSidebar = () => {
   };
 
   sidebar.addEventListener("pointerenter", (event) => {
-    if (!desktopQuery.matches || event.pointerType === "touch") {
+    if (!desktopQuery.matches || event.pointerType !== "mouse") {
       return;
     }
 
+    pointerInside = true;
     clearHoverTimer();
     hoverTimer = window.setTimeout(() => {
+      if (!pointerInside) {
+        return;
+      }
+
       expanded = true;
       applyState();
     }, HOVER_EXPAND_MS);
   });
 
   sidebar.addEventListener("pointerleave", () => {
+    pointerInside = false;
+
     if (!desktopQuery.matches) {
       return;
     }
 
     collapse();
-  });
-
-  sidebar.addEventListener("focusin", () => {
-    if (!desktopQuery.matches) {
-      return;
-    }
-
-    clearHoverTimer();
-    expanded = true;
-    applyState();
-  });
-
-  sidebar.addEventListener("focusout", (event) => {
-    if (!desktopQuery.matches || sidebar.contains(event.relatedTarget)) {
-      return;
-    }
-
-    collapse();
-  });
-
-  sidebar.querySelectorAll('a[href^="#"]').forEach((link) => {
-    link.addEventListener("click", () => {
-      if (!desktopQuery.matches) {
-        return;
-      }
-
-      collapse();
-    });
   });
 
   document.addEventListener("keydown", (event) => {
@@ -3075,12 +3055,8 @@ const initDesktopSidebar = () => {
   });
 
   desktopQuery.addEventListener("change", () => {
-    if (!desktopQuery.matches) {
-      collapse();
-      return;
-    }
-
-    applyState();
+    pointerInside = false;
+    collapse();
   });
 
   applyState();
