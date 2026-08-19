@@ -3163,7 +3163,7 @@ const initAsciiCurtain = () => {
   let foregroundColorRegions = [];
   let liveSplatCaptured = false;
   let liveSplatCapturePending = false;
-  const asciiEnabled = true;
+  const asciiEnabled = false;
   let asciiCanvasHasContent = false;
   let asciiScrollFrame = null;
 

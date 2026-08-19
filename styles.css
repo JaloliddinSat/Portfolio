@@ -784,6 +784,18 @@ h3 {
     rgba(3, 5, 12, 0.48);
 }
 
+html[data-theme="light"] .splat-stage::after {
+  background:
+    radial-gradient(
+      ellipse 108% 96% at 50% 48%,
+      transparent 6%,
+      rgba(247, 247, 248, 0.42) 42%,
+      rgba(243, 243, 244, 0.78) 72%,
+      rgba(243, 243, 244, 0.94) 100%
+    ),
+    rgba(247, 247, 248, 0.48);
+}
+
 .splat-viewer {
   --hero-depth-mix: 0;
   --hero-depth-collapse: 0;
@@ -1239,6 +1251,15 @@ body.debug-hero-transition {
   flex: 0 0 16px;
 }
 
+html[data-theme="light"] img[src$="github.svg"],
+html[data-theme="light"] img[src$="resend.svg"] {
+  filter: invert(1);
+}
+
+html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
+  filter: none;
+}
+
 .experience-video-placeholder,
 .project-video-frame {
   position: relative;
@@ -1508,8 +1529,12 @@ body.debug-hero-transition {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(245, 245, 245, 0.78);
+  color: var(--pill-text);
   font-size: 0.84rem;
+}
+
+.stepnote-project-skills .project-showcase-skill {
+  color: rgba(245, 245, 245, 0.78);
 }
 
 .project-showcase-skill-icon {
