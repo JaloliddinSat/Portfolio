@@ -48,7 +48,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260818-69" />
+    <link rel="stylesheet" href="styles.css?v=20260818-70" />
     <script type="importmap">
       {
         "imports": {
@@ -338,6 +338,17 @@
                     aria-label="WATonomous project video"
                     hidden
                   ></video>
+                  <button
+                    class="media-playback-toggle"
+                    type="button"
+                    aria-label="Pause preview"
+                    aria-pressed="false"
+                  >
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                      <path class="media-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
+                      <path class="media-play-icon" d="M6.5 4.25v11.5L15 10z" />
+                    </svg>
+                  </button>
                 </div>
                 <ul class="experience-skills" aria-label="WATonomous technologies">
                   <li class="experience-skill-pill">
@@ -397,14 +408,14 @@
                   </div>
                 </div>
                 <button
-                  class="stepnote-splat-playback-toggle"
+                  class="media-playback-toggle stepnote-splat-playback-toggle"
                   type="button"
                   aria-label="Pause StepNote animation"
                   aria-pressed="false"
                 >
                   <svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path class="stepnote-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
-                    <path class="stepnote-play-icon" d="M6.5 4.25v11.5L15 10z" />
+                    <path class="media-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
+                    <path class="media-play-icon" d="M6.5 4.25v11.5L15 10z" />
                   </svg>
                 </button>
                 <div
@@ -499,6 +510,17 @@
                     aria-label="Behaviourly preview"
                   >
                     <video muted playsinline preload="metadata" hidden></video>
+                    <button
+                      class="media-playback-toggle"
+                      type="button"
+                      aria-label="Pause preview"
+                      aria-pressed="false"
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path class="media-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
+                        <path class="media-play-icon" d="M6.5 4.25v11.5L15 10z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="project-showcase-body">
@@ -587,6 +609,17 @@
                       loading="lazy"
                       decoding="async"
                     >
+                    <button
+                      class="media-playback-toggle"
+                      type="button"
+                      aria-label="Pause preview"
+                      aria-pressed="false"
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path class="media-pause-icon" d="M6 4h3v12H6zm5 0h3v12h-3z" />
+                        <path class="media-play-icon" d="M6.5 4.25v11.5L15 10z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="project-showcase-body">
@@ -683,6 +716,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260818-62"></script>
+    <script type="module" src="script.js?v=20260818-63"></script>
   </body>
 </html>

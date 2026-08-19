@@ -3831,6 +3831,8 @@ const initConfiguredVideoFrame = ({
   let localVideoUrl = null;
   let panel = null;
   let isInView = false;
+  let userPaused = false;
+  const playbackToggle = frame.querySelector(".media-playback-toggle");
 
   if (debugEnabled && storageKey) {
     try {
@@ -4021,6 +4023,7 @@ const initConfiguredVideoFrame = ({
     !debugEnabled &&
     isInView &&
     !document.hidden &&
+    !userPaused &&
     Boolean(config.src || video.src) &&
     duration > 0;
 
@@ -4062,6 +4065,37 @@ const initConfiguredVideoFrame = ({
     }
   };
 
+  const syncPlaybackToggle = () => {
+    if (!playbackToggle) {
+      return;
+    }
+
+    const paused = video.paused;
+    playbackToggle.classList.toggle("is-paused", paused);
+    playbackToggle.setAttribute("aria-pressed", String(paused));
+    playbackToggle.setAttribute(
+      "aria-label",
+      paused ? "Play preview" : "Pause preview",
+    );
+  };
+
+  playbackToggle?.addEventListener("click", () => {
+    if (video.paused) {
+      userPaused = false;
+      playIfVisible();
+
+      if (video.paused && duration > 0) {
+        video.play().catch(() => {});
+      }
+    } else {
+      userPaused = true;
+      video.pause();
+      stopLoopWatcher();
+    }
+
+    syncPlaybackToggle();
+  });
+
   const loadConfiguredVideo = () => {
     if (!config.src) {
       return;
@@ -4091,10 +4125,14 @@ const initConfiguredVideoFrame = ({
     refreshPanel();
   });
 
-  video.addEventListener("play", startLoopWatcher);
+  video.addEventListener("play", () => {
+    startLoopWatcher();
+    syncPlaybackToggle();
+  });
   video.addEventListener("pause", () => {
     stopLoopWatcher();
     refreshPanel();
+    syncPlaybackToggle();
   });
   video.addEventListener("seeked", refreshPanel);
 
