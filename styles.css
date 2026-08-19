@@ -1092,8 +1092,37 @@ body.debug-hero-transition {
   gap: 2px;
 }
 
+.portfolio-section > .portfolio-skills,
 .portfolio-section > .portfolio-projects {
   margin-top: 96px;
+}
+
+.portfolio-skills {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.portfolio-skills > :first-child {
+  width: min(100%, 760px);
+  max-width: 760px;
+  padding-inline: 27px;
+}
+
+.portfolio-skills .section-title {
+  margin-bottom: 0;
+}
+
+.portfolio-skills .skills-pills {
+  width: min(100%, 760px);
+  max-width: 760px;
+  margin: 0;
+  padding: 0 27px;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .portfolio-subsection {
@@ -1252,7 +1281,9 @@ body.debug-hero-transition {
 }
 
 html[data-theme="light"] img[src$="github.svg"],
-html[data-theme="light"] img[src$="resend.svg"] {
+html[data-theme="light"] img[src$="resend.svg"],
+html[data-theme="light"] img[src$="nextdotjs.svg"],
+html[data-theme="light"] img[src$="vercel.svg"] {
   filter: invert(1);
 }
 
