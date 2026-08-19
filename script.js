@@ -49,7 +49,10 @@ const initGridCursorGlow = () => {
 
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.clearRect(0, 0, glowSize, glowSize);
-    context.strokeStyle = `rgba(255, 255, 255, ${lineAlpha})`;
+    context.strokeStyle =
+      document.documentElement.dataset.theme === "light"
+        ? `rgba(15, 15, 15, ${lineAlpha})`
+        : `rgba(255, 255, 255, ${lineAlpha})`;
     context.lineWidth = 1;
     context.beginPath();
 
@@ -2528,8 +2531,8 @@ const initHeroScrollTransition = () => {
     return;
   }
 
-  const COPY_FADE_START = 0.18;
-  const COPY_FADE_END = 0.3;
+  const COPY_FADE_START = 0.05;
+  const COPY_FADE_END = 0.16;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
@@ -2980,74 +2983,149 @@ const initMobileDockNavigation = () => {
 
 const initDesktopSidebar = () => {
   const sidebar = document.querySelector(".site-header");
-  const toggle = document.querySelector("#sidebar-toggle");
-  const toggleLabel = toggle?.querySelector("[data-sidebar-toggle-label]");
   const desktopQuery = window.matchMedia("(min-width: 701px)");
-  const storageKey = "desktopSidebarExpanded";
+  const HOVER_EXPAND_MS = 2000;
 
-  if (!sidebar || !toggle) {
+  if (!sidebar) {
     return;
   }
 
-  const readSavedState = () => {
-    try {
-      return window.localStorage.getItem(storageKey) === "1";
-    } catch (error) {
-      console.warn("[SIDEBAR] Preference could not be read:", error);
-      return false;
-    }
-  };
+  let expanded = false;
+  let hoverTimer = null;
 
-  let expanded = readSavedState();
-
-  const applyState = ({ persist = false } = {}) => {
+  const applyState = () => {
     const desktopExpanded = desktopQuery.matches && expanded;
-    const action = desktopExpanded ? "Collapse" : "Expand";
 
     sidebar.classList.toggle("is-expanded", desktopExpanded);
-    toggle.setAttribute("aria-expanded", String(desktopExpanded));
-    toggle.setAttribute("aria-label", `${action} navigation`);
-    toggle.title = `${action} navigation`;
-
-    if (toggleLabel) {
-      toggleLabel.textContent = `${action} menu`;
-    }
-
-    if (persist) {
-      try {
-        window.localStorage.setItem(storageKey, expanded ? "1" : "0");
-      } catch (error) {
-        console.warn("[SIDEBAR] Preference could not be saved:", error);
-      }
-    }
   };
 
-  toggle.addEventListener("click", () => {
-    expanded = !expanded;
-    applyState({ persist: true });
+  const clearHoverTimer = () => {
+    window.clearTimeout(hoverTimer);
+    hoverTimer = null;
+  };
+
+  const collapse = () => {
+    clearHoverTimer();
+    expanded = false;
+    applyState();
+  };
+
+  sidebar.addEventListener("pointerenter", (event) => {
+    if (!desktopQuery.matches || event.pointerType === "touch") {
+      return;
+    }
+
+    clearHoverTimer();
+    hoverTimer = window.setTimeout(() => {
+      expanded = true;
+      applyState();
+    }, HOVER_EXPAND_MS);
+  });
+
+  sidebar.addEventListener("pointerleave", () => {
+    if (!desktopQuery.matches) {
+      return;
+    }
+
+    collapse();
+  });
+
+  sidebar.addEventListener("focusin", () => {
+    if (!desktopQuery.matches) {
+      return;
+    }
+
+    clearHoverTimer();
+    expanded = true;
+    applyState();
+  });
+
+  sidebar.addEventListener("focusout", (event) => {
+    if (!desktopQuery.matches || sidebar.contains(event.relatedTarget)) {
+      return;
+    }
+
+    collapse();
   });
 
   sidebar.querySelectorAll('a[href^="#"]').forEach((link) => {
     link.addEventListener("click", () => {
-      if (!desktopQuery.matches || !expanded) {
+      if (!desktopQuery.matches) {
         return;
       }
 
-      expanded = false;
-      applyState({ persist: true });
+      collapse();
     });
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && desktopQuery.matches && expanded) {
-      expanded = false;
-      applyState({ persist: true });
-      toggle.focus();
+      collapse();
     }
   });
 
-  desktopQuery.addEventListener("change", () => applyState());
+  desktopQuery.addEventListener("change", () => {
+    if (!desktopQuery.matches) {
+      collapse();
+      return;
+    }
+
+    applyState();
+  });
+
   applyState();
+};
+
+const initThemeToggle = () => {
+  const toggle = document.querySelector("#theme-toggle");
+  const toggleLabel = toggle?.querySelector("[data-theme-toggle-label]");
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  const storageKey = "site-theme";
+
+  if (!toggle) {
+    return;
+  }
+
+  const readSavedTheme = () => {
+    try {
+      return window.localStorage.getItem(storageKey) === "light" ? "light" : "dark";
+    } catch (error) {
+      return "dark";
+    }
+  };
+
+  const applyTheme = (theme, { persist = false } = {}) => {
+    const isLight = theme === "light";
+    const nextAction = isLight ? "dark" : "light";
+
+    document.documentElement.dataset.theme = isLight ? "light" : "dark";
+    toggle.setAttribute("aria-label", `Switch to ${nextAction} theme`);
+    toggle.title = `${nextAction[0].toUpperCase()}${nextAction.slice(1)} theme`;
+
+    if (toggleLabel) {
+      toggleLabel.textContent = `${nextAction[0].toUpperCase()}${nextAction.slice(1)}`;
+    }
+
+    if (themeColor) {
+      themeColor.setAttribute("content", isLight ? "#f3f3f4" : "#0a0a0a");
+    }
+
+    if (persist) {
+      try {
+        window.localStorage.setItem(storageKey, isLight ? "light" : "dark");
+      } catch (error) {
+        console.warn("[THEME] Preference could not be saved:", error);
+      }
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    const nextTheme =
+      document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(nextTheme, { persist: true });
+  });
+
+  applyTheme(readSavedTheme());
 };
 
 const initAsciiCurtain = () => {
@@ -4273,6 +4351,7 @@ const initProjectShowcaseVideos = () => {
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
+initThemeToggle();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
