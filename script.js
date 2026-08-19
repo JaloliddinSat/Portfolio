@@ -3428,7 +3428,6 @@ const initDesktopSidebar = () => {
 const initThemeToggle = () => {
   const toggle = document.querySelector("#theme-toggle");
   const toggleLabel = toggle?.querySelector("[data-theme-toggle-label]");
-  const themeColor = document.querySelector('meta[name="theme-color"]');
   const storageKey = "site-theme";
 
   if (!toggle) {
@@ -3453,10 +3452,6 @@ const initThemeToggle = () => {
 
     if (toggleLabel) {
       toggleLabel.textContent = `${nextAction[0].toUpperCase()}${nextAction.slice(1)}`;
-    }
-
-    if (themeColor) {
-      themeColor.setAttribute("content", isLight ? "#f3f3f4" : "#0a0a0a");
     }
 
     syncHeroDepthTheme();
