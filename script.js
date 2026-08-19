@@ -503,11 +503,16 @@ const initMobileHeroAutoScroll = () => {
     return;
   }
 
-  let touching = false;
-  let gestureStartY = 0;
-  let armedDown = false;
-  let animating = false;
-  let frame = 0;
+  let isScrolling = false;
+  let scrollingSpeed = 0;
+  let lastY = window.scrollY;
+  let lastT = performance.now();
+  let inputHeld = false;
+  let coasting = false;
+  let coastFrame = 0;
+  let wheelTimeout = 0;
+
+  const inSplat = () => mobileQuery.matches && getScrollProgress() < 0.995;
 
   const getTargetY = () => {
     const header = document.querySelector(".site-header");
@@ -520,61 +525,96 @@ const initMobileHeroAutoScroll = () => {
     return getHeroTrackEndScrollY() + extra;
   };
 
-  const stop = () => {
-    animating = false;
-    armedDown = false;
+  const stopCoast = () => {
+    coasting = false;
 
-    if (frame) {
-      cancelAnimationFrame(frame);
-      frame = 0;
+    if (coastFrame) {
+      cancelAnimationFrame(coastFrame);
+      coastFrame = 0;
     }
 
     document.documentElement.style.scrollBehavior = "";
   };
 
-  const start = () => {
+  const startCoast = () => {
     if (
-      animating ||
-      !mobileQuery.matches ||
+      coasting ||
+      inputHeld ||
       reducedMotion.matches ||
-      getScrollProgress() >= 0.985
+      !isScrolling ||
+      scrollingSpeed <= 0 ||
+      !inSplat()
     ) {
       return;
     }
 
     const targetY = getTargetY();
-    const startY = window.scrollY;
-    const distance = targetY - startY;
 
-    if (distance < 32) {
+    if (targetY - window.scrollY < 8) {
+      isScrolling = false;
+      scrollingSpeed = 0;
       return;
     }
 
-    animating = true;
-    const duration = Math.min(4200, Math.max(1600, (distance / 640) * 1000));
-    const startedAt = performance.now();
+    coasting = true;
     document.documentElement.style.scrollBehavior = "auto";
+    let previousT = performance.now();
 
     const step = (now) => {
-      if (!animating) {
+      if (!coasting) {
         return;
       }
 
-      const t = Math.min(1, (now - startedAt) / duration);
-      const eased = 1 - (1 - t) * (1 - t);
+      const dt = Math.min(32, now - previousT);
+      previousT = now;
+      const nextY = Math.min(targetY, window.scrollY + scrollingSpeed * dt);
 
-      window.scrollTo(0, startY + distance * eased);
+      window.scrollTo(0, nextY);
 
-      if (t < 1) {
-        frame = requestAnimationFrame(step);
+      if (nextY >= targetY - 0.5) {
+        isScrolling = false;
+        scrollingSpeed = 0;
+        stopCoast();
         return;
       }
 
-      stop();
+      coastFrame = requestAnimationFrame(step);
     };
 
-    frame = requestAnimationFrame(step);
+    coastFrame = requestAnimationFrame(step);
   };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const now = performance.now();
+      const y = window.scrollY;
+      const dt = now - lastT;
+      const dy = y - lastY;
+
+      lastY = y;
+      lastT = now;
+
+      if (coasting || !inSplat() || dt <= 0 || dt > 120) {
+        return;
+      }
+
+      const speed = dy / dt;
+
+      if (speed > 0) {
+        isScrolling = true;
+        scrollingSpeed = speed;
+        return;
+      }
+
+      if (speed < 0) {
+        isScrolling = false;
+        scrollingSpeed = 0;
+        stopCoast();
+      }
+    },
+    { passive: true },
+  );
 
   window.addEventListener(
     "touchstart",
@@ -583,50 +623,37 @@ const initMobileHeroAutoScroll = () => {
         return;
       }
 
-      touching = true;
-      gestureStartY = window.scrollY;
-      armedDown = false;
-
-      if (animating) {
-        stop();
-      }
+      inputHeld = true;
+      stopCoast();
     },
     { passive: true },
   );
 
-  window.addEventListener(
-    "touchmove",
-    () => {
-      if (!touching || !mobileQuery.matches) {
-        return;
-      }
-
-      const delta = window.scrollY - gestureStartY;
-
-      if (delta > 12) {
-        armedDown = true;
-      } else if (delta < -12) {
-        armedDown = false;
-        stop();
-      }
-    },
-    { passive: true },
-  );
-
-  const onTouchDone = () => {
+  const onInputEnd = () => {
     if (!mobileQuery.matches) {
       return;
     }
 
-    touching = false;
-
-    if (armedDown) {
-      start();
-    }
+    inputHeld = false;
+    startCoast();
   };
 
-  window.addEventListener("touchend", onTouchDone, { passive: true });
-  window.addEventListener("touchcancel", onTouchDone, { passive: true });
+  window.addEventListener("touchend", onInputEnd, { passive: true });
+  window.addEventListener("touchcancel", onInputEnd, { passive: true });
+
+  window.addEventListener(
+    "wheel",
+    () => {
+      if (!mobileQuery.matches) {
+        return;
+      }
+
+      stopCoast();
+      window.clearTimeout(wheelTimeout);
+      wheelTimeout = window.setTimeout(onInputEnd, 80);
+    },
+    { passive: true },
+  );
 };
 
 const initHeroActionLinks = () => {
