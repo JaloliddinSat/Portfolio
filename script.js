@@ -495,122 +495,145 @@ const smoothScrollTo = (targetY, duration) => {
 };
 
 const initMobileHeroAutoScroll = () => {
-  const aboutSection = document.querySelector("#about");
   const mobileQuery = window.matchMedia("(max-width: 700px)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  if (!aboutSection) {
+  if (!heroScrollTrack || !document.querySelector("#about")) {
     return;
   }
 
-  let isScrolling = false;
-  let scrollingSpeed = 0;
-  let lastY = window.scrollY;
-  let lastT = performance.now();
-  let inputHeld = false;
-  let coasting = false;
-  let coastFrame = 0;
-  let wheelTimeout = 0;
+  const SETTLE_DELAY_MS = 160;
+  const FINISH_DELAY_MS = 240;
+  const MIN_VERTICAL_GESTURE = 24;
+  const MIN_ASSIST_DISTANCE = 32;
+  const ASSISTED_REVEAL_PROGRESS = 0.84;
+  let state = "idle";
+  let gestureStart = null;
+  let downwardIntent = false;
+  let quietTimer = 0;
 
-  const usableViewportHeight = () => {
-    const header = document.querySelector(".site-header");
-    const dockReserve = (header?.getBoundingClientRect().height || 56) + 18;
+  // Native scrolling owns the gesture and momentum. The assist only starts
+  // after the browser reports (or appears to have reached) a settled position.
+  const getAssistTargetY = () => {
+    const heroHeight = getHeroViewportHeight();
+    const scrollRange = heroScrollTrack.offsetHeight - heroHeight;
 
-    return window.innerHeight - dockReserve;
-  };
-
-  const aboutReachedMiddle = () => {
-    const rect = aboutSection.getBoundingClientRect();
-    const aboutCenter = rect.top + rect.height / 2;
-
-    return aboutCenter <= usableViewportHeight() / 2;
-  };
-
-  const inSplat = () => mobileQuery.matches && !aboutReachedMiddle();
-
-  const stopCoast = () => {
-    coasting = false;
-
-    if (coastFrame) {
-      cancelAnimationFrame(coastFrame);
-      coastFrame = 0;
+    if (scrollRange <= 0) {
+      return window.scrollY;
     }
 
-    document.documentElement.style.scrollBehavior = "";
+    const trackTop =
+      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+    const transitionStart = HERO_ABOUT_TRANSITION_CONFIG.start;
+    const transitionSpeed = Math.min(
+      10,
+      Math.max(1, HERO_ABOUT_TRANSITION_CONFIG.speed),
+    );
+    const transitionDuration =
+      0.26 - transitionSpeed * 0.023;
+    const transitionEnd = Math.min(1, transitionStart + transitionDuration);
+    const targetProgress =
+      transitionStart +
+      (transitionEnd - transitionStart) * ASSISTED_REVEAL_PROGRESS;
+
+    return Math.min(
+      getHeroTrackEndScrollY(),
+      trackTop + targetProgress * scrollRange,
+    );
   };
 
-  const startCoast = () => {
-    if (
-      coasting ||
-      inputHeld ||
-      reducedMotion.matches ||
-      !isScrolling ||
-      scrollingSpeed <= 0 ||
-      !inSplat()
-    ) {
+  const clearQuietTimer = () => {
+    if (quietTimer) {
+      window.clearTimeout(quietTimer);
+      quietTimer = 0;
+    }
+  };
+
+  const finishAssist = () => {
+    clearQuietTimer();
+    state = "idle";
+    gestureStart = null;
+    downwardIntent = false;
+  };
+
+  const stopActiveAssist = () => {
+    if (state !== "assisting") {
       return;
     }
 
-    if (aboutReachedMiddle()) {
-      isScrolling = false;
-      scrollingSpeed = 0;
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    const currentY = window.scrollY;
+
+    root.style.scrollBehavior = "auto";
+    window.scrollTo({ top: currentY, behavior: "instant" });
+    requestAnimationFrame(() => {
+      if (root.style.scrollBehavior === "auto") {
+        root.style.scrollBehavior = previousScrollBehavior;
+      }
+    });
+  };
+
+  const cancelAssist = () => {
+    clearQuietTimer();
+    stopActiveAssist();
+    state = "idle";
+    gestureStart = null;
+    downwardIntent = false;
+  };
+
+  const canAssist = () =>
+    mobileQuery.matches &&
+    !reducedMotion.matches &&
+    getScrollProgress() < 0.995;
+
+  const startAssist = () => {
+    if (state !== "settling") {
       return;
     }
 
-    coasting = true;
-    document.documentElement.style.scrollBehavior = "auto";
-    let previousT = performance.now();
+    clearQuietTimer();
 
-    const step = (now) => {
-      if (!coasting) {
-        return;
-      }
+    if (!canAssist()) {
+      finishAssist();
+      return;
+    }
 
-      const dt = Math.min(32, now - previousT);
-      previousT = now;
+    const targetY = getAssistTargetY();
 
-      window.scrollTo(0, window.scrollY + scrollingSpeed * dt);
+    if (targetY - window.scrollY < MIN_ASSIST_DISTANCE) {
+      finishAssist();
+      return;
+    }
 
-      if (aboutReachedMiddle() || window.scrollY >= getHeroTrackEndScrollY()) {
-        isScrolling = false;
-        scrollingSpeed = 0;
-        stopCoast();
-        return;
-      }
+    state = "assisting";
+    window.scrollTo({
+      top: targetY,
+      behavior: "smooth",
+    });
 
-      coastFrame = requestAnimationFrame(step);
-    };
-
-    coastFrame = requestAnimationFrame(step);
+    quietTimer = window.setTimeout(finishAssist, FINISH_DELAY_MS);
   };
 
-  window.addEventListener(
-    "scroll",
+  const scheduleQuietCheck = () => {
+    clearQuietTimer();
+
+    if (state === "settling") {
+      quietTimer = window.setTimeout(startAssist, SETTLE_DELAY_MS);
+    } else if (state === "assisting") {
+      quietTimer = window.setTimeout(finishAssist, FINISH_DELAY_MS);
+    }
+  };
+
+  window.addEventListener("scroll", scheduleQuietCheck, { passive: true });
+
+  document.addEventListener(
+    "scrollend",
     () => {
-      const now = performance.now();
-      const y = window.scrollY;
-      const dt = now - lastT;
-      const dy = y - lastY;
-
-      lastY = y;
-      lastT = now;
-
-      if (coasting || !inSplat() || dt <= 0 || dt > 120) {
-        return;
-      }
-
-      const speed = dy / dt;
-
-      if (speed > 0) {
-        isScrolling = true;
-        scrollingSpeed = speed;
-        return;
-      }
-
-      if (speed < 0) {
-        isScrolling = false;
-        scrollingSpeed = 0;
-        stopCoast();
+      if (state === "settling") {
+        startAssist();
+      } else if (state === "assisting") {
+        finishAssist();
       }
     },
     { passive: true },
@@ -618,42 +641,122 @@ const initMobileHeroAutoScroll = () => {
 
   window.addEventListener(
     "touchstart",
-    () => {
-      if (!mobileQuery.matches) {
+    (event) => {
+      cancelAssist();
+
+      if (!canAssist() || event.touches.length !== 1) {
         return;
       }
 
-      inputHeld = true;
-      stopCoast();
+      const touch = event.touches[0];
+
+      state = "tracking";
+      gestureStart = {
+        x: touch.clientX,
+        y: touch.clientY,
+      };
     },
     { passive: true },
   );
 
-  const onInputEnd = () => {
-    if (!mobileQuery.matches) {
-      return;
-    }
+  window.addEventListener(
+    "touchmove",
+    (event) => {
+      if (state !== "tracking" || !gestureStart || !event.touches.length) {
+        return;
+      }
 
-    inputHeld = false;
-    startCoast();
-  };
+      const touch = event.touches[0];
+      const verticalDistance = gestureStart.y - touch.clientY;
+      const horizontalDistance = Math.abs(gestureStart.x - touch.clientX);
 
-  window.addEventListener("touchend", onInputEnd, { passive: true });
-  window.addEventListener("touchcancel", onInputEnd, { passive: true });
+      if (verticalDistance < -MIN_VERTICAL_GESTURE / 2) {
+        downwardIntent = false;
+      } else if (
+        verticalDistance >= MIN_VERTICAL_GESTURE &&
+        verticalDistance > horizontalDistance * 1.15
+      ) {
+        downwardIntent = true;
+      }
+    },
+    { passive: true },
+  );
+
+  window.addEventListener(
+    "touchend",
+    () => {
+      if (state !== "tracking") {
+        return;
+      }
+
+      const shouldAssist = downwardIntent && canAssist();
+
+      gestureStart = null;
+      downwardIntent = false;
+
+      if (!shouldAssist) {
+        state = "idle";
+        return;
+      }
+
+      state = "settling";
+      scheduleQuietCheck();
+    },
+    { passive: true },
+  );
+
+  window.addEventListener("touchcancel", cancelAssist, { passive: true });
 
   window.addEventListener(
     "wheel",
-    () => {
+    (event) => {
       if (!mobileQuery.matches) {
         return;
       }
 
-      stopCoast();
-      window.clearTimeout(wheelTimeout);
-      wheelTimeout = window.setTimeout(onInputEnd, 80);
+      const interruptedAssist = state === "assisting";
+
+      cancelAssist();
+
+      if (
+        interruptedAssist ||
+        event.deltaY <= 0 ||
+        reducedMotion.matches ||
+        getScrollProgress() >= 0.995
+      ) {
+        return;
+      }
+
+      state = "settling";
+      scheduleQuietCheck();
     },
     { passive: true },
   );
+
+  window.addEventListener("keydown", (event) => {
+    if (
+      [
+        "ArrowDown",
+        "ArrowUp",
+        "End",
+        "Home",
+        "PageDown",
+        "PageUp",
+        " ",
+      ].includes(event.key)
+    ) {
+      cancelAssist();
+    }
+  });
+
+  const onPreferenceChange = () => {
+    if (!mobileQuery.matches || reducedMotion.matches) {
+      cancelAssist();
+    }
+  };
+
+  mobileQuery.addEventListener?.("change", onPreferenceChange);
+  reducedMotion.addEventListener?.("change", onPreferenceChange);
 };
 
 const initHeroActionLinks = () => {
