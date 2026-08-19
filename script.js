@@ -495,21 +495,112 @@ const smoothScrollTo = (targetY, duration) => {
 };
 
 const initMobileHeroAutoScroll = () => {
+  const aboutSection = document.querySelector("#about");
   const mobileQuery = window.matchMedia("(max-width: 700px)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  if (!heroScrollTrack || !document.querySelector("#about")) {
+  if (!heroScrollTrack || !aboutSection) {
     return;
   }
 
   const SETTLE_DELAY_MS = 160;
   const MIN_VERTICAL_GESTURE = 24;
   const MIN_ASSIST_DISTANCE = 32;
+  const MAX_ASSIST_STEP = 24;
   let state = "idle";
   let gestureStart = null;
   let downwardIntent = false;
   let quietTimer = 0;
   let assistFrame = 0;
+
+  const clamp01 = (value) => Math.min(1, Math.max(0, value));
+  const smoothstep = (value) => {
+    const t = clamp01(value);
+
+    return t * t * (3 - 2 * t);
+  };
+  const getUsableViewportCenter = () => {
+    const header = document.querySelector(".site-header");
+    const dockReserve = (header?.getBoundingClientRect().height || 56) + 18;
+
+    return (window.innerHeight - dockReserve) / 2;
+  };
+  const getAboutEntryOffsetAtProgress = (progress) => {
+    const transitionStart = HERO_ABOUT_TRANSITION_CONFIG.start;
+    const transitionSpeed = Math.min(
+      10,
+      Math.max(1, HERO_ABOUT_TRANSITION_CONFIG.speed),
+    );
+    const transitionEnd = Math.min(
+      1,
+      transitionStart + (0.26 - transitionSpeed * 0.023),
+    );
+    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+    const viewportHeight = getHeroViewportHeight();
+    const preEntryOffset = Math.max(
+      0,
+      viewportHeight - (transitionEnd - transitionStart) * scrollRange,
+    );
+    const reveal = smoothstep(
+      (progress - transitionStart) /
+        Math.max(0.001, transitionEnd - transitionStart),
+    );
+
+    return preEntryOffset * (1 - reveal);
+  };
+  const getAboutCenterAtProgress = (progress) => {
+    const trackTop =
+      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+    const scrollY = trackTop + progress * scrollRange;
+    const currentProgress = getScrollProgress();
+    const aboutRect = aboutSection.getBoundingClientRect();
+    const aboutCenterNow = aboutRect.top + aboutRect.height / 2;
+    const entryDelta =
+      getAboutEntryOffsetAtProgress(progress) -
+      getAboutEntryOffsetAtProgress(currentProgress);
+
+    return aboutCenterNow + (window.scrollY - scrollY) + entryDelta;
+  };
+  const aboutReachedMiddle = () => {
+    const aboutRect = aboutSection.getBoundingClientRect();
+    const aboutCenter = aboutRect.top + aboutRect.height / 2;
+
+    return aboutCenter <= getUsableViewportCenter();
+  };
+  const getAssistTargetY = () => {
+    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+
+    if (scrollRange <= 0) {
+      return window.scrollY;
+    }
+
+    const trackTop =
+      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+    const targetCenter = getUsableViewportCenter();
+    let low = getScrollProgress();
+    let high = 1;
+
+    if (getAboutCenterAtProgress(low) <= targetCenter) {
+      return window.scrollY;
+    }
+
+    if (getAboutCenterAtProgress(high) > targetCenter) {
+      return getHeroTrackEndScrollY();
+    }
+
+    for (let index = 0; index < 18; index += 1) {
+      const midpoint = (low + high) / 2;
+
+      if (getAboutCenterAtProgress(midpoint) > targetCenter) {
+        low = midpoint;
+      } else {
+        high = midpoint;
+      }
+    }
+
+    return Math.min(getHeroTrackEndScrollY(), trackTop + high * scrollRange);
+  };
 
   // Native scrolling owns the gesture and momentum. The assist only starts
   // after the browser reports (or appears to have reached) a settled position.
@@ -575,7 +666,7 @@ const initMobileHeroAutoScroll = () => {
       return;
     }
 
-    const targetY = getHeroTrackEndScrollY();
+    const targetY = getAssistTargetY();
     const distance = targetY - window.scrollY;
 
     if (distance < MIN_ASSIST_DISTANCE) {
@@ -595,18 +686,32 @@ const initMobileHeroAutoScroll = () => {
         return;
       }
 
-      const t = Math.min(1, (now - startedAt) / duration);
-
-      window.scrollTo(0, startY + distance * easeOut(t));
-
-      if (t < 1) {
-        assistFrame = requestAnimationFrame(step);
+      if (aboutReachedMiddle()) {
+        assistFrame = 0;
+        document.documentElement.style.scrollBehavior = "";
+        finishAssist();
         return;
       }
 
-      assistFrame = 0;
-      document.documentElement.style.scrollBehavior = "";
-      finishAssist();
+      const t = Math.min(1, (now - startedAt) / duration);
+      const idealY = startY + distance * easeOut(t);
+      const currentY = window.scrollY;
+      const remaining = idealY - currentY;
+      const nextY =
+        Math.abs(remaining) <= MAX_ASSIST_STEP
+          ? idealY
+          : currentY + Math.sign(remaining) * MAX_ASSIST_STEP;
+
+      window.scrollTo(0, nextY);
+
+      if (aboutReachedMiddle() || t >= 1) {
+        assistFrame = 0;
+        document.documentElement.style.scrollBehavior = "";
+        finishAssist();
+        return;
+      }
+
+      assistFrame = requestAnimationFrame(step);
     };
 
     assistFrame = requestAnimationFrame(step);
