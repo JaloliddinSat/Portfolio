@@ -1003,9 +1003,9 @@ body.debug-hero-transition {
   line-height: 1.72;
 }
 
-.about-summary strong {
+.about-program-name {
   color: var(--text);
-  font-weight: 700;
+  font-weight: inherit;
 }
 
 .about-detail {
