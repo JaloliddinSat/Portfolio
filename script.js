@@ -512,18 +512,21 @@ const initMobileHeroAutoScroll = () => {
   let coastFrame = 0;
   let wheelTimeout = 0;
 
-  const inSplat = () => mobileQuery.matches && getScrollProgress() < 0.995;
-
-  const getTargetY = () => {
+  const usableViewportHeight = () => {
     const header = document.querySelector(".site-header");
-    const dockReserve = (header?.getBoundingClientRect().height || 56) + 16;
-    const extra = Math.max(
-      0,
-      aboutSection.offsetHeight - (window.innerHeight - dockReserve),
-    );
+    const dockReserve = (header?.getBoundingClientRect().height || 56) + 18;
 
-    return getHeroTrackEndScrollY() + extra;
+    return window.innerHeight - dockReserve;
   };
+
+  const aboutReachedMiddle = () => {
+    const rect = aboutSection.getBoundingClientRect();
+    const aboutCenter = rect.top + rect.height / 2;
+
+    return aboutCenter <= usableViewportHeight() / 2;
+  };
+
+  const inSplat = () => mobileQuery.matches && !aboutReachedMiddle();
 
   const stopCoast = () => {
     coasting = false;
@@ -548,9 +551,7 @@ const initMobileHeroAutoScroll = () => {
       return;
     }
 
-    const targetY = getTargetY();
-
-    if (targetY - window.scrollY < 8) {
+    if (aboutReachedMiddle()) {
       isScrolling = false;
       scrollingSpeed = 0;
       return;
@@ -567,11 +568,10 @@ const initMobileHeroAutoScroll = () => {
 
       const dt = Math.min(32, now - previousT);
       previousT = now;
-      const nextY = Math.min(targetY, window.scrollY + scrollingSpeed * dt);
 
-      window.scrollTo(0, nextY);
+      window.scrollTo(0, window.scrollY + scrollingSpeed * dt);
 
-      if (nextY >= targetY - 0.5) {
+      if (aboutReachedMiddle() || window.scrollY >= getHeroTrackEndScrollY()) {
         isScrolling = false;
         scrollingSpeed = 0;
         stopCoast();
