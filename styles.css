@@ -803,6 +803,15 @@ h3 {
     url("/splats/Color.png") center / cover no-repeat;
 }
 
+html[data-theme="light"] .splat-viewer[data-depth-effect="ready"] {
+  background:
+    linear-gradient(
+      rgb(247 247 248 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28)),
+      rgb(247 247 248 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28))
+    ),
+    url("/splats/Color.png") center / cover no-repeat;
+}
+
 .splat-viewer canvas {
   width: 100% !important;
   height: 100% !important;

@@ -228,6 +228,9 @@ const HERO_ABOUT_TRANSITION_CONFIG = {
 };
 
 let heroVignetteFadeEnd = HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
+let syncHeroDepthTheme = () => {};
+
+const isLightTheme = () => document.documentElement.dataset.theme === "light";
 
 // Production values captured with ?debugStepNoteSplat.
 const STEPNOTE_SPLAT_CONFIG = {
@@ -590,6 +593,7 @@ const installHeroDepthShader = (splatMesh) => {
 
   material.uniforms.heroDepthMix = { value: 0 };
   material.uniforms.heroDepthCollapse = { value: 0 };
+  material.uniforms.heroDepthInvert = { value: isLightTheme() ? 1 : 0 };
   material.uniforms.heroDepthNear = { value: HERO_DEPTH_CONFIG.near };
   material.uniforms.heroDepthFar = { value: HERO_DEPTH_CONFIG.far };
   material.uniforms.heroDepthRecedeDistance = {
@@ -613,6 +617,7 @@ const installHeroDepthShader = (splatMesh) => {
        varying float vHeroCameraDepth;
        uniform float heroDepthMix;
        uniform float heroDepthCollapse;
+       uniform float heroDepthInvert;
        uniform float heroDepthNear;
        uniform float heroDepthFar;
        uniform float heroDepthRecedeDistance;`,
@@ -623,7 +628,7 @@ const installHeroDepthShader = (splatMesh) => {
        float recededCameraDepth = vHeroCameraDepth + heroDepthCollapse * heroDepthRecedeDistance;
        float depthValue = clamp((recededCameraDepth - heroDepthNear) / depthRange, 0.0, 1.0);
        depthValue = pow(depthValue, 0.55);
-       vec3 depthColor = vec3(1.0 - depthValue);
+       vec3 depthColor = vec3(mix(1.0 - depthValue, depthValue, heroDepthInvert));
        vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);`,
     );
 
@@ -644,6 +649,7 @@ const installHeroDepthShader = (splatMesh) => {
 
     material.uniforms.heroDepthMix.value = depthMix;
     material.uniforms.heroDepthCollapse.value = depthCollapse;
+    material.uniforms.heroDepthInvert.value = isLightTheme() ? 1 : 0;
     splatContainer?.style.setProperty("--hero-depth-mix", depthMix.toFixed(4));
     splatContainer?.style.setProperty(
       "--hero-depth-collapse",
@@ -914,6 +920,10 @@ const initSplat = async () => {
       }
 
       renderFrameId = requestAnimationFrame(renderSplatForScroll);
+    };
+
+    syncHeroDepthTheme = () => {
+      requestSplatRender({ force: true });
     };
 
     if (DEBUG_SPLAT) {
@@ -3109,6 +3119,8 @@ const initThemeToggle = () => {
     if (themeColor) {
       themeColor.setAttribute("content", isLight ? "#f3f3f4" : "#0a0a0a");
     }
+
+    syncHeroDepthTheme();
 
     if (persist) {
       try {
