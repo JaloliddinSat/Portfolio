@@ -797,8 +797,7 @@ html[data-theme="light"] .splat-stage::after {
 }
 
 .splat-viewer {
-  --hero-depth-mix: 0;
-  --hero-depth-collapse: 0;
+  --hero-depth-tint: 0;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -806,22 +805,22 @@ html[data-theme="light"] .splat-stage::after {
   background: url("/splats/Color.png") center / cover no-repeat;
 }
 
-.splat-viewer[data-depth-effect="ready"] {
-  background:
-    linear-gradient(
-      rgb(7 10 19 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28)),
-      rgb(7 10 19 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28))
-    ),
-    url("/splats/Color.png") center / cover no-repeat;
+/* The tint lives on its own layer so scrolling only animates opacity. Folding it
+   into the background shorthand re-rasterized the full-viewport poster image on
+   every frame. z-index -1 keeps it between that poster and the splat canvas, so
+   the splat itself is still tinted by the shader alone. */
+.splat-viewer[data-depth-effect="ready"]::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--hero-depth-tint);
+  background: rgb(7 10 19);
+  will-change: opacity;
+  content: "";
 }
 
-html[data-theme="light"] .splat-viewer[data-depth-effect="ready"] {
-  background:
-    linear-gradient(
-      rgb(247 247 248 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28)),
-      rgb(247 247 248 / calc(var(--hero-depth-mix) * 0.72 + var(--hero-depth-collapse) * 0.28))
-    ),
-    url("/splats/Color.png") center / cover no-repeat;
+html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
+  background: rgb(247 247 248);
 }
 
 .splat-viewer canvas {

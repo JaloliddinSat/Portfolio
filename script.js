@@ -167,6 +167,12 @@ const initGridCursorGlow = () => {
 };
 
 const DEBUG_SPLAT = new URLSearchParams(window.location.search).has("debugSplat");
+const DEBUG_SPLAT_PERF = new URLSearchParams(window.location.search).has("perfSplat");
+// ?splatPixelRatio=1.25 renders the hero at a different resolution for one page
+// load, so the mobile ceiling can be compared on a real handset without a deploy.
+const DEBUG_SPLAT_PIXEL_RATIO = Number(
+  new URLSearchParams(window.location.search).get("splatPixelRatio"),
+);
 const DEBUG_STEPNOTE_SPLAT = new URLSearchParams(window.location.search).has(
   "debugStepNoteSplat",
 );
@@ -192,6 +198,7 @@ const SPLAT_RENDERER_URL =
 
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
 const SPLAT_ASSET_VERSION = 3;
+const MOBILE_SPLAT_PIXEL_RATIO = 1.5;
 
 const SPLAT_CONFIG = {
   cameraStart: {
@@ -228,7 +235,9 @@ const HERO_ABOUT_TRANSITION_CONFIG = {
 };
 
 let heroVignetteFadeEnd = HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
+let heroCopyVisible = true;
 let syncHeroDepthTheme = () => {};
+let onHeroCopyVisibilityChange = () => {};
 
 const isLightTheme = () => document.documentElement.dataset.theme === "light";
 
@@ -408,25 +417,49 @@ const getSplatUrl = () => {
   return appendSplatVersion(url);
 };
 
-const getHeroViewportHeight = () =>
-  heroScrollTrack?.querySelector(".hero")?.offsetHeight || window.innerHeight;
+// The track is sized in lvh units, so its geometry only changes when the viewport
+// does. Measuring once per resize keeps the per-frame scroll math free of layout
+// reads, which would otherwise force a synchronous layout mid-frame.
+let heroMetrics = null;
+
+const invalidateHeroMetrics = () => {
+  heroMetrics = null;
+};
+
+const getHeroMetrics = () => {
+  if (!heroMetrics) {
+    const viewportHeight =
+      heroScrollTrack?.querySelector(".hero")?.offsetHeight || window.innerHeight;
+    const trackHeight = heroScrollTrack?.offsetHeight || 0;
+    const trackTop = heroScrollTrack
+      ? heroScrollTrack.getBoundingClientRect().top + window.scrollY
+      : 0;
+
+    heroMetrics = {
+      viewportHeight,
+      trackHeight,
+      trackTop,
+      scrollRange: trackHeight - viewportHeight,
+    };
+  }
+
+  return heroMetrics;
+};
+
+const getHeroViewportHeight = () => getHeroMetrics().viewportHeight;
 
 const getScrollProgress = () => {
   if (!heroScrollTrack) {
     return 0;
   }
 
-  const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+  const { trackTop, scrollRange } = getHeroMetrics();
 
   if (scrollRange <= 0) {
     return 1;
   }
 
-  const trackTop =
-    heroScrollTrack.getBoundingClientRect().top + window.scrollY;
-  const scrolled = window.scrollY - trackTop;
-
-  return Math.min(Math.max(scrolled / scrollRange, 0), 1);
+  return Math.min(Math.max((window.scrollY - trackTop) / scrollRange, 0), 1);
 };
 
 const HERO_SCROLL_ANIM_MS = 1900;
@@ -436,17 +469,141 @@ const getHeroTrackEndScrollY = () => {
     return window.scrollY;
   }
 
-  const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+  const { trackTop, scrollRange } = getHeroMetrics();
 
   if (scrollRange <= 0) {
     return window.scrollY;
   }
 
-  const trackTop =
-    heroScrollTrack.getBoundingClientRect().top + window.scrollY;
-
   return trackTop + scrollRange;
 };
+
+const HERO_FRAME_SMOOTHING_MS = 90;
+const HERO_FRAME_IDLE_HOLD_MS = 250;
+const HERO_FRAME_EPSILON = 0.00005;
+
+// Every hero effect shares one animation loop. Scroll events only wake the loop;
+// they never do work themselves, so the number of listeners firing during a flick
+// no longer decides how much work a frame costs.
+const heroFrameDriver = (() => {
+  const subscribers = [];
+  const idleListeners = [];
+  let frameId = null;
+  let lastFrameTime = 0;
+  let smoothedProgress = null;
+  let lastRawProgress = null;
+  let activeUntil = 0;
+  let forceNextFrame = false;
+
+  const runFrame = (now) => {
+    frameId = null;
+
+    const delta = lastFrameTime ? Math.min(64, now - lastFrameTime) : 16.7;
+    lastFrameTime = now;
+
+    const raw = getScrollProgress();
+
+    if (smoothedProgress === null) {
+      smoothedProgress = raw;
+    }
+
+    // Exponential follow written against elapsed time, so the motion is identical
+    // at 60Hz or 120Hz and a dropped frame costs no distance.
+    smoothedProgress +=
+      (raw - smoothedProgress) * (1 - Math.exp(-delta / HERO_FRAME_SMOOTHING_MS));
+
+    const drift = Math.abs(raw - smoothedProgress);
+
+    if (drift < HERO_FRAME_EPSILON) {
+      smoothedProgress = raw;
+    }
+
+    const force = forceNextFrame;
+    forceNextFrame = false;
+
+    const moved = raw !== lastRawProgress || drift >= HERO_FRAME_EPSILON;
+    lastRawProgress = raw;
+
+    if (moved || force) {
+      activeUntil = now + HERO_FRAME_IDLE_HOLD_MS;
+    }
+
+    const state = { raw, smoothed: smoothedProgress, delta, force };
+
+    // Subscribers run in priority order: style writes first, splat render last, so
+    // the renderer's layout reads flush an already-clean tree once per frame.
+    for (let index = 0; index < subscribers.length; index += 1) {
+      subscribers[index].callback(state);
+    }
+
+    if (now < activeUntil) {
+      frameId = requestAnimationFrame(runFrame);
+      return;
+    }
+
+    lastFrameTime = 0;
+    idleListeners.forEach((listener) => listener());
+  };
+
+  const request = ({ force = false } = {}) => {
+    if (force) {
+      forceNextFrame = true;
+    }
+
+    activeUntil = Math.max(
+      activeUntil,
+      performance.now() + HERO_FRAME_IDLE_HOLD_MS,
+    );
+
+    if (frameId === null) {
+      frameId = requestAnimationFrame(runFrame);
+    }
+  };
+
+  // Used after programmatic jumps, where easing toward the new position would read
+  // as the hero sliding on its own.
+  const snapToScroll = () => {
+    smoothedProgress = null;
+    lastRawProgress = null;
+  };
+
+  window.addEventListener("scroll", () => request(), { passive: true });
+  window.addEventListener(
+    "resize",
+    () => {
+      invalidateHeroMetrics();
+      request({ force: true });
+    },
+    { passive: true },
+  );
+  window.addEventListener("orientationchange", () => {
+    invalidateHeroMetrics();
+    snapToScroll();
+    request({ force: true });
+  });
+  window.addEventListener("load", () => {
+    invalidateHeroMetrics();
+    request({ force: true });
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      snapToScroll();
+      request({ force: true });
+    }
+  });
+
+  return {
+    request,
+    snapToScroll,
+    subscribe: (callback, priority = 0) => {
+      subscribers.push({ callback, priority });
+      subscribers.sort((a, b) => a.priority - b.priority);
+    },
+    onIdle: (listener) => {
+      idleListeners.push(listener);
+    },
+  };
+})();
 
 const getElementScrollY = (element) =>
   element.getBoundingClientRect().top + window.scrollY;
@@ -506,7 +663,9 @@ const initMobileHeroAutoScroll = () => {
   const SETTLE_DELAY_MS = 160;
   const MIN_VERTICAL_GESTURE = 24;
   const MIN_ASSIST_DISTANCE = 32;
-  const MAX_ASSIST_STEP = 24;
+  // Pixels per millisecond rather than pixels per frame: a dropped frame then
+  // costs no scroll distance, which is what used to show up as a speed dip.
+  const MAX_ASSIST_SPEED = 24 / 16.7;
   let state = "idle";
   let gestureStart = null;
   let downwardIntent = false;
@@ -519,11 +678,17 @@ const initMobileHeroAutoScroll = () => {
 
     return t * t * (3 - 2 * t);
   };
+  // The dock is a fixed element, so its height only changes with the viewport.
+  let usableViewportCenter = null;
   const getUsableViewportCenter = () => {
-    const header = document.querySelector(".site-header");
-    const dockReserve = (header?.getBoundingClientRect().height || 56) + 18;
+    if (usableViewportCenter === null) {
+      const header = document.querySelector(".site-header");
+      const dockReserve = (header?.getBoundingClientRect().height || 56) + 18;
 
-    return (window.innerHeight - dockReserve) / 2;
+      usableViewportCenter = (window.innerHeight - dockReserve) / 2;
+    }
+
+    return usableViewportCenter;
   };
   const getAboutEntryOffsetAtProgress = (progress) => {
     const transitionStart = HERO_ABOUT_TRANSITION_CONFIG.start;
@@ -535,8 +700,7 @@ const initMobileHeroAutoScroll = () => {
       1,
       transitionStart + (0.26 - transitionSpeed * 0.023),
     );
-    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
-    const viewportHeight = getHeroViewportHeight();
+    const { scrollRange, viewportHeight } = getHeroMetrics();
     const preEntryOffset = Math.max(
       0,
       viewportHeight - (transitionEnd - transitionStart) * scrollRange,
@@ -549,9 +713,7 @@ const initMobileHeroAutoScroll = () => {
     return preEntryOffset * (1 - reveal);
   };
   const getAboutCenterAtProgress = (progress) => {
-    const trackTop =
-      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
-    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+    const { trackTop, scrollRange } = getHeroMetrics();
     const scrollY = trackTop + progress * scrollRange;
     const currentProgress = getScrollProgress();
     const aboutRect = aboutSection.getBoundingClientRect();
@@ -569,14 +731,12 @@ const initMobileHeroAutoScroll = () => {
     return aboutCenter <= getUsableViewportCenter();
   };
   const getAssistTargetY = () => {
-    const scrollRange = heroScrollTrack.offsetHeight - getHeroViewportHeight();
+    const { trackTop, scrollRange } = getHeroMetrics();
 
     if (scrollRange <= 0) {
       return window.scrollY;
     }
 
-    const trackTop =
-      heroScrollTrack.getBoundingClientRect().top + window.scrollY;
     const targetCenter = getUsableViewportCenter();
     let low = getScrollProgress();
     let high = 1;
@@ -679,6 +839,7 @@ const initMobileHeroAutoScroll = () => {
     const duration = getAssistDuration(distance);
     const startedAt = performance.now();
     const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
+    let lastStepAt = startedAt;
     document.documentElement.style.scrollBehavior = "auto";
 
     const step = (now) => {
@@ -686,24 +847,23 @@ const initMobileHeroAutoScroll = () => {
         return;
       }
 
-      if (aboutReachedMiddle()) {
-        assistFrame = 0;
-        document.documentElement.style.scrollBehavior = "";
-        finishAssist();
-        return;
-      }
+      const elapsedSinceStep = Math.min(64, Math.max(1, now - lastStepAt));
+      lastStepAt = now;
 
       const t = Math.min(1, (now - startedAt) / duration);
       const idealY = startY + distance * easeOut(t);
       const currentY = window.scrollY;
       const remaining = idealY - currentY;
+      const maxStep = MAX_ASSIST_SPEED * elapsedSinceStep;
       const nextY =
-        Math.abs(remaining) <= MAX_ASSIST_STEP
+        Math.abs(remaining) <= maxStep
           ? idealY
-          : currentY + Math.sign(remaining) * MAX_ASSIST_STEP;
+          : currentY + Math.sign(remaining) * maxStep;
 
       window.scrollTo(0, nextY);
 
+      // One rect read per frame: the pre-move check duplicated this and the second
+      // read forced a fresh layout right after the scroll write.
       if (aboutReachedMiddle() || t >= 1) {
         assistFrame = 0;
         document.documentElement.style.scrollBehavior = "";
@@ -713,6 +873,12 @@ const initMobileHeroAutoScroll = () => {
 
       assistFrame = requestAnimationFrame(step);
     };
+
+    if (aboutReachedMiddle()) {
+      document.documentElement.style.scrollBehavior = "";
+      finishAssist();
+      return;
+    }
 
     assistFrame = requestAnimationFrame(step);
   };
@@ -855,6 +1021,14 @@ const initMobileHeroAutoScroll = () => {
 
   mobileQuery.addEventListener?.("change", onPreferenceChange);
   reducedMotion.addEventListener?.("change", onPreferenceChange);
+
+  window.addEventListener(
+    "resize",
+    () => {
+      usableViewportCenter = null;
+    },
+    { passive: true },
+  );
 };
 
 const initHeroActionLinks = () => {
@@ -998,6 +1172,8 @@ const installHeroDepthShader = (splatMesh) => {
   material.needsUpdate = true;
   splatContainer?.setAttribute("data-depth-effect", "ready");
 
+  let appliedTint = null;
+
   return (rawProgress) => {
     const depthMix = smoothstepRange(
       rawProgress,
@@ -1013,16 +1189,102 @@ const installHeroDepthShader = (splatMesh) => {
     material.uniforms.heroDepthMix.value = depthMix;
     material.uniforms.heroDepthCollapse.value = depthCollapse;
     material.uniforms.heroDepthInvert.value = isLightTheme() ? 1 : 0;
-    splatContainer?.style.setProperty("--hero-depth-mix", depthMix.toFixed(4));
-    splatContainer?.style.setProperty(
-      "--hero-depth-collapse",
-      depthCollapse.toFixed(4),
-    );
+
+    const tint = (depthMix * 0.72 + depthCollapse * 0.28).toFixed(4);
+
+    if (tint !== appliedTint) {
+      appliedTint = tint;
+      splatContainer?.style.setProperty("--hero-depth-tint", tint);
+    }
   };
 };
 
 const getAnimationProgress = (rawScrollProgress, scrollEndAt = 1) =>
   easeScrollProgress(mapScrollProgress(rawScrollProgress, scrollEndAt));
+
+// Reachable with ?perfSplat. Reports the numbers that decide whether the hero
+// scroll is smooth: frame cadence during motion, and how often the renderer is
+// re-sorting the scene.
+const createSplatPerfProbe = (viewer) => {
+  if (!DEBUG_SPLAT_PERF) {
+    return null;
+  }
+
+  const readout = document.createElement("aside");
+  readout.style.cssText = [
+    "position:fixed",
+    "top:max(12px, env(safe-area-inset-top))",
+    "left:12px",
+    "z-index:10002",
+    "padding:8px 12px",
+    "border-radius:12px",
+    "color:#e9f6ff",
+    "background:rgba(6, 10, 20, 0.82)",
+    "font:600 11px/1.55 'JetBrains Mono', ui-monospace, monospace",
+    "white-space:pre",
+    "pointer-events:none",
+  ].join(";");
+  document.body.appendChild(readout);
+
+  const REPORT_INTERVAL_MS = 500;
+  const GAP_MS = 200;
+  const frameDurations = [];
+  let lastFrameAt = 0;
+  let lastReportAt = performance.now();
+  let sortsInWindow = 0;
+  let lastSortPromise = null;
+  let lastSortSize = 0;
+
+  const percentile = (values, fraction) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.min(
+      sorted.length - 1,
+      Math.floor(sorted.length * fraction),
+    );
+
+    return sorted[index] ?? 0;
+  };
+
+  return () => {
+    const now = performance.now();
+
+    // A gap means the loop parked, which is not a slow frame.
+    if (lastFrameAt && now - lastFrameAt < GAP_MS) {
+      frameDurations.push(now - lastFrameAt);
+    }
+
+    lastFrameAt = now;
+
+    if (viewer.sortPromise && viewer.sortPromise !== lastSortPromise) {
+      lastSortPromise = viewer.sortPromise;
+      lastSortSize = viewer.splatSortCount || 0;
+      sortsInWindow += 1;
+    }
+
+    const sinceReport = now - lastReportAt;
+
+    if (sinceReport < REPORT_INTERVAL_MS || frameDurations.length === 0) {
+      return;
+    }
+
+    const median = percentile(frameDurations, 0.5);
+    const p95 = percentile(frameDurations, 0.95);
+    const worst = Math.max(...frameDurations);
+    const sortsPerSecond = (sortsInWindow / sinceReport) * 1000;
+    const splatCount = viewer.getSplatMesh?.()?.getSplatCount?.() ?? 0;
+
+    readout.textContent = [
+      `frame  med ${median.toFixed(1)}ms  p95 ${p95.toFixed(1)}ms  max ${worst.toFixed(1)}ms`,
+      `fps    ${median > 0 ? (1000 / median).toFixed(0) : "--"}  frames ${frameDurations.length}`,
+      `sorts  ${sortsPerSecond.toFixed(1)}/s  last ${lastSortSize.toLocaleString()} of ${splatCount.toLocaleString()}`,
+      `dpr    ${(viewer.devicePixelRatio || 1).toFixed(2)}`,
+    ].join("\n");
+
+    frameDurations.length = 0;
+    sortsInWindow = 0;
+    lastReportAt = now;
+  };
+};
 
 const initSplat = async () => {
   if (!splatContainer) {
@@ -1061,10 +1323,13 @@ const initSplat = async () => {
       selfDrivenMode: !manualRendering,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
-      dynamicScene: true,
+      // Only the camera moves, so the splat mesh stays static. Static mode lets the
+      // renderer skip sorts when the view barely changed and use its progressive
+      // partial sorts instead of re-sorting all ~318k splats every frame.
+      dynamicScene: false,
       halfPrecisionCovariancesOnGPU: false,
       freeIntermediateSplatData: true,
-      ignoreDevicePixelRatio: isMobile,
+      ignoreDevicePixelRatio: false,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
       sceneRevealMode: isMobile
@@ -1073,9 +1338,20 @@ const initSplat = async () => {
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
-    const splatPixelRatio = isMobile
-      ? 1
-      : Math.min(window.devicePixelRatio || 1, 1.5);
+    // Mobile used to render at 1 device pixel per CSS pixel to buy frame time.
+    // Removing the per-frame full-scene sort freed that budget, so the splat can
+    // be resolved closer to the panel. Lower MOBILE_SPLAT_PIXEL_RATIO if ?perfSplat
+    // shows the p95 frame time drifting past 16.7ms on a real handset.
+    const pixelRatioCeiling =
+      DEBUG_SPLAT_PIXEL_RATIO > 0
+        ? Math.min(3, DEBUG_SPLAT_PIXEL_RATIO)
+        : isMobile
+          ? MOBILE_SPLAT_PIXEL_RATIO
+          : 1.5;
+    const splatPixelRatio = Math.min(
+      window.devicePixelRatio || 1,
+      pixelRatioCeiling,
+    );
 
     viewer.devicePixelRatio = splatPixelRatio;
     viewer.getSplatMesh().devicePixelRatio = splatPixelRatio;
@@ -1109,48 +1385,80 @@ const initSplat = async () => {
 
     setStatus("ready");
 
-    let lastScrollY = null;
-    let renderFrameId = null;
     let renderStopTimer = null;
     let initialLoadTimer = null;
     let allowIdleStop = false;
-    const idleStopEnabled = !isMobile;
     let splatInView = false;
-    let forceNextRender = true;
-    let lastViewportWidth = window.innerWidth;
     let pendingManualSort = null;
+    let lastRenderedProgress = null;
 
-    const stopViewer = () => {
+    const clearRenderStopTimer = () => {
       if (renderStopTimer) {
         clearTimeout(renderStopTimer);
         renderStopTimer = null;
       }
+    };
+
+    const stopViewer = () => {
+      clearRenderStopTimer();
 
       if (initialLoadTimer) {
         clearTimeout(initialLoadTimer);
         initialLoadTimer = null;
       }
 
-      if (renderFrameId) {
-        cancelAnimationFrame(renderFrameId);
-        renderFrameId = null;
+      if (!manualRendering && viewerRunning) {
+        viewer.stop();
       }
 
-      if (manualRendering) {
-        viewerRunning = false;
-      } else if (viewerRunning && typeof viewer.stop === "function") {
-        viewer.stop();
-        viewerRunning = false;
-      }
+      viewerRunning = false;
     };
 
     const ensureViewerRunning = () => {
+      clearRenderStopTimer();
+
       if (!viewerRunning) {
         if (!manualRendering) {
           viewer.start();
         }
         viewerRunning = true;
       }
+    };
+
+    const stopViewerAfterIdle = (delay = 280) => {
+      if (!allowIdleStop || !viewerRunning) {
+        return;
+      }
+
+      clearRenderStopTimer();
+
+      renderStopTimer = setTimeout(() => {
+        renderStopTimer = null;
+
+        if (!document.hidden) {
+          if (!manualRendering) {
+            viewer.stop();
+          }
+
+          viewerRunning = false;
+        }
+      }, delay);
+    };
+
+    const scheduleInitialLoadGrace = () => {
+      if (allowIdleStop || initialLoadTimer) {
+        return;
+      }
+
+      ensureViewerRunning();
+
+      // The scene keeps changing for a few seconds after the first frame, so hold
+      // the viewer awake until loading settles.
+      initialLoadTimer = setTimeout(() => {
+        allowIdleStop = true;
+        initialLoadTimer = null;
+        stopViewerAfterIdle(1200);
+      }, 6500);
     };
 
     const renderManualViewerFrame = () => {
@@ -1171,7 +1479,12 @@ const initSplat = async () => {
 
       viewer.renderNextFrame = false;
 
+      // A sort that lands after the loop parks would leave the last frame showing
+      // the previous ordering, so wake the loop once when it resolves. Static scene
+      // mode makes that safe: an unchanged camera starts no further sorts, so this
+      // no longer feeds itself an endless chain of full-scene sorts.
       const activeSort = viewer.sortRunning ? viewer.sortPromise : null;
+
       if (activeSort && activeSort !== pendingManualSort) {
         pendingManualSort = activeSort;
         activeSort.finally(() => {
@@ -1180,75 +1493,24 @@ const initSplat = async () => {
           }
 
           if (viewerRunning && splatInView && !document.hidden) {
-            requestSplatRender({ force: true });
+            heroFrameDriver.request({ force: true });
           }
         });
       }
     };
 
-    const scheduleInitialLoadGrace = () => {
-      if (!idleStopEnabled) {
-        ensureViewerRunning();
-        return;
-      }
-
-      if (allowIdleStop || initialLoadTimer) {
-        return;
-      }
-
-      ensureViewerRunning();
-
-      initialLoadTimer = setTimeout(() => {
-        allowIdleStop = true;
-        initialLoadTimer = null;
-        stopViewerAfterIdle(1200);
-      }, 6500);
-    };
-
-    const stopViewerAfterIdle = (delay = 280) => {
-      if (!idleStopEnabled) {
-        return;
-      }
-
-      if (renderStopTimer) {
-        clearTimeout(renderStopTimer);
-      }
-
-      if (typeof viewer.stop !== "function") {
-        return;
-      }
-
-      if (!allowIdleStop) {
-        return;
-      }
-
-      renderStopTimer = setTimeout(() => {
-        if (!document.hidden) {
-          viewer.stop();
-          viewerRunning = false;
-        }
-
-        renderStopTimer = null;
-      }, delay);
-    };
-
-    const renderSplatForScroll = () => {
-      renderFrameId = null;
-
+    const renderSplatFrame = ({ smoothed, force }) => {
       if (document.hidden || !splatInView) {
         return;
       }
 
-      if (!forceNextRender && window.scrollY === lastScrollY) {
-        stopViewerAfterIdle();
+      if (!force && smoothed === lastRenderedProgress) {
         return;
       }
 
-      forceNextRender = false;
-      lastScrollY = window.scrollY;
+      lastRenderedProgress = smoothed;
 
-      const rawProgress = getScrollProgress();
-      const progress = easeScrollProgress(rawProgress);
+      const progress = easeScrollProgress(smoothed);
       const { position, lookAt } = computeScrollPosition(
         progress,
         SPLAT_CONFIG.cameraStart,
@@ -1265,28 +1527,15 @@ const initSplat = async () => {
         viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
       }
 
-      updateHeroDepthShader?.(rawProgress);
+      updateHeroDepthShader?.(smoothed);
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();
       renderManualViewerFrame();
-      stopViewerAfterIdle();
-    };
-
-    const requestSplatRender = ({ force = false } = {}) => {
-      if (force) {
-        forceNextRender = true;
-      }
-
-      if (renderFrameId || document.hidden || !splatInView) {
-        return;
-      }
-
-      renderFrameId = requestAnimationFrame(renderSplatForScroll);
     };
 
     syncHeroDepthTheme = () => {
-      requestSplatRender({ force: true });
+      heroFrameDriver.request({ force: true });
     };
 
     if (DEBUG_SPLAT) {
@@ -1299,7 +1548,7 @@ const initSplat = async () => {
           if (splatInView) {
             ensureViewerRunning();
             scheduleInitialLoadGrace();
-            requestSplatRender({ force: true });
+            heroFrameDriver.request({ force: true });
           } else {
             stopViewer();
           }
@@ -1309,38 +1558,28 @@ const initSplat = async () => {
 
       observer.observe(splatContainer);
 
-      window.addEventListener("scroll", () => requestSplatRender(), {
-        passive: true,
-      });
-      window.addEventListener(
-        "resize",
-        () => {
-          const viewportWidth = window.innerWidth;
-          const widthChanged = Math.abs(viewportWidth - lastViewportWidth) > 1;
-          lastViewportWidth = viewportWidth;
+      // Priority 100 keeps the render after every style write of the frame.
+      heroFrameDriver.subscribe(renderSplatFrame, 100);
+      heroFrameDriver.onIdle(() => stopViewerAfterIdle());
 
-          // Mobile Safari changes only the viewport height as its toolbar moves.
-          // Stable lvh sizing means that event does not require a WebGL resize.
-          if (isMobile && !widthChanged) {
-            return;
-          }
+      const samplePerf = createSplatPerfProbe(viewer);
 
-          requestSplatRender({ force: true });
-        },
-        { passive: true },
-      );
+      if (samplePerf) {
+        window.__heroSplatViewer = viewer;
+        heroFrameDriver.subscribe(samplePerf, 200);
+      }
+
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           stopViewer();
         } else {
           scheduleInitialLoadGrace();
-          requestSplatRender({ force: true });
         }
       });
 
       splatInView = true;
       scheduleInitialLoadGrace();
-      requestSplatRender({ force: true });
+      heroFrameDriver.request({ force: true });
     }
   } catch (error) {
     const message = error?.stack || error?.message || String(error);
@@ -2916,33 +3155,51 @@ const initHeroScrollTransition = () => {
   const fadeBetween = (progress, start, end) =>
     smoothstep((progress - start) / (end - start));
 
-  let ticking = false;
+  let appliedCopyOpacity = null;
+  let appliedIntroOverlay = null;
+  let appliedCollapseOverlay = null;
+  let appliedPointerEvents = null;
 
-  const update = () => {
-    ticking = false;
-    const progress = getScrollProgress();
-    const copyOpacity = 1 - fadeBetween(progress, COPY_FADE_START, COPY_FADE_END);
-    const introOverlay = 1 - fadeBetween(progress, 0.08, heroVignetteFadeEnd);
-    const collapseOverlay = fadeBetween(progress, 0.5, 0.98);
+  // These layers all sit on top of the splat, so they follow the same smoothed
+  // progress as the camera rather than the raw scroll offset.
+  const update = ({ smoothed }) => {
+    const copyOpacity = 1 - fadeBetween(smoothed, COPY_FADE_START, COPY_FADE_END);
+    const introOverlay = 1 - fadeBetween(smoothed, 0.08, heroVignetteFadeEnd);
+    const collapseOverlay = fadeBetween(smoothed, 0.5, 0.98);
+    const pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
-    hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
-    hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
-    hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
+    // Each of these vars feeds a full-viewport gradient, so skipping unchanged
+    // values keeps a settled hero from repainting the overlay layers.
+    if (copyOpacity !== appliedCopyOpacity) {
+      appliedCopyOpacity = copyOpacity;
+      hero.style.setProperty("--hero-copy-opacity", String(copyOpacity));
 
-    heroCopy.style.pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
+      const copyVisible = copyOpacity > 0.01;
 
-  };
+      if (copyVisible !== heroCopyVisible) {
+        heroCopyVisible = copyVisible;
+        onHeroCopyVisibilityChange();
+      }
+    }
 
-  const onScroll = () => {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(update);
+    if (introOverlay !== appliedIntroOverlay) {
+      appliedIntroOverlay = introOverlay;
+      hero.style.setProperty("--hero-intro-overlay", String(introOverlay));
+    }
+
+    if (collapseOverlay !== appliedCollapseOverlay) {
+      appliedCollapseOverlay = collapseOverlay;
+      hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
+    }
+
+    if (pointerEvents !== appliedPointerEvents) {
+      appliedPointerEvents = pointerEvents;
+      heroCopy.style.pointerEvents = pointerEvents;
     }
   };
 
-  window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", onScroll, { passive: true });
-  update();
+  heroFrameDriver.subscribe(update, 10);
+  update({ smoothed: getScrollProgress() });
 };
 
 const initHeroAboutTransition = () => {
@@ -3029,9 +3286,14 @@ const initHeroAboutTransition = () => {
   heroVignetteFadeEnd = DEBUG_HERO_TRANSITION
     ? readSavedVignetteEnd()
     : HERO_ABOUT_TRANSITION_CONFIG.vignetteFadeEnd;
-  let previewFrame = null;
   let desktopHeaderVisible = false;
   let appliedHeaderVisibility = null;
+  let appliedMarginTop = null;
+  let appliedEntryY = null;
+  let appliedPointerEvents = null;
+  let appliedClipBottom = null;
+  const siteHeader = document.querySelector(".site-header");
+  const mobileDockQuery = window.matchMedia("(max-width: 700px)");
 
   document.body.classList.toggle("debug-hero-transition", DEBUG_HERO_TRANSITION);
 
@@ -3084,15 +3346,17 @@ const initHeroAboutTransition = () => {
   const rangeOutput = panel.querySelector("[data-range-output]");
   const status = panel.querySelector("[data-status]");
 
-  const getScrollRange = () =>
-    Math.max(1, heroScrollTrack.offsetHeight - hero.offsetHeight);
+  const getScrollRange = () => Math.max(1, getHeroMetrics().scrollRange);
   const scrollToProgress = (progress) => {
-    const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
-
     window.scrollTo({
-      top: trackTop + clamp(progress) * getScrollRange(),
+      top: getHeroMetrics().trackTop + clamp(progress) * getScrollRange(),
       behavior: "instant",
     });
+
+    // A jump is not motion, so the camera should arrive with the page rather than
+    // easing across the gap.
+    heroFrameDriver.snapToScroll();
+    heroFrameDriver.request({ force: true });
   };
   const updateRangeText = () => {
     const slideDuration = speedToDuration(transitionSpeed);
@@ -3103,13 +3367,11 @@ const initHeroAboutTransition = () => {
     vignetteOutput.value = `${(heroVignetteFadeEnd * 100).toFixed(1)}%`;
     rangeOutput.textContent = `Slides from ${(transitionStart * 100).toFixed(1)}% to ${(end * 100).toFixed(1)}% (${(slideDuration * 100).toFixed(1)}% of hero scroll).`;
   };
-  const updatePreview = () => {
-    previewFrame = null;
-    const progress = getScrollProgress();
+  const updatePreview = ({ raw } = {}) => {
+    const progress = raw ?? getScrollProgress();
     const end = Math.min(1, transitionStart + speedToDuration(transitionSpeed));
     const reveal = smoothstep((progress - transitionStart) / Math.max(0.001, end - transitionStart));
-    const scrollRange = getScrollRange();
-    const viewportHeight = hero.offsetHeight;
+    const { scrollRange, viewportHeight } = getHeroMetrics();
     const overlap = viewportHeight + (1 - end) * scrollRange;
     const preEntryOffset = Math.max(
       0,
@@ -3121,24 +3383,40 @@ const initHeroAboutTransition = () => {
       0,
       viewportHeight,
     );
+    const marginTop = `${-overlap.toFixed(3)}px`;
+    const entryY = `${entryOffset.toFixed(3)}px`;
+    const clipBottom = `${(viewportHeight - contentTop).toFixed(3)}px`;
+    const pointerEvents = reveal > 0.01 ? "auto" : "none";
 
-    siteContent.style.marginTop = `${-overlap.toFixed(3)}px`;
-    siteContent.style.setProperty(
-      "--site-content-entry-y",
-      `${entryOffset.toFixed(3)}px`,
-    );
-    siteContent.style.pointerEvents = reveal > 0.01 ? "auto" : "none";
-    hero.style.setProperty(
-      "--hero-content-clip-bottom",
-      `${(viewportHeight - contentTop).toFixed(3)}px`,
-    );
-    progressInput.value = (progress * 100).toFixed(1);
-    progressOutput.value = `${(progress * 100).toFixed(1)}%`;
+    // marginTop invalidates layout for everything below the hero and clip-bottom
+    // repaints the sticky hero, so both are written only when they actually move.
+    if (marginTop !== appliedMarginTop) {
+      appliedMarginTop = marginTop;
+      siteContent.style.marginTop = marginTop;
+    }
 
-    const siteHeader = document.querySelector(".site-header");
+    if (entryY !== appliedEntryY) {
+      appliedEntryY = entryY;
+      siteContent.style.setProperty("--site-content-entry-y", entryY);
+    }
+
+    if (pointerEvents !== appliedPointerEvents) {
+      appliedPointerEvents = pointerEvents;
+      siteContent.style.pointerEvents = pointerEvents;
+    }
+
+    if (clipBottom !== appliedClipBottom) {
+      appliedClipBottom = clipBottom;
+      hero.style.setProperty("--hero-content-clip-bottom", clipBottom);
+    }
+
+    if (DEBUG_HERO_TRANSITION) {
+      progressInput.value = (progress * 100).toFixed(1);
+      progressOutput.value = `${(progress * 100).toFixed(1)}%`;
+    }
 
     if (siteHeader) {
-      const mobileDock = window.matchMedia("(max-width: 700px)").matches;
+      const mobileDock = mobileDockQuery.matches;
 
       if (progress >= 1 || reveal > 0.65) {
         desktopHeaderVisible = true;
@@ -3156,9 +3434,7 @@ const initHeroAboutTransition = () => {
     }
   };
   const requestPreviewUpdate = () => {
-    if (previewFrame === null) {
-      previewFrame = requestAnimationFrame(updatePreview);
-    }
+    heroFrameDriver.request({ force: true });
   };
   const saveStart = () => {
     try {
@@ -3215,7 +3491,7 @@ const initHeroAboutTransition = () => {
       transitionStart + speedToDuration(transitionSpeed) + 0.04,
     );
     const range = getScrollRange();
-    const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+    const { trackTop } = getHeroMetrics();
 
     scrollToProgress(previewStart);
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -3253,15 +3529,15 @@ const initHeroAboutTransition = () => {
         1,
         transitionStart + speedToDuration(transitionSpeed),
       );
-      const trackTop = heroScrollTrack.getBoundingClientRect().top + window.scrollY;
+      const { trackTop } = getHeroMetrics();
 
       await smoothScrollTo(trackTop + transitionEnd * getScrollRange(), 900);
       history.replaceState(null, "", "#about");
     });
   });
 
-  window.addEventListener("scroll", requestPreviewUpdate, { passive: true });
-  window.addEventListener("resize", requestPreviewUpdate, { passive: true });
+  heroFrameDriver.subscribe(updatePreview, 20);
+  mobileDockQuery.addEventListener?.("change", requestPreviewUpdate);
   updateRangeText();
   updatePreview();
 
@@ -4110,23 +4386,41 @@ const initHeroMotion = () => {
     return;
   }
 
-  motionTargets.forEach(({ element, tilt }) => {
-    element.addEventListener("pointermove", (event) => {
-      const rect = element.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / rect.width - 0.5;
-      const y = (event.clientY - rect.top) / rect.height - 0.5;
+  // Pointer tilt is unreachable without a fine pointer, so those listeners are
+  // only worth attaching on devices that have one.
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    motionTargets.forEach(({ element, tilt }) => {
+      element.addEventListener("pointermove", (event) => {
+        const rect = element.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
 
-      element.style.setProperty("--tilt-x", `${(-y * tilt).toFixed(2)}deg`);
-      element.style.setProperty("--tilt-y", `${(x * tilt).toFixed(2)}deg`);
-    });
+        element.style.setProperty("--tilt-x", `${(-y * tilt).toFixed(2)}deg`);
+        element.style.setProperty("--tilt-y", `${(x * tilt).toFixed(2)}deg`);
+      });
 
-    element.addEventListener("pointerleave", () => {
-      element.style.setProperty("--tilt-x", "0deg");
-      element.style.setProperty("--tilt-y", "0deg");
+      element.addEventListener("pointerleave", () => {
+        element.style.setProperty("--tilt-x", "0deg");
+        element.style.setProperty("--tilt-y", "0deg");
+      });
     });
-  });
+  }
+
+  let floatFrame = null;
+  let heroOnScreen = true;
+
+  // The copy sits inside a 3D-transformed subtree, so writing these vars costs a
+  // style pass plus a transform update. Once the copy has faded out during the
+  // scroll there is nothing to animate, which is exactly when the splat needs the
+  // frame budget most.
+  const shouldFloat = () => heroOnScreen && heroCopyVisible && !document.hidden;
 
   const floatLoop = (time) => {
+    if (!shouldFloat()) {
+      floatFrame = null;
+      return;
+    }
+
     const seconds = time / 1000;
 
     motionTargets.forEach(({ element, phase, float }) => {
@@ -4137,10 +4431,35 @@ const initHeroMotion = () => {
       element.style.setProperty("--float-rotate", `${rotate.toFixed(3)}deg`);
     });
 
-    requestAnimationFrame(floatLoop);
+    floatFrame = requestAnimationFrame(floatLoop);
   };
 
-  requestAnimationFrame(floatLoop);
+  const syncFloatLoop = () => {
+    if (!shouldFloat()) {
+      if (floatFrame !== null) {
+        cancelAnimationFrame(floatFrame);
+        floatFrame = null;
+      }
+
+      return;
+    }
+
+    if (floatFrame === null) {
+      floatFrame = requestAnimationFrame(floatLoop);
+    }
+  };
+
+  onHeroCopyVisibilityChange = syncFloatLoop;
+  document.addEventListener("visibilitychange", syncFloatLoop);
+
+  const visibilityObserver = new IntersectionObserver(([entry]) => {
+    heroOnScreen = entry.isIntersecting;
+    syncFloatLoop();
+  });
+
+  motionTargets.forEach(({ element }) => visibilityObserver.observe(element));
+
+  syncFloatLoop();
 };
 
 const initConfiguredVideoFrame = ({
