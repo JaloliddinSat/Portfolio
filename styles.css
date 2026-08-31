@@ -836,12 +836,8 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
   z-index: 3;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(7, 10, 19, 0.82);
+  gap: 8px;
+  color: #c7c7c7;
   opacity: 1;
   transition:
     opacity 360ms ease,
@@ -860,8 +856,8 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-top-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(199, 199, 199, 0.36);
+  border-top-color: #c7c7c7;
   border-radius: 50%;
   animation: splat-loader-spin 900ms linear infinite;
 }
@@ -870,17 +866,6 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
   font: 700 0.64rem/1 "JetBrains Mono", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-html[data-theme="light"] .splat-loader {
-  border-color: rgba(23, 23, 23, 0.22);
-  color: rgba(23, 23, 23, 0.78);
-  background: rgba(247, 247, 248, 0.86);
-}
-
-html[data-theme="light"] .splat-loader-spinner {
-  border-color: rgba(23, 23, 23, 0.28);
-  border-top-color: rgba(23, 23, 23, 0.88);
 }
 
 @keyframes splat-loader-spin {
