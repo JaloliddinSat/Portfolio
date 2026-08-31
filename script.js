@@ -383,10 +383,16 @@ const cloneKeyframes = (keyframes) => ({
 });
 
 const splatContainer = document.querySelector("#splat-viewer");
+const splatStage = document.querySelector("#splat-stage");
 const splatError = document.querySelector("#splat-error");
 const heroScrollTrack = document.querySelector("#hero-scroll-track");
 
 const setStatus = (state, message = "") => {
+  if (splatStage) {
+    splatStage.dataset.loadState = state;
+    splatStage.setAttribute("aria-busy", String(state === "loading"));
+  }
+
   if (splatError) {
     splatError.hidden = state !== "error";
     if (message) {
