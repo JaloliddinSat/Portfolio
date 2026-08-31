@@ -10,6 +10,51 @@
       name="description"
       content="Portfolio website for Jaloliddin Satimov, a second-year Waterloo Mathematics student."
     />
+    <script>
+      (() => {
+        if (!window.matchMedia("(max-width: 700px)").matches) {
+          return;
+        }
+
+        const navigationEntry = performance.getEntriesByType?.("navigation")[0];
+        const isReload =
+          navigationEntry?.type === "reload" || performance.navigation?.type === 1;
+
+        if (!isReload) {
+          return;
+        }
+
+        if ("scrollRestoration" in history) {
+          history.scrollRestoration = "manual";
+        }
+
+        if (window.location.hash) {
+          history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${window.location.search}`,
+          );
+        }
+
+        const resetScroll = () => window.scrollTo(0, 0);
+
+        resetScroll();
+        window.addEventListener(
+          "pageshow",
+          () => {
+            resetScroll();
+            requestAnimationFrame(() => {
+              resetScroll();
+
+              if ("scrollRestoration" in history) {
+                history.scrollRestoration = "auto";
+              }
+            });
+          },
+          { once: true },
+        );
+      })();
+    </script>
     <title>Jalol Satimov | Portfolio</title>
     <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,7 +82,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260830-85" />
+    <link rel="stylesheet" href="styles.css?v=20260830-86" />
     <script type="importmap">
       {
         "imports": {
