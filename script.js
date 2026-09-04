@@ -1386,10 +1386,9 @@ const initSplat = async () => {
 
     if (!manualRendering) {
       viewer.start();
+      setStatus("ready");
     }
     let viewerRunning = true;
-
-    setStatus("ready");
 
     let renderStopTimer = null;
     let initialLoadTimer = null;
@@ -1397,6 +1396,8 @@ const initSplat = async () => {
     let splatInView = false;
     let pendingManualSort = null;
     let lastRenderedProgress = null;
+    let initialManualFramesRemaining = manualRendering ? 4 : 0;
+    let manualRenderResizeObserver = null;
 
     const clearRenderStopTimer = () => {
       if (renderStopTimer) {
@@ -1474,13 +1475,15 @@ const initSplat = async () => {
         document.hidden ||
         !splatInView
       ) {
-        return;
+        return false;
       }
 
       viewer.update();
+      let rendered = false;
 
       if (viewer.shouldRender()) {
         viewer.render();
+        rendered = true;
       }
 
       viewer.renderNextFrame = false;
@@ -1503,6 +1506,8 @@ const initSplat = async () => {
           }
         });
       }
+
+      return rendered;
     };
 
     const renderSplatFrame = ({ smoothed, force }) => {
@@ -1510,7 +1515,9 @@ const initSplat = async () => {
         return;
       }
 
-      if (!force && smoothed === lastRenderedProgress) {
+      const needsInitialManualFrames = initialManualFramesRemaining > 0;
+
+      if (!force && !needsInitialManualFrames && smoothed === lastRenderedProgress) {
         return;
       }
 
@@ -1537,7 +1544,15 @@ const initSplat = async () => {
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();
-      renderManualViewerFrame();
+      const rendered = renderManualViewerFrame();
+
+      if (rendered && needsInitialManualFrames) {
+        initialManualFramesRemaining -= 1;
+
+        if (initialManualFramesRemaining === 0) {
+          setStatus("ready");
+        }
+      }
     };
 
     syncHeroDepthTheme = () => {
@@ -1546,6 +1561,7 @@ const initSplat = async () => {
 
     if (DEBUG_SPLAT) {
       initDebugMode(viewer, isMobile);
+      setStatus("ready");
     } else {
       const observer = new IntersectionObserver(
         ([entry]) => {
@@ -1563,6 +1579,16 @@ const initSplat = async () => {
       );
 
       observer.observe(splatContainer);
+
+      if (manualRendering && "ResizeObserver" in window) {
+        manualRenderResizeObserver = new ResizeObserver(() => {
+          if (splatInView && !document.hidden) {
+            heroFrameDriver.request({ force: true });
+          }
+        });
+
+        manualRenderResizeObserver.observe(splatContainer);
+      }
 
       // Priority 100 keeps the render after every style write of the frame.
       heroFrameDriver.subscribe(renderSplatFrame, 100);
