@@ -543,7 +543,10 @@ const heroFrameDriver = (() => {
     }
 
     if (now < activeUntil) {
-      frameId = requestAnimationFrame(runFrame);
+      // A subscriber may already have requested the next frame while running.
+      if (frameId === null) {
+        frameId = requestAnimationFrame(runFrame);
+      }
       return;
     }
 
@@ -1378,6 +1381,10 @@ const initSplat = async () => {
       sceneOptions.format = GaussianSplats3D.SceneFormat.Ply;
     }
 
+    // lookAt changes the camera quaternion but leaves matrixWorld at its previous
+    // orientation. Scene loading sorts splats using that matrix before the first
+    // render; static scenes then reuse that ordering until the camera moves.
+    viewer.camera.updateMatrixWorld(true);
     await viewer.addSplatScene(splatUrl, sceneOptions);
 
     console.log("[SPLAT] Scene added successfully.");
@@ -1394,7 +1401,6 @@ const initSplat = async () => {
     let initialLoadTimer = null;
     let allowIdleStop = false;
     let splatInView = false;
-    let pendingManualSort = null;
     let lastRenderedProgress = null;
     let initialManualFramesRemaining = manualRendering ? 4 : 0;
     let manualRenderResizeObserver = null;
@@ -1488,27 +1494,16 @@ const initSplat = async () => {
 
       viewer.renderNextFrame = false;
 
-      // A sort that lands after the loop parks would leave the last frame showing
-      // the previous ordering, so wake the loop once when it resolves. Static scene
-      // mode makes that safe: an unchanged camera starts no further sorts, so this
-      // no longer feeds itself an endless chain of full-scene sorts.
-      const activeSort = viewer.sortRunning ? viewer.sortPromise : null;
-
-      if (activeSort && activeSort !== pendingManualSort) {
-        pendingManualSort = activeSort;
-        activeSort.finally(() => {
-          if (pendingManualSort === activeSort) {
-            pendingManualSort = null;
-          }
-
-          if (viewerRunning && splatInView && !document.hidden) {
-            heroFrameDriver.request({ force: true });
-          }
-        });
-      }
-
       return rendered;
     };
+
+    // sortRunning is set synchronously, whereas sortPromise is assigned in a
+    // microtask. Keep updating until the worker finishes and its result is drawn.
+    const hasPendingManualWork = () => manualRendering && (
+      initialManualFramesRemaining > 0 ||
+      viewer.sortRunning ||
+      viewer.renderNextFrame
+    );
 
     const renderSplatFrame = ({ smoothed, force }) => {
       if (document.hidden || !splatInView) {
@@ -1517,7 +1512,9 @@ const initSplat = async () => {
 
       const needsInitialManualFrames = initialManualFramesRemaining > 0;
 
-      if (!force && !needsInitialManualFrames && smoothed === lastRenderedProgress) {
+      const progressChanged = smoothed !== lastRenderedProgress;
+
+      if (!force && !progressChanged && !hasPendingManualWork()) {
         return;
       }
 
@@ -1538,20 +1535,33 @@ const initSplat = async () => {
           position[2],
         );
         viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+        // Sorting happens in update(), before render() refreshes camera matrices.
+        viewer.camera.updateMatrixWorld(true);
       }
 
       updateHeroDepthShader?.(smoothed);
 
       ensureViewerRunning();
-      viewer.forceRenderNextFrame?.();
+      if (force || progressChanged || needsInitialManualFrames) {
+        viewer.forceRenderNextFrame?.();
+      }
       const rendered = renderManualViewerFrame();
 
-      if (rendered && needsInitialManualFrames) {
+      if (
+        rendered &&
+        needsInitialManualFrames &&
+        !viewer.sortRunning &&
+        viewer.getSplatMesh().geometry.instanceCount > 0
+      ) {
         initialManualFramesRemaining -= 1;
 
         if (initialManualFramesRemaining === 0) {
           setStatus("ready");
         }
+      }
+
+      if (hasPendingManualWork()) {
+        heroFrameDriver.request();
       }
     };
 
