@@ -29,6 +29,9 @@
   --max-width: 1120px;
   --hero-scroll-distance: 240vh;
   --hero-scroll-distance: 240lvh;
+  --hero-viewport-height: 100lvh;
+  --hero-viewport-top: 0px;
+  --mobile-viewport-bottom: 0px;
 }
 
 html[data-theme="light"] {
@@ -80,6 +83,8 @@ body {
   min-height: 100lvh;
   margin: 0;
   overflow-x: hidden;
+  /* Clip horizontal overflow without creating another vertical scroll container. */
+  overflow-x: clip;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background:
@@ -367,7 +372,7 @@ html[data-theme="light"] .theme-toggle .theme-icon-moon {
   position: relative;
   width: 100vw;
   height: calc(100vh + var(--hero-scroll-distance));
-  height: calc(100lvh + var(--hero-scroll-distance));
+  height: calc(var(--hero-viewport-height) + var(--hero-scroll-distance));
   margin-left: calc(50% - 50vw);
 }
 
@@ -382,12 +387,12 @@ html[data-theme="light"] .theme-toggle .theme-icon-moon {
   --line: rgba(255, 255, 255, 0.16);
   color: #f5f5f5;
   position: sticky;
-  top: 0;
+  top: var(--hero-viewport-top);
   width: 100%;
   height: 100vh;
-  height: 100lvh;
+  height: var(--hero-viewport-height);
   min-height: 100vh;
-  min-height: 100lvh;
+  min-height: var(--hero-viewport-height);
   margin-top: 0;
   margin-left: 0;
   overflow: hidden;
@@ -732,8 +737,7 @@ h3 {
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  height: 100lvh;
+  height: 100%;
   z-index: 0;
   display: grid;
   place-items: center;
@@ -2253,6 +2257,10 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 }
 
 @media (max-width: 700px) {
+  :root {
+    --hero-viewport-height: max(100lvh, var(--mobile-viewport-height, 0px));
+  }
+
   .sidebar-toggle,
   .sidebar-item-label {
     display: none;
@@ -2262,7 +2270,7 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   .site-header.is-visible {
     top: auto;
     right: auto;
-    bottom: max(10px, env(safe-area-inset-bottom));
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--mobile-viewport-bottom));
     left: 50%;
     display: flex;
     flex-direction: row;

@@ -454,6 +454,59 @@ const getHeroMetrics = () => {
 
 const getHeroViewportHeight = () => getHeroMetrics().viewportHeight;
 
+const initMobileHeroViewport = () => {
+  const viewport = window.visualViewport;
+
+  if (!viewport || !heroScrollTrack) {
+    return;
+  }
+
+  const mobileQuery = window.matchMedia("(max-width: 700px)");
+  const root = document.documentElement;
+  let previous = "";
+  let frameId = null;
+
+  const sync = () => {
+    frameId = null;
+
+    // Pinch zoom should keep its native panning behavior. At normal scale,
+    // Chrome on iOS can pan the visual viewport while its toolbars collapse.
+    if (mobileQuery.matches && Math.abs(viewport.scale - 1) > 0.01) {
+      return;
+    }
+
+    const mobile = mobileQuery.matches;
+    const top = mobile ? Math.max(0, viewport.offsetTop) : 0;
+    const height = mobile ? viewport.height : 0;
+    const bottom = mobile ? window.innerHeight - height - top : 0;
+    const next = `${top}:${height}:${bottom}`;
+
+    if (next === previous) {
+      return;
+    }
+
+    previous = next;
+    root.style.setProperty("--hero-viewport-top", `${top}px`);
+    root.style.setProperty("--mobile-viewport-height", `${height}px`);
+    root.style.setProperty("--mobile-viewport-bottom", `${bottom}px`);
+    invalidateHeroMetrics();
+    heroFrameDriver.request({ force: true });
+  };
+
+  const requestSync = () => {
+    if (frameId === null) {
+      frameId = requestAnimationFrame(sync);
+    }
+  };
+
+  viewport.addEventListener("resize", requestSync, { passive: true });
+  viewport.addEventListener("scroll", requestSync, { passive: true });
+  window.addEventListener("resize", requestSync, { passive: true });
+  window.addEventListener("pageshow", requestSync);
+  mobileQuery.addEventListener("change", requestSync);
+  sync();
+};
+
 const getScrollProgress = () => {
   if (!heroScrollTrack) {
     return 0;
@@ -5093,6 +5146,7 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
+initMobileHeroViewport();
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
