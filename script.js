@@ -168,6 +168,9 @@ const initGridCursorGlow = () => {
 
 const DEBUG_SPLAT = new URLSearchParams(window.location.search).has("debugSplat");
 const DEBUG_SPLAT_PERF = new URLSearchParams(window.location.search).has("perfSplat");
+const DEBUG_VIEWPORT = new URLSearchParams(window.location.search).has(
+  "debugViewport",
+);
 // ?splatPixelRatio=1.25 renders the hero at a different resolution for one page
 // load, so the mobile ceiling can be compared on a real handset without a deploy.
 const DEBUG_SPLAT_PIXEL_RATIO = Number(
@@ -192,6 +195,113 @@ const DEBUG_PROJECT_VIDEO =
   DEBUG_PROJECT_VIDEO_PARAM !== null && DEBUG_PROJECT_VIDEO_PARAM !== "false";
 const DEBUG_PROJECT_VIDEO_ID =
   DEBUG_PROJECT_VIDEO && DEBUG_PROJECT_VIDEO_PARAM ? DEBUG_PROJECT_VIDEO_PARAM : null;
+
+const initViewportDebug = () => {
+  if (!DEBUG_VIEWPORT) {
+    return;
+  }
+
+  const viewport = window.visualViewport;
+  const dock = document.querySelector(".site-header");
+  const loader = document.querySelector(".splat-loader");
+  const panel = document.createElement("pre");
+  const chromeVersion = navigator.userAgent.match(/CriOS\/([\d.]+)/)?.[1] || "not CriOS";
+  let minimumVisualHeight = Number.POSITIVE_INFINITY;
+  let maximumVisualHeight = 0;
+  let pendingFrame = 0;
+  let latestEvent = "init";
+
+  panel.setAttribute("aria-hidden", "true");
+  panel.style.cssText = [
+    "position:fixed",
+    "top:max(8px, env(safe-area-inset-top))",
+    "left:8px",
+    "z-index:2147483647",
+    "width:224px",
+    "margin:0",
+    "padding:8px 10px",
+    "pointer-events:none",
+    "border:1px solid rgba(255,255,255,.34)",
+    "border-radius:10px",
+    "background:rgba(0,0,0,.82)",
+    "box-shadow:0 8px 28px rgba(0,0,0,.4)",
+    "color:#fff",
+    "font:600 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace",
+    "letter-spacing:0",
+    "white-space:pre-wrap",
+  ].join(";");
+  document.body.append(panel);
+
+  const round = (value) => Math.round(value * 10) / 10;
+  const rectFor = (element) => {
+    if (!element) {
+      return null;
+    }
+
+    const rect = element.getBoundingClientRect();
+    return {
+      top: round(rect.top),
+      bottom: round(rect.bottom),
+      height: round(rect.height),
+    };
+  };
+
+  const render = () => {
+    pendingFrame = 0;
+    const visualHeight = viewport?.height ?? window.innerHeight;
+    const visualTop = viewport?.offsetTop ?? 0;
+    const visualBottom = visualTop + visualHeight;
+    const bottomOcclusion = Math.max(
+      0,
+      window.innerHeight - visualBottom,
+    );
+    const dockRect = rectFor(dock);
+    const loaderRect = rectFor(loader);
+    minimumVisualHeight = Math.min(minimumVisualHeight, visualHeight);
+    maximumVisualHeight = Math.max(maximumVisualHeight, visualHeight);
+
+    const dockGap = dockRect ? visualBottom - dockRect.bottom : null;
+    const loaderGap = loaderRect ? visualBottom - loaderRect.bottom : null;
+    const loaderState = document.querySelector(".splat-stage")?.dataset.loadState;
+
+    panel.textContent = [
+      `VIEWPORT DEBUG · ${latestEvent}`,
+      `iOS ${navigator.userAgent.match(/OS ([\d_]+)/)?.[1]?.replaceAll("_", ".") || "?"}`,
+      `CriOS ${chromeVersion}`,
+      `innerHeight     ${round(window.innerHeight)}`,
+      `visual height   ${round(visualHeight)}`,
+      `visual top      ${round(visualTop)}`,
+      `visual bottom   ${round(visualBottom)}`,
+      `bottom blocked  ${round(bottomOcclusion)}`,
+      `visual range    ${round(minimumVisualHeight)}–${round(maximumVisualHeight)}`,
+      `scrollY         ${round(window.scrollY)}`,
+      dockRect
+        ? `dock t/b/h     ${dockRect.top}/${dockRect.bottom}/${dockRect.height}`
+        : "dock           missing",
+      `dock→visible    ${dockGap === null ? "?" : round(dockGap)}`,
+      loaderRect
+        ? `loader t/b     ${loaderRect.top}/${loaderRect.bottom}`
+        : "loader         missing",
+      `loader→visible  ${loaderGap === null ? "?" : round(loaderGap)}`,
+      `loader state    ${loaderState || "?"}`,
+    ].join("\n");
+  };
+
+  const requestRender = (event) => {
+    latestEvent = event?.type || "manual";
+    if (!pendingFrame) {
+      pendingFrame = requestAnimationFrame(render);
+    }
+  };
+
+  viewport?.addEventListener("resize", requestRender, { passive: true });
+  viewport?.addEventListener("scroll", requestRender, { passive: true });
+  window.addEventListener("resize", requestRender, { passive: true });
+  window.addEventListener("scroll", requestRender, { passive: true });
+  window.addEventListener("orientationchange", requestRender, { passive: true });
+  window.addEventListener("pageshow", requestRender);
+  requestRender();
+};
 
 const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
@@ -5057,6 +5167,7 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
+initViewportDebug();
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
