@@ -454,59 +454,6 @@ const getHeroMetrics = () => {
 
 const getHeroViewportHeight = () => getHeroMetrics().viewportHeight;
 
-const initMobileHeroViewport = () => {
-  const viewport = window.visualViewport;
-
-  if (!viewport || !heroScrollTrack) {
-    return;
-  }
-
-  const mobileQuery = window.matchMedia("(max-width: 700px)");
-  const root = document.documentElement;
-  let previous = "";
-  let frameId = null;
-
-  const sync = () => {
-    frameId = null;
-
-    // Pinch zoom should keep its native panning behavior. At normal scale,
-    // Chrome on iOS can pan the visual viewport while its toolbars collapse.
-    if (mobileQuery.matches && Math.abs(viewport.scale - 1) > 0.01) {
-      return;
-    }
-
-    const mobile = mobileQuery.matches;
-    const top = mobile ? Math.max(0, viewport.offsetTop) : 0;
-    const height = mobile ? viewport.height : 0;
-    const bottom = mobile ? window.innerHeight - height - top : 0;
-    const next = `${top}:${height}:${bottom}`;
-
-    if (next === previous) {
-      return;
-    }
-
-    previous = next;
-    root.style.setProperty("--hero-viewport-top", `${top}px`);
-    root.style.setProperty("--mobile-viewport-height", `${height}px`);
-    root.style.setProperty("--mobile-viewport-bottom", `${bottom}px`);
-    invalidateHeroMetrics();
-    heroFrameDriver.request({ force: true });
-  };
-
-  const requestSync = () => {
-    if (frameId === null) {
-      frameId = requestAnimationFrame(sync);
-    }
-  };
-
-  viewport.addEventListener("resize", requestSync, { passive: true });
-  viewport.addEventListener("scroll", requestSync, { passive: true });
-  window.addEventListener("resize", requestSync, { passive: true });
-  window.addEventListener("pageshow", requestSync);
-  mobileQuery.addEventListener("change", requestSync);
-  sync();
-};
-
 const getScrollProgress = () => {
   if (!heroScrollTrack) {
     return 0;
@@ -596,10 +543,7 @@ const heroFrameDriver = (() => {
     }
 
     if (now < activeUntil) {
-      // A subscriber may already have requested the next frame while running.
-      if (frameId === null) {
-        frameId = requestAnimationFrame(runFrame);
-      }
+      frameId = requestAnimationFrame(runFrame);
       return;
     }
 
@@ -1434,10 +1378,6 @@ const initSplat = async () => {
       sceneOptions.format = GaussianSplats3D.SceneFormat.Ply;
     }
 
-    // lookAt changes the camera quaternion but leaves matrixWorld at its previous
-    // orientation. Scene loading sorts splats using that matrix before the first
-    // render; static scenes then reuse that ordering until the camera moves.
-    viewer.camera.updateMatrixWorld(true);
     await viewer.addSplatScene(splatUrl, sceneOptions);
 
     console.log("[SPLAT] Scene added successfully.");
@@ -1446,17 +1386,17 @@ const initSplat = async () => {
 
     if (!manualRendering) {
       viewer.start();
-      setStatus("ready");
     }
     let viewerRunning = true;
+
+    setStatus("ready");
 
     let renderStopTimer = null;
     let initialLoadTimer = null;
     let allowIdleStop = false;
     let splatInView = false;
+    let pendingManualSort = null;
     let lastRenderedProgress = null;
-    let initialManualFramesRemaining = manualRendering ? 4 : 0;
-    let manualRenderResizeObserver = null;
 
     const clearRenderStopTimer = () => {
       if (renderStopTimer) {
@@ -1534,40 +1474,43 @@ const initSplat = async () => {
         document.hidden ||
         !splatInView
       ) {
-        return false;
+        return;
       }
 
       viewer.update();
-      let rendered = false;
 
       if (viewer.shouldRender()) {
         viewer.render();
-        rendered = true;
       }
 
       viewer.renderNextFrame = false;
 
-      return rendered;
-    };
+      // A sort that lands after the loop parks would leave the last frame showing
+      // the previous ordering, so wake the loop once when it resolves. Static scene
+      // mode makes that safe: an unchanged camera starts no further sorts, so this
+      // no longer feeds itself an endless chain of full-scene sorts.
+      const activeSort = viewer.sortRunning ? viewer.sortPromise : null;
 
-    // sortRunning is set synchronously, whereas sortPromise is assigned in a
-    // microtask. Keep updating until the worker finishes and its result is drawn.
-    const hasPendingManualWork = () => manualRendering && (
-      initialManualFramesRemaining > 0 ||
-      viewer.sortRunning ||
-      viewer.renderNextFrame
-    );
+      if (activeSort && activeSort !== pendingManualSort) {
+        pendingManualSort = activeSort;
+        activeSort.finally(() => {
+          if (pendingManualSort === activeSort) {
+            pendingManualSort = null;
+          }
+
+          if (viewerRunning && splatInView && !document.hidden) {
+            heroFrameDriver.request({ force: true });
+          }
+        });
+      }
+    };
 
     const renderSplatFrame = ({ smoothed, force }) => {
       if (document.hidden || !splatInView) {
         return;
       }
 
-      const needsInitialManualFrames = initialManualFramesRemaining > 0;
-
-      const progressChanged = smoothed !== lastRenderedProgress;
-
-      if (!force && !progressChanged && !hasPendingManualWork()) {
+      if (!force && smoothed === lastRenderedProgress) {
         return;
       }
 
@@ -1588,34 +1531,13 @@ const initSplat = async () => {
           position[2],
         );
         viewer.camera.lookAt(lookAt[0], lookAt[1], lookAt[2]);
-        // Sorting happens in update(), before render() refreshes camera matrices.
-        viewer.camera.updateMatrixWorld(true);
       }
 
       updateHeroDepthShader?.(smoothed);
 
       ensureViewerRunning();
-      if (force || progressChanged || needsInitialManualFrames) {
-        viewer.forceRenderNextFrame?.();
-      }
-      const rendered = renderManualViewerFrame();
-
-      if (
-        rendered &&
-        needsInitialManualFrames &&
-        !viewer.sortRunning &&
-        viewer.getSplatMesh().geometry.instanceCount > 0
-      ) {
-        initialManualFramesRemaining -= 1;
-
-        if (initialManualFramesRemaining === 0) {
-          setStatus("ready");
-        }
-      }
-
-      if (hasPendingManualWork()) {
-        heroFrameDriver.request();
-      }
+      viewer.forceRenderNextFrame?.();
+      renderManualViewerFrame();
     };
 
     syncHeroDepthTheme = () => {
@@ -1624,7 +1546,6 @@ const initSplat = async () => {
 
     if (DEBUG_SPLAT) {
       initDebugMode(viewer, isMobile);
-      setStatus("ready");
     } else {
       const observer = new IntersectionObserver(
         ([entry]) => {
@@ -1642,16 +1563,6 @@ const initSplat = async () => {
       );
 
       observer.observe(splatContainer);
-
-      if (manualRendering && "ResizeObserver" in window) {
-        manualRenderResizeObserver = new ResizeObserver(() => {
-          if (splatInView && !document.hidden) {
-            heroFrameDriver.request({ force: true });
-          }
-        });
-
-        manualRenderResizeObserver.observe(splatContainer);
-      }
 
       // Priority 100 keeps the render after every style write of the frame.
       heroFrameDriver.subscribe(renderSplatFrame, 100);
@@ -5146,7 +5057,6 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
-initMobileHeroViewport();
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
