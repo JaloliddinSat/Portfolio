@@ -2290,11 +2290,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .site-header.is-ios-chrome-viewport-clamping,
-  .site-header.is-ios-chrome-viewport-clamping.is-visible {
-    transition: none;
-  }
-
   html[data-theme="light"] .site-header,
   html[data-theme="light"] .site-header.is-visible {
     box-shadow:

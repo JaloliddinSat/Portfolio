@@ -214,16 +214,11 @@ const initMobileVisualViewportAlignment = () => {
   const DOCK_MIN_INSET = 10;
   const LOADER_DOCK_GAP = 18;
   const LOADER_VIEWPORT_INSET = 24;
-  const SAMPLE_INTERVAL = 60;
-  const REQUIRED_STABLE_SAMPLES = 4;
-  const STABILITY_TOLERANCE = 1;
-  const ALIGNMENT_TOLERANCE = 2;
+  const STABILITY_DELAY = 180;
+  const ALIGNMENT_TOLERANCE = 4;
   let dockShift = 0;
   let loaderShift = 0;
-  let calibrationTimer = 0;
-  let safetyFrame = 0;
-  let stableSampleCount = 0;
-  let previousSample = null;
+  let alignmentTimer = 0;
 
   const clampShift = (value) =>
     Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, value));
@@ -240,95 +235,37 @@ const initMobileVisualViewportAlignment = () => {
       return 0;
     }
   };
-  const visibleViewportBottom = () =>
-    Math.min(
-      window.innerHeight,
-      viewport.offsetTop + viewport.height,
-    );
-  const dockInset = () => {
-    const computedBottom = Number.parseFloat(getComputedStyle(dock).bottom);
-
-    return Number.isFinite(computedBottom)
-      ? Math.max(DOCK_MIN_INSET, computedBottom)
-      : DOCK_MIN_INSET;
-  };
-  const enableManagement = () => {
-    dock.classList.add("is-ios-chrome-viewport-managed");
-    loader?.classList.add("is-ios-chrome-viewport-managed");
-  };
 
   const resetAlignment = () => {
-    window.clearTimeout(calibrationTimer);
-    calibrationTimer = 0;
-    cancelAnimationFrame(safetyFrame);
-    safetyFrame = 0;
-    stableSampleCount = 0;
-    previousSample = null;
+    window.clearTimeout(alignmentTimer);
+    alignmentTimer = 0;
     dockShift = 0;
     loaderShift = 0;
     dock.classList.remove("is-ios-chrome-viewport-managed");
-    dock.classList.remove("is-ios-chrome-viewport-clamping");
     dock.style.removeProperty("--mobile-dock-shift-y");
     loader?.classList.remove("is-ios-chrome-viewport-managed");
     loader?.style.removeProperty("--mobile-loader-shift-y");
   };
 
-  const takeSample = () => {
-    const dockRect = dock.getBoundingClientRect();
-    const renderedDockShift = renderedTranslateY(dock);
+  const alignToStableViewport = () => {
+    alignmentTimer = 0;
 
-    return {
-      innerHeight: window.innerHeight,
-      visualHeight: viewport.height,
-      visualTop: viewport.offsetTop,
-      visibleBottom: visibleViewportBottom(),
-      baseDockTop: dockRect.top - renderedDockShift,
-      baseDockBottom: dockRect.bottom - renderedDockShift,
-      inset: dockInset(),
-    };
-  };
-
-  const samplesMatch = (first, second) =>
-    first &&
-    Object.keys(second).every(
-      (key) => Math.abs(first[key] - second[key]) <= STABILITY_TOLERANCE,
-    );
-
-  const positionLoader = (correctedDockTop, viewportBottom) => {
-    if (!loader || stage?.dataset.loadState !== "loading") {
-      if (loaderShift !== 0) {
-        loaderShift = 0;
-        loader?.style.removeProperty("--mobile-loader-shift-y");
-      }
+    if (!mobileViewport.matches) {
+      resetAlignment();
       return;
     }
 
-    const loaderRect = loader.getBoundingClientRect();
-    const unshiftedLoaderBottom =
-      loaderRect.bottom - renderedTranslateY(loader);
-    const desiredLoaderBottom = Math.min(
-      correctedDockTop - LOADER_DOCK_GAP,
-      viewportBottom - LOADER_VIEWPORT_INSET,
-    );
-    let nextLoaderShift = clampShift(
-      desiredLoaderBottom - unshiftedLoaderBottom,
-    );
-
-    if (Math.abs(nextLoaderShift) < ALIGNMENT_TOLERANCE) {
-      nextLoaderShift = 0;
-    }
-
-    if (Math.abs(nextLoaderShift - loaderShift) >= ALIGNMENT_TOLERANCE) {
-      loaderShift = nextLoaderShift;
-      loader.style.setProperty("--mobile-loader-shift-y", `${loaderShift}px`);
-    }
-  };
-
-  const applyStableAlignment = (sample) => {
-    dock.classList.remove("is-ios-chrome-viewport-clamping");
-    let nextDockShift = clampShift(
-      sample.visibleBottom - sample.inset - sample.baseDockBottom,
-    );
+    dock.classList.add("is-ios-chrome-viewport-managed");
+    loader?.classList.add("is-ios-chrome-viewport-managed");
+    const dockRect = dock.getBoundingClientRect();
+    const renderedDockShift = renderedTranslateY(dock);
+    const computedDockBottom = Number.parseFloat(getComputedStyle(dock).bottom);
+    const dockInset = Number.isFinite(computedDockBottom)
+      ? Math.max(DOCK_MIN_INSET, computedDockBottom)
+      : DOCK_MIN_INSET;
+    const unshiftedDockBottom = dockRect.bottom - renderedDockShift;
+    const desiredDockBottom = window.innerHeight - dockInset;
+    let nextDockShift = clampShift(desiredDockBottom - unshiftedDockBottom);
 
     if (Math.abs(nextDockShift) < ALIGNMENT_TOLERANCE) {
       nextDockShift = 0;
@@ -339,121 +276,64 @@ const initMobileVisualViewportAlignment = () => {
       dock.style.setProperty("--mobile-dock-shift-y", `${dockShift}px`);
     }
 
-    positionLoader(
-      sample.baseDockTop + nextDockShift,
-      sample.visibleBottom,
-    );
-  };
-
-  const sampleUntilStable = () => {
-    calibrationTimer = 0;
-
-    if (!mobileViewport.matches) {
-      resetAlignment();
-      return;
-    }
-
-    enableManagement();
-    const sample = takeSample();
-
-    if (samplesMatch(previousSample, sample)) {
-      stableSampleCount += 1;
-    } else {
-      stableSampleCount = 1;
-    }
-    previousSample = sample;
-
-    if (stableSampleCount >= REQUIRED_STABLE_SAMPLES) {
-      stableSampleCount = 0;
-      previousSample = null;
-      applyStableAlignment(sample);
-      return;
-    }
-
-    calibrationTimer = window.setTimeout(sampleUntilStable, SAMPLE_INTERVAL);
-  };
-
-  const requestCalibration = (delay = SAMPLE_INTERVAL) => {
-    window.clearTimeout(calibrationTimer);
-    calibrationTimer = 0;
-    stableSampleCount = 0;
-    previousSample = null;
-    calibrationTimer = window.setTimeout(sampleUntilStable, delay);
-  };
-
-  const clampDockToVisibleViewport = () => {
-    safetyFrame = 0;
-
-    if (!mobileViewport.matches) {
-      resetAlignment();
-      return;
-    }
-
-    enableManagement();
-    const viewportBottom = visibleViewportBottom();
-    const dockRect = dock.getBoundingClientRect();
-    const maximumDockBottom = viewportBottom - dockInset();
-
-    if (dockRect.bottom > maximumDockBottom + ALIGNMENT_TOLERANCE) {
-      dock.classList.add("is-ios-chrome-viewport-clamping");
-      const clampDelta = maximumDockBottom - dockRect.bottom;
-      dockShift = clampShift(renderedTranslateY(dock) + clampDelta);
-      dock.style.setProperty("--mobile-dock-shift-y", `${dockShift}px`);
-      positionLoader(
-        dockRect.top + clampDelta,
-        viewportBottom,
+    if (loader && stage?.dataset.loadState === "loading") {
+      const correctedDockTop = dockRect.top - renderedDockShift + nextDockShift;
+      const loaderRect = loader.getBoundingClientRect();
+      const unshiftedLoaderBottom =
+        loaderRect.bottom - renderedTranslateY(loader);
+      const desiredLoaderBottom = Math.min(
+        correctedDockTop - LOADER_DOCK_GAP,
+        window.innerHeight - LOADER_VIEWPORT_INSET,
       );
+      let nextLoaderShift = clampShift(
+        desiredLoaderBottom - unshiftedLoaderBottom,
+      );
+
+      if (Math.abs(nextLoaderShift) < ALIGNMENT_TOLERANCE) {
+        nextLoaderShift = 0;
+      }
+
+      if (Math.abs(nextLoaderShift - loaderShift) >= ALIGNMENT_TOLERANCE) {
+        loaderShift = nextLoaderShift;
+        loader.style.setProperty("--mobile-loader-shift-y", `${loaderShift}px`);
+      }
+    } else if (loaderShift !== 0) {
+      loaderShift = 0;
+      loader?.style.removeProperty("--mobile-loader-shift-y");
     }
   };
 
-  const handleViewportActivity = () => {
-    if (!mobileViewport.matches) {
-      resetAlignment();
-      return;
-    }
-
-    if (!safetyFrame) {
-      safetyFrame = requestAnimationFrame(clampDockToVisibleViewport);
-    }
-    requestCalibration();
+  const requestAlignment = (delay = STABILITY_DELAY) => {
+    window.clearTimeout(alignmentTimer);
+    alignmentTimer = window.setTimeout(alignToStableViewport, delay);
   };
 
-  const handlePageShow = () => {
+  const scheduleAlignment = () => requestAlignment();
+  const scheduleOrientationAlignment = () => {
     resetAlignment();
-    enableManagement();
-    requestCalibration(120);
+    requestAlignment(350);
   };
 
-  const handleOrientationChange = () => {
-    resetAlignment();
-    enableManagement();
-    requestCalibration(350);
-  };
-
-  enableManagement();
-  viewport.addEventListener("resize", handleViewportActivity, { passive: true });
-  viewport.addEventListener("scroll", handleViewportActivity, { passive: true });
-  window.addEventListener("resize", handleViewportActivity, { passive: true });
-  window.addEventListener("scroll", handleViewportActivity, { passive: true });
-  window.addEventListener("orientationchange", handleOrientationChange, {
+  dock.classList.add("is-ios-chrome-viewport-managed");
+  loader?.classList.add("is-ios-chrome-viewport-managed");
+  viewport.addEventListener("resize", scheduleAlignment, { passive: true });
+  viewport.addEventListener("scroll", scheduleAlignment, { passive: true });
+  window.addEventListener("resize", scheduleAlignment, { passive: true });
+  window.addEventListener("scroll", scheduleAlignment, { passive: true });
+  window.addEventListener("orientationchange", scheduleOrientationAlignment, {
     passive: true,
   });
-  window.addEventListener("pageshow", handlePageShow);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      handlePageShow();
-    }
-  });
-  mobileViewport.addEventListener?.("change", handleViewportActivity);
+  window.addEventListener("pageshow", scheduleAlignment);
+  mobileViewport.addEventListener?.("change", scheduleAlignment);
 
   if (stage) {
-    new MutationObserver(handleViewportActivity).observe(stage, {
+    new MutationObserver(scheduleAlignment).observe(stage, {
       attributes: true,
       attributeFilter: ["data-load-state"],
     });
   }
 
-  requestCalibration(120);
+  requestAlignment(0);
 };
 
 const initViewportDebug = () => {
@@ -517,14 +397,6 @@ const initViewportDebug = () => {
     );
     const dockRect = rectFor(dock);
     const loaderRect = rectFor(loader);
-    const dockShift = dock
-      ? getComputedStyle(dock).getPropertyValue("--mobile-dock-shift-y").trim()
-      : "";
-    const dockMode = dock?.classList.contains("is-ios-chrome-viewport-clamping")
-      ? "clamping"
-      : dock?.classList.contains("is-ios-chrome-viewport-managed")
-        ? "calibrated"
-        : "native";
     minimumVisualHeight = Math.min(minimumVisualHeight, visualHeight);
     maximumVisualHeight = Math.max(maximumVisualHeight, visualHeight);
 
@@ -547,8 +419,6 @@ const initViewportDebug = () => {
         ? `dock t/b/h     ${dockRect.top}/${dockRect.bottom}/${dockRect.height}`
         : "dock           missing",
       `dock→visible    ${dockGap === null ? "?" : round(dockGap)}`,
-      `dock shift      ${dockShift || "0px"}`,
-      `dock mode       ${dockMode}`,
       loaderRect
         ? `loader t/b     ${loaderRect.top}/${loaderRect.bottom}`
         : "loader         missing",
