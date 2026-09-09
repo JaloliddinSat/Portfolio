@@ -196,6 +196,107 @@ const DEBUG_PROJECT_VIDEO =
 const DEBUG_PROJECT_VIDEO_ID =
   DEBUG_PROJECT_VIDEO && DEBUG_PROJECT_VIDEO_PARAM ? DEBUG_PROJECT_VIDEO_PARAM : null;
 
+const initMobileVisualViewportAlignment = () => {
+  const viewport = window.visualViewport;
+  const dock = document.querySelector(".site-header");
+  const loader = document.querySelector(".splat-loader");
+
+  if (!viewport || !dock) {
+    return;
+  }
+
+  const mobileViewport = window.matchMedia("(max-width: 700px)");
+  const stage = document.querySelector(".splat-stage");
+  const MAX_SHIFT = 400;
+  const DOCK_MIN_INSET = 10;
+  const LOADER_DOCK_GAP = 18;
+  const LOADER_VIEWPORT_INSET = 24;
+  const SETTLE_DURATION = 1200;
+  let dockShift = 0;
+  let loaderShift = 0;
+  let pendingFrame = 0;
+  let settleUntil = 0;
+
+  const clampShift = (value) =>
+    Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, value));
+
+  const resetAlignment = () => {
+    dockShift = 0;
+    loaderShift = 0;
+    dock.style.removeProperty("--mobile-dock-shift-y");
+    loader?.style.removeProperty("--mobile-loader-shift-y");
+  };
+
+  const align = () => {
+    pendingFrame = 0;
+
+    if (!mobileViewport.matches) {
+      resetAlignment();
+      return;
+    }
+
+    const visualBottom = viewport.offsetTop + viewport.height;
+    const dockRect = dock.getBoundingClientRect();
+    const computedDockBottom = Number.parseFloat(getComputedStyle(dock).bottom);
+    const dockInset = Number.isFinite(computedDockBottom)
+      ? Math.max(DOCK_MIN_INSET, computedDockBottom)
+      : DOCK_MIN_INSET;
+    const desiredDockBottom = visualBottom - dockInset;
+    const dockDelta = desiredDockBottom - dockRect.bottom;
+
+    if (Math.abs(dockDelta) > 0.25) {
+      dockShift = clampShift(dockShift + dockDelta);
+      dock.style.setProperty("--mobile-dock-shift-y", `${dockShift}px`);
+    }
+
+    if (loader && stage?.dataset.loadState === "loading") {
+      const correctedDockTop = dockRect.top + dockDelta;
+      const loaderRect = loader.getBoundingClientRect();
+      const desiredLoaderBottom = Math.min(
+        correctedDockTop - LOADER_DOCK_GAP,
+        visualBottom - LOADER_VIEWPORT_INSET,
+      );
+      const loaderDelta = desiredLoaderBottom - loaderRect.bottom;
+
+      if (Math.abs(loaderDelta) > 0.25) {
+        loaderShift = clampShift(loaderShift + loaderDelta);
+        loader.style.setProperty("--mobile-loader-shift-y", `${loaderShift}px`);
+      }
+    } else if (loaderShift !== 0) {
+      loaderShift = 0;
+      loader?.style.removeProperty("--mobile-loader-shift-y");
+    }
+
+    if (performance.now() < settleUntil) {
+      pendingFrame = requestAnimationFrame(align);
+    }
+  };
+
+  const requestAlignment = () => {
+    settleUntil = performance.now() + SETTLE_DURATION;
+    if (!pendingFrame) {
+      pendingFrame = requestAnimationFrame(align);
+    }
+  };
+
+  viewport.addEventListener("resize", requestAlignment, { passive: true });
+  viewport.addEventListener("scroll", requestAlignment, { passive: true });
+  window.addEventListener("resize", requestAlignment, { passive: true });
+  window.addEventListener("scroll", requestAlignment, { passive: true });
+  window.addEventListener("orientationchange", requestAlignment, { passive: true });
+  window.addEventListener("pageshow", requestAlignment);
+  mobileViewport.addEventListener?.("change", requestAlignment);
+
+  if (stage) {
+    new MutationObserver(requestAlignment).observe(stage, {
+      attributes: true,
+      attributeFilter: ["data-load-state"],
+    });
+  }
+
+  requestAlignment();
+};
+
 const initViewportDebug = () => {
   if (!DEBUG_VIEWPORT) {
     return;
@@ -5167,6 +5268,7 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
+initMobileVisualViewportAlignment();
 initViewportDebug();
 initHeroScrollTransition();
 initHeroAboutTransition();
