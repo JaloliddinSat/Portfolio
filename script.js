@@ -200,8 +200,11 @@ const initMobileVisualViewportAlignment = () => {
   const viewport = window.visualViewport;
   const dock = document.querySelector(".site-header");
   const loader = document.querySelector(".splat-loader");
+  const isIOSChrome =
+    /CriOS\//.test(navigator.userAgent) &&
+    /iPhone|iPod/.test(navigator.userAgent);
 
-  if (!viewport || !dock) {
+  if (!viewport || !dock || !isIOSChrome) {
     return;
   }
 
@@ -211,90 +214,126 @@ const initMobileVisualViewportAlignment = () => {
   const DOCK_MIN_INSET = 10;
   const LOADER_DOCK_GAP = 18;
   const LOADER_VIEWPORT_INSET = 24;
-  const SETTLE_DURATION = 1200;
+  const STABILITY_DELAY = 180;
+  const ALIGNMENT_TOLERANCE = 4;
   let dockShift = 0;
   let loaderShift = 0;
-  let pendingFrame = 0;
-  let settleUntil = 0;
+  let alignmentTimer = 0;
 
   const clampShift = (value) =>
     Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, value));
+  const renderedTranslateY = (element) => {
+    const transform = getComputedStyle(element).transform;
+
+    if (!transform || transform === "none") {
+      return 0;
+    }
+
+    try {
+      return new DOMMatrixReadOnly(transform).m42;
+    } catch {
+      return 0;
+    }
+  };
 
   const resetAlignment = () => {
+    window.clearTimeout(alignmentTimer);
+    alignmentTimer = 0;
     dockShift = 0;
     loaderShift = 0;
+    dock.classList.remove("is-ios-chrome-viewport-managed");
     dock.style.removeProperty("--mobile-dock-shift-y");
+    loader?.classList.remove("is-ios-chrome-viewport-managed");
     loader?.style.removeProperty("--mobile-loader-shift-y");
   };
 
-  const align = () => {
-    pendingFrame = 0;
+  const alignToStableViewport = () => {
+    alignmentTimer = 0;
 
     if (!mobileViewport.matches) {
       resetAlignment();
       return;
     }
 
-    const visualBottom = viewport.offsetTop + viewport.height;
+    dock.classList.add("is-ios-chrome-viewport-managed");
+    loader?.classList.add("is-ios-chrome-viewport-managed");
     const dockRect = dock.getBoundingClientRect();
+    const renderedDockShift = renderedTranslateY(dock);
     const computedDockBottom = Number.parseFloat(getComputedStyle(dock).bottom);
     const dockInset = Number.isFinite(computedDockBottom)
       ? Math.max(DOCK_MIN_INSET, computedDockBottom)
       : DOCK_MIN_INSET;
-    const desiredDockBottom = visualBottom - dockInset;
-    const dockDelta = desiredDockBottom - dockRect.bottom;
+    const unshiftedDockBottom = dockRect.bottom - renderedDockShift;
+    const desiredDockBottom = window.innerHeight - dockInset;
+    let nextDockShift = clampShift(desiredDockBottom - unshiftedDockBottom);
 
-    if (Math.abs(dockDelta) > 0.25) {
-      dockShift = clampShift(dockShift + dockDelta);
+    if (Math.abs(nextDockShift) < ALIGNMENT_TOLERANCE) {
+      nextDockShift = 0;
+    }
+
+    if (Math.abs(nextDockShift - dockShift) >= ALIGNMENT_TOLERANCE) {
+      dockShift = nextDockShift;
       dock.style.setProperty("--mobile-dock-shift-y", `${dockShift}px`);
     }
 
     if (loader && stage?.dataset.loadState === "loading") {
-      const correctedDockTop = dockRect.top + dockDelta;
+      const correctedDockTop = dockRect.top - renderedDockShift + nextDockShift;
       const loaderRect = loader.getBoundingClientRect();
+      const unshiftedLoaderBottom =
+        loaderRect.bottom - renderedTranslateY(loader);
       const desiredLoaderBottom = Math.min(
         correctedDockTop - LOADER_DOCK_GAP,
-        visualBottom - LOADER_VIEWPORT_INSET,
+        window.innerHeight - LOADER_VIEWPORT_INSET,
       );
-      const loaderDelta = desiredLoaderBottom - loaderRect.bottom;
+      let nextLoaderShift = clampShift(
+        desiredLoaderBottom - unshiftedLoaderBottom,
+      );
 
-      if (Math.abs(loaderDelta) > 0.25) {
-        loaderShift = clampShift(loaderShift + loaderDelta);
+      if (Math.abs(nextLoaderShift) < ALIGNMENT_TOLERANCE) {
+        nextLoaderShift = 0;
+      }
+
+      if (Math.abs(nextLoaderShift - loaderShift) >= ALIGNMENT_TOLERANCE) {
+        loaderShift = nextLoaderShift;
         loader.style.setProperty("--mobile-loader-shift-y", `${loaderShift}px`);
       }
     } else if (loaderShift !== 0) {
       loaderShift = 0;
       loader?.style.removeProperty("--mobile-loader-shift-y");
     }
-
-    if (performance.now() < settleUntil) {
-      pendingFrame = requestAnimationFrame(align);
-    }
   };
 
-  const requestAlignment = () => {
-    settleUntil = performance.now() + SETTLE_DURATION;
-    if (!pendingFrame) {
-      pendingFrame = requestAnimationFrame(align);
-    }
+  const requestAlignment = (delay = STABILITY_DELAY) => {
+    window.clearTimeout(alignmentTimer);
+    alignmentTimer = window.setTimeout(alignToStableViewport, delay);
   };
 
-  viewport.addEventListener("resize", requestAlignment, { passive: true });
-  viewport.addEventListener("scroll", requestAlignment, { passive: true });
-  window.addEventListener("resize", requestAlignment, { passive: true });
-  window.addEventListener("scroll", requestAlignment, { passive: true });
-  window.addEventListener("orientationchange", requestAlignment, { passive: true });
-  window.addEventListener("pageshow", requestAlignment);
-  mobileViewport.addEventListener?.("change", requestAlignment);
+  const scheduleAlignment = () => requestAlignment();
+  const scheduleOrientationAlignment = () => {
+    resetAlignment();
+    requestAlignment(350);
+  };
+
+  dock.classList.add("is-ios-chrome-viewport-managed");
+  loader?.classList.add("is-ios-chrome-viewport-managed");
+  viewport.addEventListener("resize", scheduleAlignment, { passive: true });
+  viewport.addEventListener("scroll", scheduleAlignment, { passive: true });
+  window.addEventListener("resize", scheduleAlignment, { passive: true });
+  window.addEventListener("scroll", scheduleAlignment, { passive: true });
+  window.addEventListener("orientationchange", scheduleOrientationAlignment, {
+    passive: true,
+  });
+  window.addEventListener("pageshow", scheduleAlignment);
+  mobileViewport.addEventListener?.("change", scheduleAlignment);
 
   if (stage) {
-    new MutationObserver(requestAlignment).observe(stage, {
+    new MutationObserver(scheduleAlignment).observe(stage, {
       attributes: true,
       attributeFilter: ["data-load-state"],
     });
   }
 
-  requestAlignment();
+  requestAlignment(0);
 };
 
 const initViewportDebug = () => {
