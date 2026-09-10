@@ -238,9 +238,18 @@ const initIOSChromeStableMobileUI = () => {
   const isIOSChrome =
     /CriOS\//.test(navigator.userAgent) &&
     /iPhone|iPod/.test(navigator.userAgent);
+  const isAndroidChrome =
+    /Android/.test(navigator.userAgent) &&
+    /Chrome\//.test(navigator.userAgent) &&
+    /Mobile/.test(navigator.userAgent) &&
+    !/EdgA|OPR\//.test(navigator.userAgent);
 
   if (isIOSChrome) {
     document.documentElement.classList.add("is-ios-chrome");
+  }
+
+  if (isIOSChrome || isAndroidChrome) {
+    document.documentElement.classList.add("is-mobile-chrome");
   }
 };
 
