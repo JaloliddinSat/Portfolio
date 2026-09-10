@@ -171,6 +171,9 @@ const DEBUG_SPLAT_PERF = new URLSearchParams(window.location.search).has("perfSp
 const DEBUG_VIEWPORT = new URLSearchParams(window.location.search).has(
   "debugViewport",
 );
+const DEBUG_SPLAT_LOAD = new URLSearchParams(window.location.search).has(
+  "debugSplatLoad",
+);
 // ?splatPixelRatio=1.25 renders the hero at a different resolution for one page
 // load, so the mobile ceiling can be compared on a real handset without a deploy.
 const DEBUG_SPLAT_PIXEL_RATIO = Number(
@@ -195,6 +198,39 @@ const DEBUG_PROJECT_VIDEO =
   DEBUG_PROJECT_VIDEO_PARAM !== null && DEBUG_PROJECT_VIDEO_PARAM !== "false";
 const DEBUG_PROJECT_VIDEO_ID =
   DEBUG_PROJECT_VIDEO && DEBUG_PROJECT_VIDEO_PARAM ? DEBUG_PROJECT_VIDEO_PARAM : null;
+
+const splatLoadDebug = {
+  startedAt: performance.now(),
+  viewer: null,
+  manualRendering: null,
+  effectivePixelRatio: null,
+  updateCalls: 0,
+  renderChecks: 0,
+  renders: 0,
+  lastShouldRender: null,
+  events: [],
+  refreshPanel: () => {},
+};
+
+const recordSplatLoadDebug = (name, details = "", refresh = true) => {
+  if (!DEBUG_SPLAT_LOAD) {
+    return;
+  }
+
+  splatLoadDebug.events.push({
+    name,
+    details,
+    time: performance.now() - splatLoadDebug.startedAt,
+  });
+
+  if (splatLoadDebug.events.length > 28) {
+    splatLoadDebug.events.shift();
+  }
+
+  if (refresh) {
+    splatLoadDebug.refreshPanel();
+  }
+};
 
 const initIOSChromeStableMobileUI = () => {
   const isIOSChrome =
@@ -586,6 +622,238 @@ const getScrollProgress = () => {
   }
 
   return Math.min(Math.max((window.scrollY - trackTop) / scrollRange, 0), 1);
+};
+
+const initSplatLoadDebug = () => {
+  if (!DEBUG_SPLAT_LOAD) {
+    return;
+  }
+
+  const panel = document.createElement("aside");
+  const readout = document.createElement("pre");
+  const actions = document.createElement("div");
+  const refreshButton = document.createElement("button");
+  const copyButton = document.createElement("button");
+  const feedback = document.createElement("span");
+  let pendingPanelFrame = null;
+
+  panel.id = "splat-load-debug-panel";
+  panel.setAttribute("aria-label", "Splat loading diagnostics");
+  panel.style.cssText = [
+    "position:fixed",
+    "top:50%",
+    "right:max(8px, env(safe-area-inset-right))",
+    "z-index:2147483647",
+    "width:min(292px, calc(100vw - 16px))",
+    "max-height:min(80dvh, 660px)",
+    "box-sizing:border-box",
+    "padding:10px",
+    "overflow:auto",
+    "transform:translateY(-50%)",
+    "border:1px solid rgba(255,255,255,.34)",
+    "border-radius:12px",
+    "background:rgba(0,0,0,.88)",
+    "box-shadow:0 10px 34px rgba(0,0,0,.48)",
+    "color:#fff",
+    "font:600 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace",
+  ].join(";");
+  readout.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-word;font:inherit";
+  actions.style.cssText = "display:flex;align-items:center;gap:6px;margin-top:9px";
+
+  [refreshButton, copyButton].forEach((button) => {
+    button.type = "button";
+    button.style.cssText = [
+      "min-height:30px",
+      "padding:5px 8px",
+      "border:1px solid rgba(255,255,255,.3)",
+      "border-radius:7px",
+      "color:#fff",
+      "background:rgba(255,255,255,.1)",
+      "font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace",
+    ].join(";");
+  });
+
+  refreshButton.textContent = "Refresh";
+  copyButton.textContent = "Copy";
+  feedback.style.cssText = "min-width:0;color:#a7f3d0;font-size:9px";
+  actions.append(refreshButton, copyButton, feedback);
+  panel.append(readout, actions);
+  document.body.append(panel);
+
+  const round = (value, digits = 1) =>
+    Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
+  const formatVector = (value, includeW = false) => {
+    if (!value) {
+      return "?";
+    }
+
+    const entries = includeW
+      ? [value.x, value.y, value.z, value.w]
+      : [value.x, value.y, value.z];
+
+    return entries.map((entry) => round(entry, 3)).join(",");
+  };
+
+  const buildSnapshot = () => {
+    const viewer = splatLoadDebug.viewer;
+    const splatMesh = viewer?.getSplatMesh?.();
+    const canvas = splatContainer?.querySelector("canvas");
+    const canvasRect = canvas?.getBoundingClientRect();
+    const stageRect = splatStage?.getBoundingClientRect();
+    const viewport = window.visualViewport;
+
+    return Object.freeze({
+      capturedAtMs: round(performance.now() - splatLoadDebug.startedAt),
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      navigationType:
+        performance.getEntriesByType?.("navigation")?.[0]?.type || "unknown",
+      visibility: document.visibilityState,
+      scrollY: round(window.scrollY),
+      heroProgress: round(getScrollProgress(), 4),
+      viewport: {
+        inner: [window.innerWidth, window.innerHeight],
+        visual: [
+          round(viewport?.width ?? window.innerWidth),
+          round(viewport?.height ?? window.innerHeight),
+        ],
+        visualOffset: [round(viewport?.offsetLeft ?? 0), round(viewport?.offsetTop ?? 0)],
+        scale: round(viewport?.scale ?? 1, 3),
+        devicePixelRatio: window.devicePixelRatio || 1,
+      },
+      stage: splatStage ? {
+        loadState: splatStage.dataset.loadState,
+        ariaBusy: splatStage.getAttribute("aria-busy"),
+        rect: stageRect
+          ? [round(stageRect.width), round(stageRect.height), round(stageRect.top)]
+          : null,
+      } : null,
+      mode: splatLoadDebug.manualRendering ? "manual" : "self-driven",
+      effectivePixelRatio: splatLoadDebug.effectivePixelRatio,
+      viewer: viewer ? {
+        initialized: viewer.initialized,
+        running: viewer.selfDrivenModeRunning,
+        splatRenderReady: viewer.splatRenderReady,
+        sortRunning: viewer.sortRunning,
+        hasSortPromise: Boolean(viewer.sortPromise),
+        renderNextFrame: viewer.renderNextFrame,
+        renderedSplats: viewer.splatRenderCount ?? 0,
+        totalSplats: splatMesh?.getSplatCount?.() ?? 0,
+        instanceCount: splatMesh?.geometry?.instanceCount ?? 0,
+        lastSortMs: round(viewer.lastSortTime ?? 0),
+        cameraPosition: formatVector(viewer.camera?.position),
+        cameraQuaternion: formatVector(viewer.camera?.quaternion, true),
+        cameraMatrixWorld: viewer.camera?.matrixWorld?.elements
+          ?.map((entry) => round(entry, 3)) ?? null,
+      } : null,
+      canvas: canvas ? {
+        css: [round(canvasRect?.width ?? 0), round(canvasRect?.height ?? 0)],
+        buffer: [canvas.width, canvas.height],
+        ratios: [
+          round(canvas.width / Math.max(1, canvasRect?.width ?? 1), 2),
+          round(canvas.height / Math.max(1, canvasRect?.height ?? 1), 2),
+        ],
+      } : null,
+      calls: {
+        update: splatLoadDebug.updateCalls,
+        renderCheck: splatLoadDebug.renderChecks,
+        render: splatLoadDebug.renders,
+        lastShouldRender: splatLoadDebug.lastShouldRender,
+      },
+      events: splatLoadDebug.events.map((event) => ({
+        ...event,
+        time: round(event.time),
+      })),
+    });
+  };
+
+  const formatSnapshot = (snapshot) => {
+    const viewer = snapshot.viewer;
+    const canvas = snapshot.canvas;
+    const recentEvents = snapshot.events.slice(-14)
+      .map((event) => `${event.time} ${event.name}${event.details ? ` ${event.details}` : ""}`)
+      .join("\n");
+
+    return [
+      `SPLAT DEBUG · ${snapshot.capturedAtMs}ms`,
+      `nav/vis      ${snapshot.navigationType} / ${snapshot.visibility}`,
+      `platform     ${snapshot.platform}`,
+      `viewport     ${snapshot.viewport.inner.join("x")}`,
+      `visual       ${snapshot.viewport.visual.join("x")} @${snapshot.viewport.visualOffset.join(",")}`,
+      `scale/dpr    ${snapshot.viewport.scale} / ${snapshot.viewport.devicePixelRatio} → ${snapshot.effectivePixelRatio ?? "?"}`,
+      `scroll/prog  ${snapshot.scrollY} / ${snapshot.heroProgress}`,
+      `stage        ${snapshot.stage?.loadState ?? "?"} busy:${snapshot.stage?.ariaBusy ?? "?"}`,
+      `stage rect   ${snapshot.stage?.rect?.join("x") ?? "?"}`,
+      `mode         ${snapshot.mode}`,
+      viewer
+        ? `viewer       init:${viewer.initialized} run:${viewer.running} ready:${viewer.splatRenderReady}`
+        : "viewer       pending",
+      viewer
+        ? `sort         run:${viewer.sortRunning} promise:${viewer.hasSortPromise} last:${viewer.lastSortMs}ms`
+        : "sort         pending",
+      viewer
+        ? `splats       ${viewer.renderedSplats}/${viewer.totalSplats} instances:${viewer.instanceCount}`
+        : "splats       pending",
+      viewer
+        ? `next/render  ${viewer.renderNextFrame} / ${snapshot.calls.render} (check:${snapshot.calls.renderCheck}=${snapshot.calls.lastShouldRender})`
+        : "next/render  pending",
+      canvas
+        ? `canvas css   ${canvas.css.join("x")}`
+        : "canvas css   pending",
+      canvas
+        ? `canvas buf   ${canvas.buffer.join("x")} ratio:${canvas.ratios.join("x")}`
+        : "canvas buf   pending",
+      viewer ? `camera p     ${viewer.cameraPosition}` : "camera p     pending",
+      viewer ? `camera q     ${viewer.cameraQuaternion}` : "camera q     pending",
+      "events",
+      recentEvents || "none",
+      `ua ${snapshot.userAgent}`,
+    ].join("\n");
+  };
+
+  const renderPanel = () => {
+    pendingPanelFrame = null;
+    readout.textContent = formatSnapshot(buildSnapshot());
+  };
+
+  splatLoadDebug.refreshPanel = () => {
+    if (pendingPanelFrame === null) {
+      pendingPanelFrame = requestAnimationFrame(renderPanel);
+    }
+  };
+
+  Object.defineProperty(window, "__splatLoadDebug", {
+    configurable: true,
+    enumerable: false,
+    get: buildSnapshot,
+  });
+
+  refreshButton.addEventListener("click", () => {
+    recordSplatLoadDebug("manual-snapshot");
+    feedback.textContent = "Updated";
+  });
+
+  copyButton.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(formatSnapshot(buildSnapshot()));
+      feedback.textContent = "Copied";
+    } catch (error) {
+      console.warn("[SPLAT DEBUG] Clipboard unavailable:", error);
+      feedback.textContent = "Copy failed";
+    }
+  });
+
+  const recordBrowserEvent = (event) => recordSplatLoadDebug(event.type);
+
+  window.visualViewport?.addEventListener("resize", recordBrowserEvent, { passive: true });
+  window.visualViewport?.addEventListener("scroll", recordBrowserEvent, { passive: true });
+  window.addEventListener("resize", recordBrowserEvent, { passive: true });
+  window.addEventListener("scroll", recordBrowserEvent, { passive: true });
+  window.addEventListener("orientationchange", recordBrowserEvent, { passive: true });
+  window.addEventListener("pageshow", recordBrowserEvent);
+  document.addEventListener("visibilitychange", recordBrowserEvent);
+
+  recordSplatLoadDebug("debug-panel-ready");
 };
 
 const HERO_SCROLL_ANIM_MS = 1900;
@@ -1417,9 +1685,12 @@ const initSplat = async () => {
     return;
   }
 
+  recordSplatLoadDebug("init-splat");
+
   const splatUrl = getSplatUrl();
 
   if (!splatUrl) {
+    recordSplatLoadDebug("missing-splat-url");
     setStatus("error", "Missing splat URL.");
     return;
   }
@@ -1429,12 +1700,16 @@ const initSplat = async () => {
   try {
     console.log("[SPLAT] Loading from:", splatUrl);
 
+    recordSplatLoadDebug("module-import-start");
     const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
+    recordSplatLoadDebug("module-import-done");
 
     console.log("[SPLAT] Renderer loaded:", GaussianSplats3D);
 
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
     const manualRendering = isMobile;
+
+    splatLoadDebug.manualRendering = manualRendering;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
     const initialCameraPosition = [...SPLAT_CONFIG.cameraStart.position];
@@ -1464,6 +1739,18 @@ const initSplat = async () => {
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
+    splatLoadDebug.viewer = viewer;
+    recordSplatLoadDebug("viewer-created", manualRendering ? "manual" : "self-driven");
+
+    if (DEBUG_SPLAT_LOAD) {
+      viewer.renderer?.domElement?.addEventListener("webglcontextlost", () => {
+        recordSplatLoadDebug("webgl-context-lost");
+      });
+      viewer.renderer?.domElement?.addEventListener("webglcontextrestored", () => {
+        recordSplatLoadDebug("webgl-context-restored");
+      });
+    }
+
     // Mobile used to render at 1 device pixel per CSS pixel to buy frame time.
     // Removing the per-frame full-scene sort freed that budget, so the splat can
     // be resolved closer to the panel. Lower MOBILE_SPLAT_PIXEL_RATIO if ?perfSplat
@@ -1482,6 +1769,8 @@ const initSplat = async () => {
     viewer.devicePixelRatio = splatPixelRatio;
     viewer.getSplatMesh().devicePixelRatio = splatPixelRatio;
     viewer.renderer.setPixelRatio(splatPixelRatio);
+    splatLoadDebug.effectivePixelRatio = splatPixelRatio;
+    recordSplatLoadDebug("pixel-ratio", String(splatPixelRatio));
 
     const sceneOptions = {
       progressiveLoad: !manualRendering,
@@ -1498,7 +1787,12 @@ const initSplat = async () => {
       sceneOptions.format = GaussianSplats3D.SceneFormat.Ply;
     }
 
+    recordSplatLoadDebug("scene-load-start");
     await viewer.addSplatScene(splatUrl, sceneOptions);
+    recordSplatLoadDebug(
+      "scene-load-done",
+      `sort:${viewer.lastSortTime ?? 0}ms splats:${viewer.getSplatMesh().getSplatCount()}`,
+    );
 
     console.log("[SPLAT] Scene added successfully.");
 
@@ -1506,10 +1800,12 @@ const initSplat = async () => {
 
     if (!manualRendering) {
       viewer.start();
+      recordSplatLoadDebug("viewer-started");
     }
     let viewerRunning = true;
 
     setStatus("ready");
+    recordSplatLoadDebug("status-ready");
 
     let renderStopTimer = null;
     let initialLoadTimer = null;
@@ -1599,8 +1895,33 @@ const initSplat = async () => {
 
       viewer.update();
 
-      if (viewer.shouldRender()) {
+      if (DEBUG_SPLAT_LOAD) {
+        splatLoadDebug.updateCalls += 1;
+        recordSplatLoadDebug(
+          "viewer-update",
+          `sort:${Boolean(viewer.sortRunning)} next:${Boolean(viewer.renderNextFrame)}`,
+          false,
+        );
+      }
+
+      const shouldRender = viewer.shouldRender();
+
+      if (DEBUG_SPLAT_LOAD) {
+        splatLoadDebug.renderChecks += 1;
+        splatLoadDebug.lastShouldRender = shouldRender;
+      }
+
+      if (shouldRender) {
         viewer.render();
+
+        if (DEBUG_SPLAT_LOAD) {
+          splatLoadDebug.renders += 1;
+          recordSplatLoadDebug(
+            "viewer-render",
+            `instances:${viewer.getSplatMesh().geometry.instanceCount}`,
+            false,
+          );
+        }
       }
 
       viewer.renderNextFrame = false;
@@ -1610,6 +1931,14 @@ const initSplat = async () => {
       // mode makes that safe: an unchanged camera starts no further sorts, so this
       // no longer feeds itself an endless chain of full-scene sorts.
       const activeSort = viewer.sortRunning ? viewer.sortPromise : null;
+
+      if (DEBUG_SPLAT_LOAD && viewer.sortRunning) {
+        recordSplatLoadDebug(
+          "sort-observed",
+          `promise:${Boolean(viewer.sortPromise)}`,
+          false,
+        );
+      }
 
       if (activeSort && activeSort !== pendingManualSort) {
         pendingManualSort = activeSort;
@@ -1713,6 +2042,7 @@ const initSplat = async () => {
     window.__splatDebugError = message;
     console.error("[SPLAT] Failed:", error);
 
+    recordSplatLoadDebug("splat-error", error?.message || String(error));
     setStatus("error", "The splat could not be loaded. Check console.");
   }
 };
@@ -5179,6 +5509,7 @@ const initProjectShowcaseVideos = () => {
 
 initIOSChromeStableMobileUI();
 initViewportDebug();
+initSplatLoadDebug();
 initHeroScrollTransition();
 initHeroAboutTransition();
 initDesktopSidebar();
