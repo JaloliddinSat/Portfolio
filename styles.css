@@ -740,7 +740,7 @@ h3 {
   overflow: hidden;
   background:
     linear-gradient(rgba(7, 10, 19, 0.08), rgba(7, 10, 19, 0.08)),
-    url("/splats/Color.png") center / cover no-repeat,
+    url("/splats/Color.png?v=3") center / cover no-repeat,
     var(--bg);
 }
 
@@ -802,7 +802,7 @@ html[data-theme="light"] .splat-stage::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: url("/splats/Color.png") center / cover no-repeat;
+  background: url("/splats/Color.png?v=3") center / cover no-repeat;
 }
 
 /* The tint lives on its own layer so scrolling only animates opacity. Folding it

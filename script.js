@@ -364,6 +364,9 @@ const SPLAT_RENDERER_URL =
   "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js";
 
 const SPLAT_DEBUG_STORAGE_KEY = "splatDebugConfig";
+// /splats/* is served immutable (see _headers), so this is the only cache-bust
+// handle those files have. Bump it, and the matching ?v= on the index.html
+// preloads, whenever a file in /splats is replaced.
 const SPLAT_ASSET_VERSION = 3;
 const MOBILE_SPLAT_PIXEL_RATIO = 1.5;
 
@@ -588,6 +591,33 @@ const getSplatUrl = () => {
   const url = isLocalhost && localUrl ? localUrl : productionUrl;
 
   return appendSplatVersion(url);
+};
+
+// sw.js keeps the splat files in Cache Storage, which outlives the HTTP cache's
+// eviction of multi-megabyte entries. Registered after load so it never competes
+// with the first paint.
+const registerSplatCacheWorker = () => {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("[SPLAT CACHE] Service worker registration failed:", error);
+    });
+  });
+};
+
+const warmSplatCache = (url) => {
+  if (!url || !("serviceWorker" in navigator)) {
+    return;
+  }
+
+  navigator.serviceWorker.ready
+    .then((registration) => {
+      registration.active?.postMessage({ type: "warm-splat", url });
+    })
+    .catch(() => {});
 };
 
 // The track is sized in lvh units, so its geometry only changes when the viewport
@@ -1834,6 +1864,8 @@ const initSplat = async () => {
     );
 
     console.log("[SPLAT] Scene added successfully.");
+
+    warmSplatCache(splatUrl);
 
     const updateHeroDepthShader = installHeroDepthShader(splatMesh);
 
@@ -3353,8 +3385,9 @@ const initStepNoteSplat = async () => {
   status.hidden = false;
   status.textContent = "Loading StepNote 3D preview…";
 
-  const splatUrl =
-    (DEBUG_STEPNOTE_SPLAT && DEBUG_STEPNOTE_SPLAT_ASSET) || stage.dataset.splatSrc;
+  const splatUrl = appendSplatVersion(
+    (DEBUG_STEPNOTE_SPLAT && DEBUG_STEPNOTE_SPLAT_ASSET) || stage.dataset.splatSrc,
+  );
 
   try {
     const assetResponse = await fetch(splatUrl, {
@@ -4897,7 +4930,7 @@ const initAsciiCurtain = () => {
   canvas.hidden = false;
   resize();
   draw();
-  loadPixels("/splats/Color.png")
+  loadPixels(appendSplatVersion("/splats/Color.png"))
     .then((loadedSplatPixels) => {
       splatPixels = loadedSplatPixels;
     })
@@ -5587,6 +5620,7 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
+registerSplatCacheWorker();
 initIOSChromeStableMobileUI();
 initViewportDebug();
 initSplatLoadDebug();

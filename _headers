@@ -1,0 +1,12 @@
+# Splat files are large (Fairview.ksplat alone is 7.8 MB) and Pages defaults them
+# to `max-age=0, must-revalidate`, which costs a blocking round trip on every
+# visit before the cached bytes can be reused. They are versioned through the
+# ?v= query that script.js appends (SPLAT_ASSET_VERSION), so bump that constant
+# — and the matching preloads in index.html — when a splat file is replaced.
+/splats/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Project videos are not versioned, so keep the window short enough that a
+# replaced file still rolls out within a week.
+/assets/*
+  Cache-Control: public, max-age=604800
