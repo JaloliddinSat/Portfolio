@@ -554,6 +554,32 @@ const splatStage = document.querySelector("#splat-stage");
 const splatError = document.querySelector("#splat-error");
 const heroScrollTrack = document.querySelector("#hero-scroll-track");
 
+let releaseInitialSplatScrollLock = () => {};
+
+const lockInitialSplatScroll = () => {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+
+  document.documentElement.classList.add("is-splat-loading-locked");
+  window.scrollTo(0, 0);
+
+  const keepAtTop = () => {
+    if (window.scrollX !== 0 || window.scrollY !== 0) {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  window.addEventListener("scroll", keepAtTop, { passive: true });
+  window.addEventListener("pageshow", keepAtTop, { once: true });
+
+  releaseInitialSplatScrollLock = () => {
+    window.removeEventListener("scroll", keepAtTop);
+    document.documentElement.classList.remove("is-splat-loading-locked");
+    releaseInitialSplatScrollLock = () => {};
+  };
+};
+
 const setStatus = (state, message = "") => {
   if (splatStage) {
     splatStage.dataset.loadState = state;
@@ -565,6 +591,10 @@ const setStatus = (state, message = "") => {
     if (message) {
       splatError.textContent = message;
     }
+  }
+
+  if (state === "ready" || state === "error") {
+    releaseInitialSplatScrollLock();
   }
 };
 
@@ -1712,6 +1742,7 @@ const initSplat = async () => {
   }
 
   setStatus("loading");
+  let stopProgressivePreview = () => {};
 
   try {
     console.log("[SPLAT] Loading from:", splatUrl);
@@ -1749,9 +1780,7 @@ const initSplat = async () => {
       ignoreDevicePixelRatio: false,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
-      sceneRevealMode: isMobile
-        ? GaussianSplats3D.SceneRevealMode.Instant
-        : GaussianSplats3D.SceneRevealMode.Gradual,
+      sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
@@ -1789,6 +1818,7 @@ const initSplat = async () => {
     recordSplatLoadDebug("pixel-ratio", String(splatPixelRatio));
 
     const splatMesh = viewer.getSplatMesh();
+    const updateHeroDepthShader = installHeroDepthShader(splatMesh);
     let resolveSplatTreeReady;
     const splatTreeReady = new Promise((resolve) => {
       resolveSplatTreeReady = resolve;
@@ -1811,8 +1841,63 @@ const initSplat = async () => {
       resolveSplatTreeReady(tree);
     });
 
+    let progressiveFrame = null;
+
+    if (manualRendering) {
+      const renderProgressiveFrame = () => {
+        progressiveFrame = null;
+
+        if (!document.hidden) {
+          viewer.update();
+
+          if (DEBUG_SPLAT_LOAD) {
+            splatLoadDebug.updateCalls += 1;
+          }
+
+          const shouldRender = viewer.shouldRender();
+
+          if (DEBUG_SPLAT_LOAD) {
+            splatLoadDebug.renderChecks += 1;
+            splatLoadDebug.lastShouldRender = shouldRender;
+          }
+
+          if (shouldRender) {
+            viewer.render();
+
+            if (DEBUG_SPLAT_LOAD) {
+              splatLoadDebug.renders += 1;
+            }
+          }
+
+          viewer.renderNextFrame = false;
+        }
+
+        progressiveFrame = requestAnimationFrame(renderProgressiveFrame);
+      };
+
+      progressiveFrame = requestAnimationFrame(renderProgressiveFrame);
+      recordSplatLoadDebug("progressive-preview-started", "manual");
+    } else {
+      viewer.start();
+      recordSplatLoadDebug("progressive-preview-started", "self-driven");
+    }
+
+    stopProgressivePreview = () => {
+      if (progressiveFrame !== null) {
+        cancelAnimationFrame(progressiveFrame);
+        progressiveFrame = null;
+      }
+
+      if (!manualRendering && viewer.selfDrivenModeRunning) {
+        viewer.stop();
+      }
+
+      stopProgressivePreview = () => {};
+      recordSplatLoadDebug("progressive-preview-stopped");
+    };
+
     const sceneOptions = {
-      progressiveLoad: !manualRendering,
+      progressiveLoad: true,
       showLoadingUI: false,
       splatAlphaRemovalThreshold: SPLAT_CONFIG.alphaThreshold,
       scale: [splatScale, splatScale, splatScale],
@@ -1829,54 +1914,51 @@ const initSplat = async () => {
     recordSplatLoadDebug("scene-load-start");
     await viewer.addSplatScene(splatUrl, sceneOptions);
     recordSplatLoadDebug(
-      "scene-load-done",
+      "scene-first-section-ready",
       `sort:${viewer.lastSortTime ?? 0}ms splats:${viewer.getSplatMesh().getSplatCount()}`,
     );
 
-    console.log("[SPLAT] Scene added successfully.");
+    console.log("[SPLAT] First progressive scene section added.");
 
-    const updateHeroDepthShader = installHeroDepthShader(splatMesh);
+    const existingTree = splatMesh.getSplatTree?.();
 
-    if (manualRendering) {
-      const existingTree = splatMesh.getSplatTree?.();
-
-      if (existingTree && !splatLoadDebug.treeReady) {
-        splatLoadDebug.treeReady = true;
-        resolveSplatTreeReady(existingTree);
-      }
-
-      await splatTreeReady;
-      recordSplatLoadDebug("post-tree-sort-start");
-
-      // lookAt updates the quaternion, while the sorter reads matrixWorld directly.
-      // Refresh it immediately before forcing the definitive post-tree sort.
-      viewer.camera?.updateMatrixWorld(true);
-      const sortStarted = await viewer.runSplatSort(true, true);
-      const postTreeSort = sortStarted ? viewer.sortPromise : null;
-
-      if (postTreeSort) {
-        await postTreeSort;
-      }
-
-      splatLoadDebug.postTreeSortComplete = true;
-      recordSplatLoadDebug(
-        "post-tree-sort-done",
-        `sort:${viewer.lastSortTime ?? 0}ms splats:${viewer.splatRenderCount}`,
-      );
-
-      viewer.forceRenderNextFrame?.();
-      viewer.render();
-      viewer.renderNextFrame = false;
-
-      if (DEBUG_SPLAT_LOAD) {
-        splatLoadDebug.renders += 1;
-      }
-
-      recordSplatLoadDebug(
-        "post-tree-frame-rendered",
-        `instances:${splatMesh.geometry.instanceCount}`,
-      );
+    if (existingTree && !splatLoadDebug.treeReady) {
+      splatLoadDebug.treeReady = true;
+      resolveSplatTreeReady(existingTree);
     }
+
+    await splatTreeReady;
+    stopProgressivePreview();
+    recordSplatLoadDebug("post-tree-sort-start");
+
+    // lookAt updates the quaternion, while the sorter reads matrixWorld directly.
+    // Refresh it immediately before forcing the definitive post-tree sort.
+    viewer.camera?.updateMatrixWorld(true);
+    const sortStarted = await viewer.runSplatSort(true, true);
+    const postTreeSort = sortStarted ? viewer.sortPromise : null;
+
+    if (postTreeSort) {
+      await postTreeSort;
+    }
+
+    splatLoadDebug.postTreeSortComplete = true;
+    recordSplatLoadDebug(
+      "post-tree-sort-done",
+      `sort:${viewer.lastSortTime ?? 0}ms splats:${viewer.splatRenderCount}`,
+    );
+
+    viewer.forceRenderNextFrame?.();
+    viewer.render();
+    viewer.renderNextFrame = false;
+
+    if (DEBUG_SPLAT_LOAD) {
+      splatLoadDebug.renders += 1;
+    }
+
+    recordSplatLoadDebug(
+      "post-tree-frame-rendered",
+      `instances:${splatMesh.geometry.instanceCount}`,
+    );
 
     if (!manualRendering) {
       viewer.start();
@@ -2117,6 +2199,7 @@ const initSplat = async () => {
       heroFrameDriver.request({ force: true });
     }
   } catch (error) {
+    stopProgressivePreview();
     const message = error?.stack || error?.message || String(error);
 
     window.__splatDebugError = message;
@@ -5587,6 +5670,7 @@ const initProjectShowcaseVideos = () => {
   });
 };
 
+lockInitialSplatScroll();
 initIOSChromeStableMobileUI();
 initViewportDebug();
 initSplatLoadDebug();
