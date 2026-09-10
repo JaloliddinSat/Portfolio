@@ -574,13 +574,12 @@ h3 {
   display: block;
 }
 
-/* Each line gets its own clipping box so the intro can slide it up from nothing.
-   The mask has to hang below the line box or Playfair's descenders (the J, the
-   comma) get shaved, because line-height 0.88 is tighter than the font's own
-   content area. The negative margin hands the padding back, so line spacing and
-   the h1's margin-bottom are unchanged from before. */
+/* Each line keeps a soft descender gutter so Playfair's J / comma aren't
+   clipped by masks sized to the line box (line-height 0.88 is tighter than
+   the font's content area). Negative margin hands the padding back so
+   spacing matches the pre-intro layout. Overflow is left visible — the
+   ink-bleed reveal masks the glyphs themselves instead of sliding them. */
 .hero-line {
-  overflow: hidden;
   padding-bottom: 0.24em;
   margin-bottom: -0.24em;
 }
@@ -617,18 +616,21 @@ h3 {
   transform-style: preserve-3d;
 }
 
-/* Hero intro.
+/* Hero intro — EXPERIMENT: soft ink-bleed mask on the h1.
 
-   The .hero-intro class is set by an inline script in index.html, so the hidden
-   state only ever exists when we know something can undo it. .hero-intro-play
-   arrives either when the splat resolves (script.js) or on a 2s cap, whichever
-   comes first — on a warm cache the splat is ready in well under 100ms, so the
-   copy and the photo land together instead of in two disconnected stages.
+   .hero-intro is armed by the inline head script (skipped under reduced
+   motion). .hero-intro-play is added immediately so the paint-bound mask
+   runs while the splat downloads, not against live Gaussian frames.
+   Secondary copy still fades in on the same class with longer delays.
 
-   The travel is 135% rather than 100% because the line has to clear its own
-   height plus the descender padding above. */
+   Mobile / coarse pointers skip the mask and use a cheap opacity fade —
+   mask-size animation is not compositor-accelerated and the mobile splat
+   budget is already tight.
+
+   .hero-intro-done (set from script.js after the line animations end)
+   strips the masks so we do not keep masked text in the paint path. */
 html.hero-intro .hero-line-text {
-  transform: translate3d(0, 135%, 0);
+  opacity: 0;
 }
 
 html.hero-intro .hero-text,
@@ -638,15 +640,15 @@ html.hero-intro .hero-copy .button {
 }
 
 html.hero-intro.hero-intro-play .hero-line-text {
-  animation: hero-line-rise 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: hero-line-fade 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 html.hero-intro.hero-intro-play .hero-line:nth-child(2) .hero-line-text {
-  animation-delay: 110ms;
+  animation-delay: 120ms;
 }
 
 html.hero-intro.hero-intro-play .hero-line:nth-child(3) .hero-line-text {
-  animation-delay: 220ms;
+  animation-delay: 240ms;
 }
 
 html.hero-intro.hero-intro-play .hero-text,
@@ -656,28 +658,28 @@ html.hero-intro.hero-intro-play .hero-copy .button {
 }
 
 html.hero-intro.hero-intro-play .hero-text {
-  animation-delay: 430ms;
+  animation-delay: 720ms;
 }
 
 html.hero-intro.hero-intro-play .hero-scroll-note {
-  animation-delay: 550ms;
+  animation-delay: 860ms;
 }
 
 html.hero-intro.hero-intro-play .hero-copy .button {
-  animation-delay: 650ms;
+  animation-delay: 980ms;
 }
 
 html.hero-intro.hero-intro-play .hero-copy .button + .button {
-  animation-delay: 730ms;
+  animation-delay: 1080ms;
 }
 
-@keyframes hero-line-rise {
+@keyframes hero-line-fade {
   from {
-    transform: translate3d(0, 135%, 0);
+    opacity: 0;
   }
 
   to {
-    transform: translate3d(0, 0, 0);
+    opacity: 1;
   }
 }
 
@@ -690,6 +692,85 @@ html.hero-intro.hero-intro-play .hero-copy .button + .button {
   to {
     opacity: 1;
     transform: translate3d(0, 0, var(--hero-z, 14px));
+  }
+}
+
+/* Desktop ink-bleed: soft multi-blotch radial masks that expand like ink on
+   paper. Separate -webkit- and standard props for Safari; sizes grow past
+   100% so every blotch fully covers the line including descender padding. */
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+  html.hero-intro .hero-line-text {
+    opacity: 1;
+    -webkit-mask-image:
+      radial-gradient(ellipse closest-side, #000 0%, #000 48%, transparent 76%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 42%, transparent 72%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 50%, transparent 78%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 38%, transparent 70%);
+    mask-image:
+      radial-gradient(ellipse closest-side, #000 0%, #000 48%, transparent 76%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 42%, transparent 72%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 50%, transparent 78%),
+      radial-gradient(ellipse closest-side, #000 0%, #000 38%, transparent 70%);
+    -webkit-mask-size: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+    mask-size: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+    -webkit-mask-position: 18% 58%, 52% 28%, 84% 64%, 40% 82%;
+    mask-position: 18% 58%, 52% 28%, 84% 64%, 40% 82%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+  }
+
+  html.hero-intro .hero-line:nth-child(2) .hero-line-text {
+    -webkit-mask-position: 72% 42%, 28% 68%, 58% 22%, 88% 58%;
+    mask-position: 72% 42%, 28% 68%, 58% 22%, 88% 58%;
+  }
+
+  html.hero-intro .hero-line:nth-child(3) .hero-line-text {
+    -webkit-mask-position: 36% 48%, 78% 32%, 14% 62%, 62% 78%;
+    mask-position: 36% 48%, 78% 32%, 14% 62%, 62% 78%;
+  }
+
+  html.hero-intro.hero-intro-play .hero-line-text {
+    animation: hero-ink-bleed 1500ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  html.hero-intro.hero-intro-play .hero-line:nth-child(2) .hero-line-text {
+    animation-delay: 140ms;
+  }
+
+  html.hero-intro.hero-intro-play .hero-line:nth-child(3) .hero-line-text {
+    animation-delay: 280ms;
+  }
+
+  html.hero-intro-done .hero-line-text,
+  html.hero-intro.hero-intro-done .hero-line-text {
+    -webkit-mask-image: none;
+    mask-image: none;
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@keyframes hero-ink-bleed {
+  0% {
+    -webkit-mask-size: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+    mask-size: 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+  }
+
+  28% {
+    -webkit-mask-size: 48% 62%, 18% 24%, 12% 16%, 8% 10%;
+    mask-size: 48% 62%, 18% 24%, 12% 16%, 8% 10%;
+  }
+
+  62% {
+    -webkit-mask-size: 140% 170%, 110% 135%, 95% 120%, 70% 90%;
+    mask-size: 140% 170%, 110% 135%, 95% 120%, 70% 90%;
+  }
+
+  100% {
+    -webkit-mask-size: 340% 380%, 320% 360%, 360% 400%, 300% 340%;
+    mask-size: 340% 380%, 320% 360%, 360% 400%, 300% 340%;
   }
 }
 
@@ -2658,9 +2739,13 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   /* The inline script in index.html already declines to arm the intro, but this
      covers the setting being changed after the page has loaded. */
   html.hero-intro .hero-line-text,
-  html.hero-intro-play .hero-line-text {
+  html.hero-intro-play .hero-line-text,
+  html.hero-intro-done .hero-line-text {
+    opacity: 1;
     transform: none;
     animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   html.hero-intro .hero-text,

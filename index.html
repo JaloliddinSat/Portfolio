@@ -40,8 +40,12 @@
     <script>
       // Arms the hero intro before first paint. Nothing in the copy is hidden by
       // CSS alone, so a browser with JS off just renders the hero normally, and
-      // the timer below reveals it even if script.js never loads. script.js
-      // fires the same class earlier, as soon as the splat resolves.
+      // the timer below reveals it even if script.js never loads.
+      //
+      // Ink-bleed experiment: play starts immediately so the paint-bound mask
+      // finishes while the splat is still downloading, instead of competing
+      // with live Gaussian rendering. script.js still re-adds the class on
+      // splat settle (idempotent) for the secondary fade-ins if needed.
       (function () {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
@@ -50,12 +54,13 @@
         var root = document.documentElement;
 
         root.classList.add("hero-intro");
+        root.classList.add("hero-intro-play");
         window.setTimeout(function () {
           root.classList.add("hero-intro-play");
         }, 2000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260910-hero-intro-1" />
+    <link rel="stylesheet" href="styles.css?v=20260910-ink-bleed-1" />
     <script type="importmap">
       {
         "imports": {
@@ -901,6 +906,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260910-hero-intro-1"></script>
+    <script type="module" src="script.js?v=20260910-ink-bleed-1"></script>
   </body>
 </html>
