@@ -10,3 +10,8 @@
 # replaced file still rolls out within a week.
 /assets/*
   Cache-Control: public, max-age=604800
+
+# Pages otherwise serves this with a 4 hour max-age, which would delay a fix (or
+# an unregister) to the worker by that long for everyone who already has it.
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
