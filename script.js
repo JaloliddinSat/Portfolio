@@ -203,6 +203,8 @@ const splatLoadDebug = {
   startedAt: performance.now(),
   viewer: null,
   manualRendering: null,
+  treeReady: false,
+  postTreeSortComplete: false,
   effectivePixelRatio: null,
   updateCalls: 0,
   renderChecks: 0,
@@ -734,6 +736,8 @@ const initSplatLoadDebug = () => {
         initialized: viewer.initialized,
         running: viewer.selfDrivenModeRunning,
         splatRenderReady: viewer.splatRenderReady,
+        treeReady: splatLoadDebug.treeReady,
+        postTreeSortComplete: splatLoadDebug.postTreeSortComplete,
         sortRunning: viewer.sortRunning,
         hasSortPromise: Boolean(viewer.sortPromise),
         renderNextFrame: viewer.renderNextFrame,
@@ -788,6 +792,9 @@ const initSplatLoadDebug = () => {
       viewer
         ? `viewer       init:${viewer.initialized} run:${viewer.running} ready:${viewer.splatRenderReady}`
         : "viewer       pending",
+      viewer
+        ? `tree/final   ${viewer.treeReady} / ${viewer.postTreeSortComplete}`
+        : "tree/final   pending",
       viewer
         ? `sort         run:${viewer.sortRunning} promise:${viewer.hasSortPromise} last:${viewer.lastSortMs}ms`
         : "sort         pending",
@@ -1772,6 +1779,29 @@ const initSplat = async () => {
     splatLoadDebug.effectivePixelRatio = splatPixelRatio;
     recordSplatLoadDebug("pixel-ratio", String(splatPixelRatio));
 
+    const splatMesh = viewer.getSplatMesh();
+    let resolveSplatTreeReady;
+    const splatTreeReady = new Promise((resolve) => {
+      resolveSplatTreeReady = resolve;
+    });
+
+    // GaussianSplats3D builds its visibility tree asynchronously and performs the
+    // scene's first sort before that tree necessarily exists. In static mode, an
+    // unchanged camera will not request another sort, leaving the unculled initial
+    // ordering visible until a large enough scroll movement wakes it. Wait for the
+    // tree explicitly so the first displayed mobile frame uses the final view data.
+    splatMesh.onSplatTreeReady((tree) => {
+      splatLoadDebug.treeReady = Boolean(tree);
+      recordSplatLoadDebug(
+        "splat-tree-ready",
+        `nodes:${tree?.subTrees?.reduce(
+          (count, subTree) => count + (subTree?.nodesWithIndexes?.length ?? 0),
+          0,
+        ) ?? 0}`,
+      );
+      resolveSplatTreeReady(tree);
+    });
+
     const sceneOptions = {
       progressiveLoad: !manualRendering,
       showLoadingUI: false,
@@ -1796,7 +1826,48 @@ const initSplat = async () => {
 
     console.log("[SPLAT] Scene added successfully.");
 
-    const updateHeroDepthShader = installHeroDepthShader(viewer.getSplatMesh());
+    const updateHeroDepthShader = installHeroDepthShader(splatMesh);
+
+    if (manualRendering) {
+      const existingTree = splatMesh.getSplatTree?.();
+
+      if (existingTree && !splatLoadDebug.treeReady) {
+        splatLoadDebug.treeReady = true;
+        resolveSplatTreeReady(existingTree);
+      }
+
+      await splatTreeReady;
+      recordSplatLoadDebug("post-tree-sort-start");
+
+      // lookAt updates the quaternion, while the sorter reads matrixWorld directly.
+      // Refresh it immediately before forcing the definitive post-tree sort.
+      viewer.camera?.updateMatrixWorld(true);
+      const sortStarted = await viewer.runSplatSort(true, true);
+      const postTreeSort = sortStarted ? viewer.sortPromise : null;
+
+      if (postTreeSort) {
+        await postTreeSort;
+      }
+
+      splatLoadDebug.postTreeSortComplete = true;
+      recordSplatLoadDebug(
+        "post-tree-sort-done",
+        `sort:${viewer.lastSortTime ?? 0}ms splats:${viewer.splatRenderCount}`,
+      );
+
+      viewer.forceRenderNextFrame?.();
+      viewer.render();
+      viewer.renderNextFrame = false;
+
+      if (DEBUG_SPLAT_LOAD) {
+        splatLoadDebug.renders += 1;
+      }
+
+      recordSplatLoadDebug(
+        "post-tree-frame-rendered",
+        `instances:${splatMesh.geometry.instanceCount}`,
+      );
+    }
 
     if (!manualRendering) {
       viewer.start();
