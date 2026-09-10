@@ -37,7 +37,25 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20260910-splat-cache-1" />
+    <script>
+      // Arms the hero intro before first paint. Nothing in the copy is hidden by
+      // CSS alone, so a browser with JS off just renders the hero normally, and
+      // the timer below reveals it even if script.js never loads. script.js
+      // fires the same class earlier, as soon as the splat resolves.
+      (function () {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          return;
+        }
+
+        var root = document.documentElement;
+
+        root.classList.add("hero-intro");
+        window.setTimeout(function () {
+          root.classList.add("hero-intro-play");
+        }, 2000);
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20260910-hero-intro-1" />
     <script type="importmap">
       {
         "imports": {
@@ -181,7 +199,11 @@
 
             <div class="hero-content">
               <div class="hero-copy">
-                <h1>Hi, I'm <span>Jalol</span> <span>Satimov.</span></h1>
+                <h1>
+                  <span class="hero-line"><span class="hero-line-text">Hi, I'm</span></span>
+                  <span class="hero-line"><span class="hero-line-text">Jalol</span></span>
+                  <span class="hero-line"><span class="hero-line-text">Satimov.</span></span>
+                </h1>
                 <p class="hero-text">
                   I'm a Waterloo student who enjoys good problem solving and trying to
                   find creative ways of building things.
@@ -879,6 +901,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260910-splat-cache-1"></script>
+    <script type="module" src="script.js?v=20260910-hero-intro-1"></script>
   </body>
 </html>

@@ -569,6 +569,13 @@ const setStatus = (state, message = "") => {
       splatError.textContent = message;
     }
   }
+
+  // Release the hero intro as soon as the scene has settled so the copy and the
+  // splat arrive as one composition. index.html caps the wait, and releases on
+  // error too, so a scene that never resolves cannot strand the copy.
+  if (state === "ready" || state === "error") {
+    document.documentElement.classList.add("hero-intro-play");
+  }
 };
 
 const appendSplatVersion = (url) => {

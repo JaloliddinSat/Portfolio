@@ -574,11 +574,123 @@ h3 {
   display: block;
 }
 
+/* Each line gets its own clipping box so the intro can slide it up from nothing.
+   The mask has to hang below the line box or Playfair's descenders (the J, the
+   comma) get shaved, because line-height 0.88 is tighter than the font's own
+   content area. The negative margin hands the padding back, so line spacing and
+   the h1's margin-bottom are unchanged from before. */
+.hero-line {
+  overflow: hidden;
+  padding-bottom: 0.24em;
+  margin-bottom: -0.24em;
+}
+
+/* Everything used to sit at a single depth, which made the pointer tilt move the
+   copy as one flat card. Spreading the layers lets the existing tilt and float in
+   initHeroMotion produce real parallax between them. */
+.hero-copy h1 {
+  --hero-z: 26px;
+}
+
+.hero-text {
+  --hero-z: 16px;
+}
+
+.hero-scroll-note {
+  --hero-z: 8px;
+}
+
+.hero-copy .button {
+  --hero-z: 20px;
+}
+
 .hero-copy h1,
 .hero-text,
 .hero-scroll-note,
 .hero-copy .button {
-  transform: translateZ(14px);
+  transform: translateZ(var(--hero-z, 14px));
+}
+
+/* The buttons are flattened into .hero-actions without this, so their depth (and
+   their slice of the intro) would collapse into the paragraph's plane. */
+.hero-actions {
+  transform-style: preserve-3d;
+}
+
+/* Hero intro.
+
+   The .hero-intro class is set by an inline script in index.html, so the hidden
+   state only ever exists when we know something can undo it. .hero-intro-play
+   arrives either when the splat resolves (script.js) or on a 2s cap, whichever
+   comes first — on a warm cache the splat is ready in well under 100ms, so the
+   copy and the photo land together instead of in two disconnected stages.
+
+   The travel is 135% rather than 100% because the line has to clear its own
+   height plus the descender padding above. */
+html.hero-intro .hero-line-text {
+  transform: translate3d(0, 135%, 0);
+}
+
+html.hero-intro .hero-text,
+html.hero-intro .hero-scroll-note,
+html.hero-intro .hero-copy .button {
+  opacity: 0;
+}
+
+html.hero-intro.hero-intro-play .hero-line-text {
+  animation: hero-line-rise 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html.hero-intro.hero-intro-play .hero-line:nth-child(2) .hero-line-text {
+  animation-delay: 110ms;
+}
+
+html.hero-intro.hero-intro-play .hero-line:nth-child(3) .hero-line-text {
+  animation-delay: 220ms;
+}
+
+html.hero-intro.hero-intro-play .hero-text,
+html.hero-intro.hero-intro-play .hero-scroll-note,
+html.hero-intro.hero-intro-play .hero-copy .button {
+  animation: hero-fade-rise 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html.hero-intro.hero-intro-play .hero-text {
+  animation-delay: 430ms;
+}
+
+html.hero-intro.hero-intro-play .hero-scroll-note {
+  animation-delay: 550ms;
+}
+
+html.hero-intro.hero-intro-play .hero-copy .button {
+  animation-delay: 650ms;
+}
+
+html.hero-intro.hero-intro-play .hero-copy .button + .button {
+  animation-delay: 730ms;
+}
+
+@keyframes hero-line-rise {
+  from {
+    transform: translate3d(0, 135%, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hero-fade-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, var(--hero-z, 14px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, var(--hero-z, 14px));
+  }
 }
 
 .hero-toc {
@@ -2540,6 +2652,24 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
 @media (prefers-reduced-motion: reduce) {
   .splat-loader-spinner {
+    animation: none;
+  }
+
+  /* The inline script in index.html already declines to arm the intro, but this
+     covers the setting being changed after the page has loaded. */
+  html.hero-intro .hero-line-text,
+  html.hero-intro-play .hero-line-text {
+    transform: none;
+    animation: none;
+  }
+
+  html.hero-intro .hero-text,
+  html.hero-intro .hero-scroll-note,
+  html.hero-intro .hero-copy .button,
+  html.hero-intro-play .hero-text,
+  html.hero-intro-play .hero-scroll-note,
+  html.hero-intro-play .hero-copy .button {
+    opacity: 1;
     animation: none;
   }
 }
