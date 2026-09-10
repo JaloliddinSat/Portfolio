@@ -73,12 +73,6 @@ html {
   background: var(--bg);
 }
 
-html.is-splat-loading-locked,
-html.is-splat-loading-locked body {
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
 body {
   position: relative;
   isolation: isolate;
