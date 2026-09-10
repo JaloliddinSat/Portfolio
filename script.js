@@ -619,7 +619,7 @@ const initHeroIntroCleanup = () => {
     line.addEventListener("animationend", onLineDone, { once: true });
   });
 
-  window.setTimeout(settle, 3200);
+  window.setTimeout(settle, 3600);
 };
 
 const appendSplatVersion = (url) => {
