@@ -2407,17 +2407,29 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   }
 
   .splat-loader {
-    right: 20px;
-    bottom: max(88px, calc(76px + env(safe-area-inset-bottom)));
-  }
-
-  html.is-mobile-chrome .splat-loader {
     position: fixed;
     top: max(18px, calc(env(safe-area-inset-top) + 10px));
     right: auto;
     bottom: auto;
     left: 50%;
+    gap: 5px;
+    color: rgba(199, 199, 199, 0.7);
+    opacity: 0.58;
     transform: translateX(-50%);
+  }
+
+  .splat-loader-spinner {
+    width: 10px;
+    height: 10px;
+    flex-basis: 10px;
+    border-color: rgba(199, 199, 199, 0.26);
+    border-top-color: rgba(199, 199, 199, 0.72);
+  }
+
+  .splat-loader-label {
+    font-size: 0.52rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
   }
 
   .splat-stage::before {
