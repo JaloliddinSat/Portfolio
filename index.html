@@ -16,7 +16,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preload" href="/splats/Color.png?v=3" as="image" />
-    <link rel="preload" href="/assets/hero-ink-mask.png?v=1" as="image" />
     <link
       rel="preload"
       href="/splats/Fairview.ksplat?v=3"
@@ -41,12 +40,8 @@
     <script>
       // Arms the hero intro before first paint. Nothing in the copy is hidden by
       // CSS alone, so a browser with JS off just renders the hero normally, and
-      // the timer below reveals it even if script.js never loads.
-      //
-      // Ink-bleed experiment: play starts immediately so the paint-bound mask
-      // finishes while the splat is still downloading, instead of competing
-      // with live Gaussian rendering. script.js still re-adds the class on
-      // splat settle (idempotent) for the secondary fade-ins if needed.
+      // the timer below reveals it even if script.js never loads. script.js
+      // fires the same class earlier, as soon as the splat resolves.
       (function () {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
@@ -55,13 +50,12 @@
         var root = document.documentElement;
 
         root.classList.add("hero-intro");
-        root.classList.add("hero-intro-play");
         window.setTimeout(function () {
           root.classList.add("hero-intro-play");
         }, 2000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260910-ink-mask-1" />
+    <link rel="stylesheet" href="styles.css?v=20260910-hero-intro-1" />
     <script type="importmap">
       {
         "imports": {
@@ -907,6 +901,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20260910-ink-mask-1"></script>
+    <script type="module" src="script.js?v=20260910-hero-intro-1"></script>
   </body>
 </html>

@@ -570,56 +570,12 @@ const setStatus = (state, message = "") => {
     }
   }
 
-  // Release the hero intro as soon as the scene has settled so secondary copy
-  // can still sync with the splat when the head script's immediate play raced
-  // ahead. index.html also re-adds the class on a 2s cap, and on error, so a
-  // scene that never resolves cannot strand the copy.
+  // Release the hero intro as soon as the scene has settled so the copy and the
+  // splat arrive as one composition. index.html caps the wait, and releases on
+  // error too, so a scene that never resolves cannot strand the copy.
   if (state === "ready" || state === "error") {
     document.documentElement.classList.add("hero-intro-play");
   }
-};
-
-// After the h1 reveal finishes, drop the ink masks so they are not left in the
-// paint path for the rest of the session. Failsafe covers animationend misses.
-const initHeroIntroCleanup = () => {
-  const root = document.documentElement;
-
-  if (!root.classList.contains("hero-intro")) {
-    return;
-  }
-
-  const lines = document.querySelectorAll(".hero-line-text");
-
-  if (!lines.length) {
-    root.classList.add("hero-intro-done");
-    return;
-  }
-
-  let pending = lines.length;
-  let settled = false;
-
-  const settle = () => {
-    if (settled) {
-      return;
-    }
-
-    settled = true;
-    root.classList.add("hero-intro-done");
-  };
-
-  const onLineDone = () => {
-    pending -= 1;
-
-    if (pending <= 0) {
-      settle();
-    }
-  };
-
-  lines.forEach((line) => {
-    line.addEventListener("animationend", onLineDone, { once: true });
-  });
-
-  window.setTimeout(settle, 3600);
 };
 
 const appendSplatVersion = (url) => {
@@ -5682,7 +5638,6 @@ initThemeToggle();
 initMobileDockNavigation();
 initAsciiCurtain();
 initHeroActionLinks();
-initHeroIntroCleanup();
 initMobileHeroAutoScroll();
 initHeroMotion();
 initGridCursorGlow();
