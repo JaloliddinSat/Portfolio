@@ -392,6 +392,7 @@ const SPLAT_CONFIG = {
 const HERO_POINTER_PARALLAX_CONFIG = {
   horizontalTravel: 0.055,
   verticalTravel: 0.04,
+  translationStrength: 0.3,
   yawDegrees: 2.6,
   pitchDegrees: 2,
   pivot: [...SPLAT_CONFIG.cameraStart.lookAt],
@@ -1856,6 +1857,7 @@ const initHeroParallaxDebug = (requestRender) => {
   const formatConfig = () => `const HERO_POINTER_PARALLAX_CONFIG = {
   horizontalTravel: ${HERO_POINTER_PARALLAX_CONFIG.horizontalTravel},
   verticalTravel: ${HERO_POINTER_PARALLAX_CONFIG.verticalTravel},
+  translationStrength: ${HERO_POINTER_PARALLAX_CONFIG.translationStrength},
   yawDegrees: ${HERO_POINTER_PARALLAX_CONFIG.yawDegrees},
   pitchDegrees: ${HERO_POINTER_PARALLAX_CONFIG.pitchDegrees},
   pivot: [${HERO_POINTER_PARALLAX_CONFIG.pivot.join(", ")}],
@@ -2170,9 +2172,13 @@ const initSplat = async () => {
           normalizedRight[1] * normalizedForward[0],
       ];
       const horizontal =
-        pointerPosition.x * HERO_POINTER_PARALLAX_CONFIG.horizontalTravel;
+        pointerPosition.x *
+        HERO_POINTER_PARALLAX_CONFIG.horizontalTravel *
+        HERO_POINTER_PARALLAX_CONFIG.translationStrength;
       const vertical =
-        -pointerPosition.y * HERO_POINTER_PARALLAX_CONFIG.verticalTravel;
+        -pointerPosition.y *
+        HERO_POINTER_PARALLAX_CONFIG.verticalTravel *
+        HERO_POINTER_PARALLAX_CONFIG.translationStrength;
       const offset = normalizedRight.map(
         (value, index) => value * horizontal + screenUp[index] * vertical,
       );
@@ -2219,7 +2225,7 @@ const initSplat = async () => {
       // camera-plane offset preserves the original translational parallax.
       return {
         position: orbitedPosition.map((value, index) => value + offset[index]),
-        lookAt: pivot,
+        lookAt: pivot.map((value, index) => value + offset[index]),
       };
     };
 
