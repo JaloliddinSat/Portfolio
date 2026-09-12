@@ -188,6 +188,9 @@ const DEBUG_STEPNOTE_SPLAT_ASSET = new URLSearchParams(window.location.search).g
 const DEBUG_HERO_TRANSITION = new URLSearchParams(window.location.search).has(
   "debugHeroTransition",
 );
+const DEBUG_HERO_PARALLAX = new URLSearchParams(window.location.search).has(
+  "debugHeroParallax",
+);
 const DEBUG_WATONOMOUS_VIDEO = new URLSearchParams(window.location.search).has(
   "debugWatonomousVideo",
 );
@@ -389,6 +392,9 @@ const SPLAT_CONFIG = {
 const HERO_POINTER_PARALLAX_CONFIG = {
   horizontalTravel: 0.055,
   verticalTravel: 0.04,
+  yawDegrees: 2.6,
+  pitchDegrees: 2,
+  pivot: [...SPLAT_CONFIG.cameraStart.lookAt],
   smoothingMs: 110,
   epsilon: 0.0005,
 };
@@ -1748,6 +1754,152 @@ const createSplatPerfProbe = (viewer) => {
   };
 };
 
+const initHeroParallaxDebug = (requestRender) => {
+  if (!DEBUG_HERO_PARALLAX) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .hero-parallax-debug {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10003;
+      width: min(340px, calc(100vw - 32px));
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      color: #f8fafc;
+      background: rgba(5, 9, 18, 0.9);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(16px);
+      font: 600 12px/1.4 Inter, system-ui, sans-serif;
+    }
+    .hero-parallax-debug h2 { margin: 0 0 4px; font-size: 15px; }
+    .hero-parallax-debug p { margin: 0 0 14px; color: #94a3b8; font-size: 11px; }
+    .hero-parallax-debug-row {
+      display: grid;
+      grid-template-columns: 18px 1fr 72px;
+      gap: 8px;
+      align-items: center;
+      margin: 9px 0;
+    }
+    .hero-parallax-debug-row input[type="range"] { width: 100%; accent-color: #8dd8ff; }
+    .hero-parallax-debug-row input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      font: 600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .hero-parallax-debug-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .hero-parallax-debug button {
+      padding: 8px 10px;
+      border: 1px solid rgba(141, 216, 255, 0.32);
+      border-radius: 10px;
+      color: #e9f6ff;
+      background: rgba(141, 216, 255, 0.12);
+      font: inherit;
+      cursor: pointer;
+    }
+    .hero-parallax-debug-status { min-height: 1.4em; margin: 10px 0 0 !important; color: #8dd8ff !important; }
+  `;
+  document.head.appendChild(style);
+
+  const panel = document.createElement("aside");
+  panel.className = "hero-parallax-debug";
+  panel.setAttribute("aria-label", "Hero parallax target controls");
+  panel.innerHTML = `
+    <h2>Hero parallax pivot</h2>
+    <p>Move the cursor normally while tuning the world-space target.</p>
+    ${["X", "Y", "Z"].map((axis, index) => `
+      <label class="hero-parallax-debug-row">
+        <span>${axis}</span>
+        <input type="range" min="-6" max="6" step="0.01" data-pivot-range="${index}">
+        <input type="number" min="-20" max="20" step="0.01" data-pivot-number="${index}">
+      </label>
+    `).join("")}
+    <div class="hero-parallax-debug-actions">
+      <button type="button" data-parallax-action="copy">Copy config</button>
+      <button type="button" data-parallax-action="reset">Reset target</button>
+    </div>
+    <p class="hero-parallax-debug-status" data-parallax-status aria-live="polite"></p>
+  `;
+  document.body.appendChild(panel);
+
+  const defaultPivot = [...HERO_POINTER_PARALLAX_CONFIG.pivot];
+  const status = panel.querySelector("[data-parallax-status]");
+  const refreshInputs = () => {
+    HERO_POINTER_PARALLAX_CONFIG.pivot.forEach((value, index) => {
+      panel.querySelector(`[data-pivot-range="${index}"]`).value = String(value);
+      panel.querySelector(`[data-pivot-number="${index}"]`).value = value.toFixed(2);
+    });
+  };
+  const setPivotValue = (index, value, syncNumber = true) => {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    HERO_POINTER_PARALLAX_CONFIG.pivot[index] = value;
+    panel.querySelector(`[data-pivot-range="${index}"]`).value = String(value);
+
+    if (syncNumber) {
+      panel.querySelector(`[data-pivot-number="${index}"]`).value = value.toFixed(2);
+    }
+
+    requestRender();
+  };
+  const formatConfig = () => `const HERO_POINTER_PARALLAX_CONFIG = {
+  horizontalTravel: ${HERO_POINTER_PARALLAX_CONFIG.horizontalTravel},
+  verticalTravel: ${HERO_POINTER_PARALLAX_CONFIG.verticalTravel},
+  yawDegrees: ${HERO_POINTER_PARALLAX_CONFIG.yawDegrees},
+  pitchDegrees: ${HERO_POINTER_PARALLAX_CONFIG.pitchDegrees},
+  pivot: [${HERO_POINTER_PARALLAX_CONFIG.pivot.join(", ")}],
+  smoothingMs: ${HERO_POINTER_PARALLAX_CONFIG.smoothingMs},
+  epsilon: ${HERO_POINTER_PARALLAX_CONFIG.epsilon},
+};`;
+
+  panel.querySelectorAll("[data-pivot-range]").forEach((input) => {
+    input.addEventListener("input", () => {
+      setPivotValue(Number(input.dataset.pivotRange), Number(input.value));
+    });
+  });
+  panel.querySelectorAll("[data-pivot-number]").forEach((input) => {
+    input.addEventListener("input", () => {
+      if (input.value === "") {
+        return;
+      }
+
+      setPivotValue(Number(input.dataset.pivotNumber), Number(input.value), false);
+    });
+    input.addEventListener("blur", refreshInputs);
+  });
+  panel.querySelector('[data-parallax-action="copy"]').addEventListener("click", async () => {
+    const config = formatConfig();
+
+    try {
+      await navigator.clipboard.writeText(config);
+      status.textContent = "Config copied — paste it back into the chat.";
+    } catch (error) {
+      console.warn("[HERO PARALLAX] Clipboard unavailable:", error);
+      console.log("[HERO PARALLAX] Config:", config);
+      status.textContent = "Copy failed; the config is in the console.";
+    }
+  });
+  panel.querySelector('[data-parallax-action="reset"]').addEventListener("click", () => {
+    HERO_POINTER_PARALLAX_CONFIG.pivot.splice(0, 3, ...defaultPivot);
+    refreshInputs();
+    requestRender();
+    status.textContent = "Target reset.";
+  });
+
+  refreshInputs();
+};
+
 const initSplat = async () => {
   if (!splatContainer) {
     return;
@@ -2024,13 +2176,50 @@ const initSplat = async () => {
       const offset = normalizedRight.map(
         (value, index) => value * horizontal + screenUp[index] * vertical,
       );
+      const pivot = HERO_POINTER_PARALLAX_CONFIG.pivot.map(
+        (value, index) =>
+          value + lookAt[index] - SPLAT_CONFIG.cameraStart.lookAt[index],
+      );
+      const rotateAroundAxis = (point, origin, axis, angle) => {
+        const axisLength = Math.hypot(...axis) || 1;
+        const [axisX, axisY, axisZ] = axis.map((value) => value / axisLength);
+        const relative = point.map((value, index) => value - origin[index]);
+        const cosine = Math.cos(angle);
+        const sine = Math.sin(angle);
+        const dot =
+          relative[0] * axisX + relative[1] * axisY + relative[2] * axisZ;
+        const cross = [
+          axisY * relative[2] - axisZ * relative[1],
+          axisZ * relative[0] - axisX * relative[2],
+          axisX * relative[1] - axisY * relative[0],
+        ];
 
-      // Moving position and target by the same camera-local offset preserves the
-      // viewing direction. The resulting depth shift is real viewpoint parallax,
-      // rather than a rotation or a 2D translation of the rendered canvas.
+        return origin.map(
+          (value, index) =>
+            value +
+            relative[index] * cosine +
+            cross[index] * sine +
+            axis[index] / axisLength * dot * (1 - cosine),
+        );
+      };
+      const yaw =
+        pointerPosition.x * HERO_POINTER_PARALLAX_CONFIG.yawDegrees * Math.PI / 180;
+      const pitch =
+        -pointerPosition.y * HERO_POINTER_PARALLAX_CONFIG.pitchDegrees * Math.PI / 180;
+      const yawedPosition = rotateAroundAxis(position, pivot, cameraUp, yaw);
+      const yawedForward = pivot.map((value, index) => value - yawedPosition[index]);
+      const pitchAxis = [
+        yawedForward[1] * cameraUp[2] - yawedForward[2] * cameraUp[1],
+        yawedForward[2] * cameraUp[0] - yawedForward[0] * cameraUp[2],
+        yawedForward[0] * cameraUp[1] - yawedForward[1] * cameraUp[0],
+      ];
+      const orbitedPosition = rotateAroundAxis(yawedPosition, pivot, pitchAxis, pitch);
+
+      // Orbiting supplies the head-turning rotation, while adding the existing
+      // camera-plane offset preserves the original translational parallax.
       return {
-        position: position.map((value, index) => value + offset[index]),
-        lookAt: lookAt.map((value, index) => value + offset[index]),
+        position: orbitedPosition.map((value, index) => value + offset[index]),
+        lookAt: pivot,
       };
     };
 
@@ -2251,6 +2440,8 @@ const initSplat = async () => {
           setPointerTarget(0, 0);
         });
       }
+
+      initHeroParallaxDebug(() => heroFrameDriver.request({ force: true }));
 
       // Priority 100 keeps the render after every style write of the frame.
       heroFrameDriver.subscribe(renderSplatFrame, 100);
