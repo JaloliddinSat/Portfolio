@@ -386,6 +386,13 @@ const SPLAT_CONFIG = {
   scrollEndAt: 0.18,
 };
 
+const HERO_POINTER_PARALLAX_CONFIG = {
+  horizontalTravel: 0.055,
+  verticalTravel: 0.04,
+  smoothingMs: 110,
+  epsilon: 0.0005,
+};
+
 // The depth transition is evaluated inside the existing splat shader. This keeps
 // the effect to one draw pass: no depth render target, second scene, or CPU readback.
 const HERO_DEPTH_CONFIG = {
@@ -975,7 +982,15 @@ const heroFrameDriver = (() => {
       activeUntil = now + HERO_FRAME_IDLE_HOLD_MS;
     }
 
-    const state = { raw, smoothed: smoothedProgress, delta, force };
+    const state = {
+      raw,
+      smoothed: smoothedProgress,
+      delta,
+      force,
+      requestNextFrame: () => {
+        activeUntil = Math.max(activeUntil, now + 34);
+      },
+    };
 
     // Subscribers run in priority order: style writes first, splat render last, so
     // the renderer's layout reads flush an already-clean tree once per frame.
@@ -1932,6 +1947,92 @@ const initSplat = async () => {
     let splatInView = false;
     let pendingManualSort = null;
     let lastRenderedProgress = null;
+    const pointerParallaxEnabled =
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pointerTarget = { x: 0, y: 0 };
+    const pointerPosition = { x: 0, y: 0 };
+
+    const setPointerTarget = (x, y) => {
+      pointerTarget.x = Math.min(1, Math.max(-1, x));
+      pointerTarget.y = Math.min(1, Math.max(-1, y));
+
+      if (splatInView && !document.hidden) {
+        heroFrameDriver.request();
+      }
+    };
+
+    const updatePointerParallax = (delta, requestNextFrame) => {
+      if (!pointerParallaxEnabled) {
+        return false;
+      }
+
+      const previousX = pointerPosition.x;
+      const previousY = pointerPosition.y;
+      const follow = 1 - Math.exp(
+        -delta / HERO_POINTER_PARALLAX_CONFIG.smoothingMs,
+      );
+
+      pointerPosition.x += (pointerTarget.x - pointerPosition.x) * follow;
+      pointerPosition.y += (pointerTarget.y - pointerPosition.y) * follow;
+
+      const driftX = Math.abs(pointerTarget.x - pointerPosition.x);
+      const driftY = Math.abs(pointerTarget.y - pointerPosition.y);
+
+      if (driftX < HERO_POINTER_PARALLAX_CONFIG.epsilon) {
+        pointerPosition.x = pointerTarget.x;
+      }
+
+      if (driftY < HERO_POINTER_PARALLAX_CONFIG.epsilon) {
+        pointerPosition.y = pointerTarget.y;
+      }
+
+      if (
+        pointerPosition.x !== pointerTarget.x ||
+        pointerPosition.y !== pointerTarget.y
+      ) {
+        requestNextFrame();
+      }
+
+      return pointerPosition.x !== previousX || pointerPosition.y !== previousY;
+    };
+
+    const applyPointerParallax = (position, lookAt) => {
+      const forward = lookAt.map((value, index) => value - position[index]);
+      const forwardLength = Math.hypot(...forward) || 1;
+      const normalizedForward = forward.map((value) => value / forwardLength);
+      const cameraUp = [0, -1, 0];
+      const right = [
+        normalizedForward[1] * cameraUp[2] - normalizedForward[2] * cameraUp[1],
+        normalizedForward[2] * cameraUp[0] - normalizedForward[0] * cameraUp[2],
+        normalizedForward[0] * cameraUp[1] - normalizedForward[1] * cameraUp[0],
+      ];
+      const rightLength = Math.hypot(...right) || 1;
+      const normalizedRight = right.map((value) => value / rightLength);
+      const screenUp = [
+        normalizedRight[1] * normalizedForward[2] -
+          normalizedRight[2] * normalizedForward[1],
+        normalizedRight[2] * normalizedForward[0] -
+          normalizedRight[0] * normalizedForward[2],
+        normalizedRight[0] * normalizedForward[1] -
+          normalizedRight[1] * normalizedForward[0],
+      ];
+      const horizontal =
+        pointerPosition.x * HERO_POINTER_PARALLAX_CONFIG.horizontalTravel;
+      const vertical =
+        -pointerPosition.y * HERO_POINTER_PARALLAX_CONFIG.verticalTravel;
+      const offset = normalizedRight.map(
+        (value, index) => value * horizontal + screenUp[index] * vertical,
+      );
+
+      // Moving position and target by the same camera-local offset preserves the
+      // viewing direction. The resulting depth shift is real viewpoint parallax,
+      // rather than a rotation or a 2D translation of the rendered canvas.
+      return {
+        position: position.map((value, index) => value + offset[index]),
+        lookAt: lookAt.map((value, index) => value + offset[index]),
+      };
+    };
 
     const clearRenderStopTimer = () => {
       if (renderStopTimer) {
@@ -2073,23 +2174,29 @@ const initSplat = async () => {
       }
     };
 
-    const renderSplatFrame = ({ smoothed, force }) => {
+    const renderSplatFrame = ({ smoothed, delta, force, requestNextFrame }) => {
       if (document.hidden || !splatInView) {
         return;
       }
 
-      if (!force && smoothed === lastRenderedProgress) {
+      const pointerMoved = updatePointerParallax(delta, requestNextFrame);
+
+      if (!force && smoothed === lastRenderedProgress && !pointerMoved) {
         return;
       }
 
       lastRenderedProgress = smoothed;
 
       const progress = easeScrollProgress(smoothed);
-      const { position, lookAt } = computeScrollPosition(
+      const scrollPose = computeScrollPosition(
         progress,
         SPLAT_CONFIG.cameraStart,
         SPLAT_CONFIG.cameraEnd,
         SPLAT_CONFIG.lookAtTiming ?? 1,
+      );
+      const { position, lookAt } = applyPointerParallax(
+        scrollPose.position,
+        scrollPose.lookAt,
       );
 
       if (viewer.camera) {
@@ -2131,6 +2238,19 @@ const initSplat = async () => {
       );
 
       observer.observe(splatContainer);
+
+      if (pointerParallaxEnabled) {
+        window.addEventListener("pointermove", (event) => {
+          setPointerTarget(
+            (event.clientX / Math.max(1, window.innerWidth)) * 2 - 1,
+            (event.clientY / Math.max(1, window.innerHeight)) * 2 - 1,
+          );
+        }, { passive: true });
+
+        document.documentElement.addEventListener("pointerleave", () => {
+          setPointerTarget(0, 0);
+        });
+      }
 
       // Priority 100 keeps the render after every style write of the frame.
       heroFrameDriver.subscribe(renderSplatFrame, 100);
