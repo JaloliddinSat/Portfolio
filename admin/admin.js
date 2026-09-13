@@ -17,6 +17,9 @@ const progress = document.querySelector("#progress");
 const progressBar = document.querySelector("#progress-bar");
 const currentFile = document.querySelector("#current-file");
 const currentFileDate = document.querySelector("#current-file-date");
+const currentFileLabel = document.querySelector("#current-file-label");
+const currentFileTitle = document.querySelector("#current-file-title");
+const viewResumeButton = document.querySelector("#view-resume-button");
 let selectedFile = null;
 
 const setStatus = (element, message = "", state = "") => {
@@ -38,9 +41,15 @@ const formatDate = (value) => {
   }).format(new Date(value))}`;
 };
 
-const updatePublishedFile = (resume) => {
-  currentFile.hidden = !resume;
+const updatePublishedFile = (resume, justUploaded = false) => {
+  currentFile.hidden = false;
+  currentFileLabel.textContent = justUploaded ? "Uploaded résumé" : "Current résumé";
+  currentFileTitle.textContent = justUploaded
+    ? "Your new PDF is published and ready to review."
+    : "Review the PDF currently shown on your portfolio.";
   currentFileDate.textContent = resume ? formatDate(resume.uploadedAt) : "";
+  viewResumeButton.textContent = justUploaded ? "View uploaded résumé" : "View current résumé";
+  viewResumeButton.href = `/resume/resume.pdf?v=${Date.now()}`;
 };
 
 const request = async (path, options = {}) => {
@@ -171,7 +180,7 @@ uploadForm.addEventListener("submit", (event) => {
     progressBar.style.width = xhr.status >= 200 && xhr.status < 300 ? "100%" : "0%";
     if (xhr.status >= 200 && xhr.status < 300) {
       setStatus(uploadStatus, "Your résumé is now live.", "success");
-      updatePublishedFile(result.resume);
+      updatePublishedFile(result.resume, true);
       selectedFile = null;
       fileInput.value = "";
       fileRow.hidden = true;
@@ -191,22 +200,6 @@ uploadForm.addEventListener("submit", (event) => {
   });
   xhr.send(selectedFile);
 });
-
-const themeToggle = document.querySelector("#theme-toggle");
-const themeLabel = document.querySelector("[data-theme-label]");
-const syncThemeLabel = () => {
-  const isLight = document.documentElement.dataset.theme === "light";
-  themeLabel.textContent = isLight ? "Dark" : "Light";
-  themeToggle.setAttribute("aria-label", `Switch to ${isLight ? "dark" : "light"} theme`);
-};
-
-themeToggle.addEventListener("click", () => {
-  const isLight = document.documentElement.dataset.theme === "light";
-  document.documentElement.dataset.theme = isLight ? "dark" : "light";
-  localStorage.setItem("site-theme", isLight ? "dark" : "light");
-  syncThemeLabel();
-});
-syncThemeLabel();
 
 request("session")
   .then((result) => {

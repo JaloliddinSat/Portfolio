@@ -62,45 +62,6 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-.admin-header {
-  position: fixed;
-  top: 18px;
-  left: 50%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: min(calc(100% - 40px), 1120px);
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(18px);
-  transform: translateX(-50%);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  font-weight: 700;
-  text-decoration: none;
-  letter-spacing: -0.025em;
-}
-
-.brand-mark {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
-}
-
-.theme-toggle,
 .quiet-button {
   border: 1px solid var(--line);
   color: var(--text);
@@ -108,28 +69,11 @@ a {
   cursor: pointer;
 }
 
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 13px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-}
-
-.theme-toggle svg {
-  width: 17px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 1.5;
-}
-
 .admin-shell {
   display: grid;
   min-height: 100vh;
   min-height: 100lvh;
-  padding: 112px 20px 48px;
+  padding: 48px 20px;
   place-items: center;
 }
 
@@ -254,8 +198,7 @@ input:focus {
   font-size: 0.78rem;
 }
 
-.quiet-button:hover,
-.theme-toggle:hover {
+.quiet-button:hover {
   border-color: var(--line-strong);
   background: var(--surface-raised);
 }
@@ -357,31 +300,33 @@ input:focus {
   border-top: 1px solid var(--line);
 }
 
-.current-file > span {
+.current-file-label {
   font-family: "JetBrains Mono", monospace;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.current-file a {
+.secondary-button {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
   color: var(--text);
   font-size: 0.8rem;
   font-weight: 600;
+  text-decoration: none;
   text-underline-offset: 3px;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
-.current-file a:hover {
-  text-decoration: underline;
+.secondary-button:hover {
+  border-color: var(--text);
+  background: var(--surface-raised);
 }
 
 @media (max-width: 600px) {
-  .admin-header {
-    top: 12px;
-    width: calc(100% - 24px);
-  }
-
   .admin-shell {
-    padding: 92px 12px 24px;
+    padding: 24px 12px;
   }
 
   .auth-card,
