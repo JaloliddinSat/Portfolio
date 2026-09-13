@@ -12,6 +12,7 @@ const dropZone = document.querySelector("#drop-zone");
 const fileRow = document.querySelector("#file-row");
 const fileName = document.querySelector("#file-name");
 const fileSize = document.querySelector("#file-size");
+const previewUploadButton = document.querySelector("#preview-upload-button");
 const uploadButton = document.querySelector("#upload-button");
 const progress = document.querySelector("#progress");
 const progressBar = document.querySelector("#progress-bar");
@@ -21,6 +22,7 @@ const currentFileLabel = document.querySelector("#current-file-label");
 const currentFileTitle = document.querySelector("#current-file-title");
 const viewResumeButton = document.querySelector("#view-resume-button");
 let selectedFile = null;
+let selectedFilePreviewUrl = null;
 
 const setStatus = (element, message = "", state = "") => {
   element.textContent = message;
@@ -68,12 +70,15 @@ const request = async (path, options = {}) => {
   return result;
 };
 
-const clearSelectedFile = () => {
+const clearSelectedFile = ({ clearStatus = true } = {}) => {
+  if (selectedFilePreviewUrl) URL.revokeObjectURL(selectedFilePreviewUrl);
+  selectedFilePreviewUrl = null;
   selectedFile = null;
   fileInput.value = "";
   fileRow.hidden = true;
   uploadButton.disabled = true;
-  setStatus(uploadStatus);
+  previewUploadButton.removeAttribute("href");
+  if (clearStatus) setStatus(uploadStatus);
 };
 
 const selectFile = (file) => {
@@ -91,7 +96,10 @@ const selectFile = (file) => {
     return;
   }
 
+  if (selectedFilePreviewUrl) URL.revokeObjectURL(selectedFilePreviewUrl);
   selectedFile = file;
+  selectedFilePreviewUrl = URL.createObjectURL(file);
+  previewUploadButton.href = selectedFilePreviewUrl;
   fileName.textContent = file.name;
   fileSize.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
   fileRow.hidden = false;
@@ -181,9 +189,7 @@ uploadForm.addEventListener("submit", (event) => {
     if (xhr.status >= 200 && xhr.status < 300) {
       setStatus(uploadStatus, "Your résumé is now live.", "success");
       updatePublishedFile(result.resume, true);
-      selectedFile = null;
-      fileInput.value = "";
-      fileRow.hidden = true;
+      clearSelectedFile({ clearStatus: false });
     } else if (xhr.status === 401) {
       showView(loginView);
       setStatus(loginStatus, "Your session expired. Please sign in again.", "error");

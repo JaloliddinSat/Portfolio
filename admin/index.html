@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=2" />
+    <link rel="stylesheet" href="/admin/styles.css?v=3" />
   </head>
   <body>
     <main class="admin-shell">
@@ -84,7 +84,16 @@
               <strong id="file-name"></strong>
               <span id="file-size"></span>
             </div>
-            <button class="quiet-button" id="clear-file" type="button">Remove</button>
+            <div class="file-actions">
+              <a
+                class="quiet-button"
+                id="preview-upload-button"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >View uploaded résumé</a>
+              <button class="quiet-button" id="clear-file" type="button">Remove</button>
+            </div>
           </div>
 
           <div class="progress" id="progress" hidden aria-label="Upload progress">
@@ -114,6 +123,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=2" defer></script>
+    <script src="/admin/admin.js?v=3" defer></script>
   </body>
 </html>

@@ -67,6 +67,7 @@ a {
   color: var(--text);
   background: transparent;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .admin-shell {
@@ -271,6 +272,12 @@ input:focus {
   gap: 4px;
 }
 
+.file-row .file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .file-row span,
 .current-file span {
   color: var(--muted);
@@ -339,6 +346,11 @@ input:focus {
   }
 
   .current-file {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .file-row {
     align-items: flex-start;
     flex-direction: column;
   }
