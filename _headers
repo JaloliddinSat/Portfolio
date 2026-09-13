@@ -15,3 +15,10 @@
 # an unregister) to the worker by that long for everyone who already has it.
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
+
+/admin/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: public, max-age=0, must-revalidate
+
+/api/admin/*
+  Cache-Control: no-store
