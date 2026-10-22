@@ -1,5 +1,5 @@
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
-export function initAsciiPhysics({ onHeroFrame } = {}) {
+export function initAsciiPhysics() {
   const canvas = document.querySelector('#ascii-curtain');
   const toggle = document.querySelector('#ascii-toggle');
   const content = document.querySelector('#site-content-transition');
@@ -319,6 +319,8 @@ export function initAsciiPhysics({ onHeroFrame } = {}) {
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   document.fonts?.ready.then(() => { geometryDirty = true; });
-  onHeroFrame?.(checkReveal);
+  document.addEventListener('portfolio:hero-frame', checkReveal);
   checkReveal();
 }
+
+initAsciiPhysics();

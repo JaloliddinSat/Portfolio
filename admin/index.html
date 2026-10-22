@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=3" />
+    <link rel="stylesheet" href="/admin/styles.css?v=5" />
   </head>
   <body>
     <main class="admin-shell">
@@ -32,7 +32,7 @@
       <section class="auth-card" id="login-view" hidden>
         <span class="eyebrow">Portfolio admin</span>
         <h1>Welcome back.</h1>
-        <p class="lede">Sign in to update the résumé shown on your portfolio.</p>
+        <p class="lede">Sign in to manage your portfolio.</p>
 
         <form id="login-form">
           <label for="email">Email</label>
@@ -68,6 +68,15 @@
           </div>
           <button class="quiet-button" id="logout-button" type="button">Sign out</button>
         </div>
+
+        <section class="site-settings" aria-labelledby="site-settings-title">
+          <h2 id="site-settings-title">Site features</h2>
+          <label class="feature-switch" for="ascii-feature-toggle">
+            <span><strong>Floating ASCII</strong><span id="ascii-feature-detail">Checking current setting…</span></span>
+            <input id="ascii-feature-toggle" type="checkbox" role="switch" aria-describedby="ascii-feature-detail" disabled />
+          </label>
+          <p class="form-status" id="settings-status" role="status" aria-live="polite"></p>
+        </section>
 
         <form id="upload-form">
           <label class="drop-zone" id="drop-zone" for="resume-file">
@@ -123,6 +132,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=4" defer></script>
+    <script src="/admin/admin.js?v=5" defer></script>
   </body>
 </html>

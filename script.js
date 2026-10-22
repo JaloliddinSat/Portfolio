@@ -1,5 +1,3 @@
-import { initAsciiPhysics } from './ascii-physics.js?v=20261022-ascii-physics-3';
-
 const year = document.querySelector("#year");
 
 if (year) {
@@ -4327,6 +4325,7 @@ const initHeroAboutTransition = () => {
         siteHeader.setAttribute("aria-hidden", headerVisible ? "false" : "true");
       }
     }
+    document.dispatchEvent(new Event("portfolio:hero-frame"));
   };
   const requestPreviewUpdate = () => {
     heroFrameDriver.request({ force: true });
@@ -5332,7 +5331,6 @@ initHeroAboutTransition();
 initDesktopSidebar();
 initThemeToggle();
 initMobileDockNavigation();
-initAsciiPhysics({ onHeroFrame: (callback) => heroFrameDriver.subscribe(callback, 30) });
 initHeroActionLinks();
 initMobileHeroAutoScroll();
 initHeroMotion();

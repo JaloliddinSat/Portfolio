@@ -1,3 +1,5 @@
+import { readSiteSettings, SITE_SETTINGS_KEY } from '../../_lib/site-settings.js';
+
 const ADMIN_EMAIL = "jsatimov@uwaterloo.ca";
 const COOKIE_NAME = "portfolio_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -145,6 +147,25 @@ export async function onRequest(context) {
 
   if (route === "session" && request.method === "GET") {
     return json({ authenticated: true, resume: await currentResume(env.RESUMES) });
+  }
+
+  if (route === "settings" && (request.method === "GET" || request.method === "POST")) {
+    if (!env.RESUMES) return json({ error: "Site settings storage is unavailable." }, 503);
+    try {
+      if (request.method === "GET") return json(await readSiteSettings(env.RESUMES));
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid settings request." }, 400); }
+      if (typeof body?.asciiEnabled !== "boolean") {
+        return json({ error: "Choose whether floating ASCII is enabled." }, 400);
+      }
+      const settings = { asciiEnabled: body.asciiEnabled };
+      await env.RESUMES.put(SITE_SETTINGS_KEY, JSON.stringify(settings), {
+        httpMetadata: { contentType: "application/json", cacheControl: "no-store" },
+      });
+      return json(settings);
+    } catch {
+      return json({ error: "Site settings could not be saved or loaded. Please try again." }, 503);
+    }
   }
 
   if (route === "resume" && request.method === "POST") {

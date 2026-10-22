@@ -70,6 +70,54 @@ const request = async (path, options = {}) => {
   return result;
 };
 
+const featureToggle = document.querySelector("#ascii-feature-toggle");
+const featureDetail = document.querySelector("#ascii-feature-detail");
+const settingsStatus = document.querySelector("#settings-status");
+let publishedAsciiEnabled = false;
+
+const renderSiteSettings = (settings) => {
+  publishedAsciiEnabled = settings.asciiEnabled === true;
+  featureToggle.checked = publishedAsciiEnabled;
+  featureDetail.textContent = publishedAsciiEnabled
+    ? "Available on desktop. Visitors can switch it off for themselves."
+    : "Hidden site-wide. Visitors receive no effect, control, or effect assets.";
+};
+
+const loadSiteSettings = async () => {
+  featureToggle.disabled = true;
+  setStatus(settingsStatus);
+  try {
+    renderSiteSettings(await request("settings"));
+    featureToggle.disabled = false;
+  } catch (error) {
+    featureDetail.textContent = "Setting unavailable.";
+    setStatus(settingsStatus, error.message, "error");
+  }
+};
+
+featureToggle.addEventListener("change", async () => {
+  const desired = featureToggle.checked;
+  featureToggle.disabled = true;
+  setStatus(settingsStatus, "Saving…");
+  try {
+    renderSiteSettings(await request("settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asciiEnabled: desired }),
+    }));
+    setStatus(settingsStatus, desired ? "Enabled for new page loads." : "Disabled for new page loads.", "success");
+  } catch (error) {
+    featureToggle.checked = publishedAsciiEnabled;
+    setStatus(settingsStatus, error.message, "error");
+    if (error.status === 401) {
+      showView(loginView);
+      setStatus(loginStatus, "Your session expired. Please sign in again.", "error");
+    }
+  } finally {
+    featureToggle.disabled = false;
+  }
+});
+
 const clearSelectedFile = ({ clearStatus = true } = {}) => {
   if (selectedFilePreviewUrl) URL.revokeObjectURL(selectedFilePreviewUrl);
   selectedFilePreviewUrl = null;
@@ -126,6 +174,7 @@ loginForm.addEventListener("submit", async (event) => {
     updatePublishedFile(result.resume);
     loginForm.reset();
     showView(uploadView);
+    loadSiteSettings();
   } catch (error) {
     setStatus(loginStatus, error.message, "error");
   } finally {
@@ -211,5 +260,6 @@ request("session")
   .then((result) => {
     updatePublishedFile(result.resume);
     showView(uploadView);
+    loadSiteSettings();
   })
   .catch(() => showView(loginView));

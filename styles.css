@@ -163,17 +163,6 @@ a {
   transform: translate(-50%, 0);
 }
 
-.ascii-curtain {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 9;
-  width: 100vw;
-  height: 100vh;
-  height: 100lvh;
-  pointer-events: none;
-}
-
 .brand,
 .header-controls,
 .nav-links {
@@ -208,63 +197,6 @@ a {
 .brand:hover .brand-mark {
   border-color: rgba(255, 255, 255, 0.32);
   background: rgba(255, 255, 255, 0.13);
-}
-
-.ascii-toggle {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-  transition: border-color 180ms ease, background 180ms ease;
-}
-
-.ascii-toggle:hover {
-  border-color: rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.13);
-}
-
-.ascii-toggle:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.82);
-  outline-offset: 3px;
-}
-
-.ascii-toggle svg {
-  width: 18px;
-  height: 18px;
-  overflow: visible;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 1.45;
-}
-
-.ascii-toggle-hash,
-.ascii-toggle-slash {
-  transition: opacity 160ms ease;
-}
-
-.ascii-toggle-slash {
-  opacity: 0;
-  stroke-width: 2;
-}
-
-.ascii-toggle[aria-pressed="true"] {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.ascii-toggle[aria-pressed="true"] .ascii-toggle-hash {
-  opacity: 0.42;
-}
-
-.ascii-toggle[aria-pressed="true"] .ascii-toggle-slash {
-  opacity: 1;
 }
 
 .nav-links {
@@ -2266,7 +2198,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .theme-toggle,
   .brand,
-  .ascii-toggle,
   .nav-links a {
     display: flex;
     align-items: center;
@@ -2297,7 +2228,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .theme-toggle:hover,
   .brand:hover,
-  .ascii-toggle:hover,
   .nav-links a:hover,
   .nav-links a[aria-current="page"] {
     color: var(--text);
@@ -2306,7 +2236,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .theme-toggle:focus-visible,
   .brand:focus-visible,
-  .ascii-toggle:focus-visible,
   .nav-links a:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.82);
     outline-offset: -2px;
@@ -2318,7 +2247,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   }
 
   .theme-toggle svg,
-  .ascii-toggle svg,
   .nav-icon {
     flex: 0 0 22px;
     width: 22px;
@@ -2411,7 +2339,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .theme-toggle,
   .brand-mark,
-  .ascii-toggle,
   .nav-links a {
     position: relative;
     width: 44px;
@@ -2426,7 +2353,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 
   .theme-toggle,
   .brand-mark,
-  .ascii-toggle,
   .nav-links a {
     display: grid;
     place-items: center;
@@ -2435,7 +2361,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   .theme-toggle:hover,
   .brand:hover .brand-mark,
   .brand[aria-current="page"] .brand-mark,
-  .ascii-toggle:hover,
   .nav-links a:hover,
   .nav-links a[aria-current="page"] {
     color: var(--text);
@@ -2460,7 +2385,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
   }
 
   .theme-toggle svg,
-  .ascii-toggle svg,
   .nav-icon {
     display: block;
     width: 20px;
@@ -2767,20 +2691,4 @@ html[data-theme="light"] .project-showcase-title a:hover {
 html[data-theme="light"] .project-link:hover {
   border-color: rgba(23, 23, 23, 0.22);
   background: rgba(23, 23, 23, 0.05);
-}
-
-/* The canvas never intercepts page controls; glyph grabs are hit-tested in JS. */
-.ascii-curtain[hidden],
-.ascii-toggle[hidden] {
-  display: none;
-}
-
-.ascii-dragging,
-.ascii-dragging * {
-  cursor: grabbing !important;
-  user-select: none !important;
-}
-
-@media (max-width: 700px), (hover: none), (pointer: coarse) {
-  #ascii-toggle, #ascii-curtain { display: none; }
 }
