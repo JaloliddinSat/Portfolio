@@ -1,5 +1,5 @@
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
-export function initAsciiPhysics() {
+export function initAsciiPhysics({ onHeroFrame } = {}) {
   const canvas = document.querySelector('#ascii-curtain');
   const toggle = document.querySelector('#ascii-toggle');
   const content = document.querySelector('#site-content-transition');
@@ -19,6 +19,8 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = 240;
   const particles = [];
+  const cells = new Map();
+  const cellPool = [];
   let enabled = !reducedMotion.matches;
   try {
     const saved = localStorage.getItem(storageKey);
@@ -58,8 +60,10 @@ export function initAsciiPhysics() {
     width = innerWidth;
     height = innerHeight;
     const ratio = Math.min(devicePixelRatio || 1, 1.5);
-    canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
+    const bitmapWidth = Math.round(width * ratio);
+    const bitmapHeight = Math.round(height * ratio);
+    if (canvas.width !== bitmapWidth) canvas.width = bitmapWidth;
+    if (canvas.height !== bitmapHeight) canvas.height = bitmapHeight;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.font = '12px "JetBrains Mono", monospace';
     context.textAlign = 'center';
@@ -83,7 +87,7 @@ export function initAsciiPhysics() {
       for (const rect of rects) {
         if (rect.width < 1 || rect.height < 1) continue;
         obstacles.push({ left: rect.left + scrollX, right: rect.right + scrollX,
-          top: rect.top + scrollY, bottom: rect.bottom + scrollY });
+          top: rect.top + scrollY - spawnTop, bottom: rect.bottom + scrollY - spawnTop });
       }
     }
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
@@ -96,9 +100,10 @@ export function initAsciiPhysics() {
     const angularVelocity = (5 + Math.random() * 40) * Math.PI / 180 *
       (Math.random() < 0.5 ? -1 : 1);
     const particle = { scale, angle, angularVelocity,
-      y: spawnTop - 24, vx: (Math.random() - 0.5) * 90, vy: 65 + Math.random() * 95,
+      y: 0, vx: (Math.random() - 0.5) * 90, vy: 65 + Math.random() * 95,
       glyph: glyphs[Math.floor(Math.random() * glyphs.length)] };
     const half = hitboxHalf(particle);
+    particle.y = spawnTop + half + 1;
     particle.x = half + Math.random() * Math.max(1, width - half * 2);
     particles.push(particle);
   };
@@ -118,13 +123,13 @@ export function initAsciiPhysics() {
       particle.y += particle.vy * step;
       if (particle.x < half) { particle.x = half; particle.vx = Math.abs(particle.vx); }
       if (particle.x > width - half) { particle.x = width - half; particle.vx = -Math.abs(particle.vx); }
-      if (particle.y < half) { particle.y = half; particle.vy = Math.abs(particle.vy); }
+      if (particle.y < spawnTop + half) { particle.y = spawnTop + half; particle.vy = Math.abs(particle.vy); }
       if (particle.y > worldBottom - half) { particle.y = worldBottom - half; particle.vy = -Math.abs(particle.vy); }
       for (const obstacle of obstacles) {
         const left = obstacle.left - half;
         const right = obstacle.right + half;
-        const top = obstacle.top - half;
-        const bottom = obstacle.bottom + half;
+        const top = spawnTop + obstacle.top - half;
+        const bottom = spawnTop + obstacle.bottom + half;
         if (particle.x <= left || particle.x >= right || particle.y <= top || particle.y >= bottom) continue;
         const distances = [particle.x - left, right - particle.x, particle.y - top, bottom - particle.y];
         const side = distances.indexOf(Math.min(...distances));
@@ -135,17 +140,24 @@ export function initAsciiPhysics() {
       }
     }
     // A spatial hash keeps glyph-to-glyph collisions local, including off-screen.
-    const cells = new Map();
+    cells.clear();
+    let usedCells = 0;
+    const columns = Math.ceil(width / cellSize) + 2;
+    for (const particle of particles) {
+      particle.collisionHalf = hitboxHalf(particle);
+    }
     for (const particle of particles) {
       const cx = Math.floor(particle.x / cellSize);
       const cy = Math.floor(particle.y / cellSize);
       for (let x = cx - 1; x <= cx + 1; x++) {
         for (let y = cy - 1; y <= cy + 1; y++) {
-          for (const other of cells.get(`${x},${y}`) || []) {
+          const neighbors = cells.get(y * columns + x);
+          if (!neighbors) continue;
+          for (const other of neighbors) {
             if (drag?.particle === particle || drag?.particle === other) continue;
             const dx = particle.x - other.x;
             const dy = particle.y - other.y;
-            const combinedHalf = hitboxHalf(particle) + hitboxHalf(other);
+            const combinedHalf = particle.collisionHalf + other.collisionHalf;
             const overlapX = combinedHalf - Math.abs(dx);
             const overlapY = combinedHalf - Math.abs(dy);
             if (overlapX <= 0 || overlapY <= 0) continue;
@@ -161,15 +173,25 @@ export function initAsciiPhysics() {
           }
         }
       }
-      const key = `${cx},${cy}`;
-      if (!cells.has(key)) cells.set(key, []);
-      cells.get(key).push(particle);
+      const key = cy * columns + cx;
+      let bucket = cells.get(key);
+      if (!bucket) {
+        bucket = cellPool[usedCells] || (cellPool[usedCells] = []);
+        usedCells += 1;
+        bucket.length = 0;
+        cells.set(key, bucket);
+      }
+      bucket.push(particle);
     }
   };
 
   const draw = () => {
     context.clearRect(0, 0, width, height);
     if (!activated) return;
+    context.save();
+    context.beginPath();
+    context.rect(0, Math.max(0, spawnTop - scrollY), width, height);
+    context.clip();
     context.fillStyle = color;
     for (const particle of particles) {
       const half = hitboxHalf(particle);
@@ -183,15 +205,23 @@ export function initAsciiPhysics() {
       context.fillText(particle.glyph, 0, 0);
       context.restore();
     }
+    context.restore();
   };
 
   const tick = (time) => {
     frame = null;
     if (geometryDirty) measure();
     // Fixed small steps prevent fast throws tunneling through thin obstacles.
-    accumulator += Math.min((time - (lastTime || time)) / 1000, 0.06);
+    // Carry dropped-frame time forward instead of discarding it. Limit work per
+    // frame so catching up cannot monopolize the main thread.
+    accumulator = Math.min(0.5, accumulator + (time - (lastTime || time)) / 1000);
     lastTime = time;
-    while (accumulator >= step) { simulate(); accumulator -= step; }
+    let steps = 0;
+    while (accumulator >= step && steps < 12) {
+      simulate();
+      accumulator -= step;
+      steps += 1;
+    }
     draw();
     frame = requestAnimationFrame(tick);
   };
@@ -218,7 +248,9 @@ export function initAsciiPhysics() {
   const checkReveal = () => {
     // The content reaches the top only once the hero is fully covered.
     // Activation is permanent for this visit, including when scrolling back up.
-    if (!activated && content.getBoundingClientRect().top <= 1) {
+    const contentTop = content.getBoundingClientRect().top;
+    spawnTop = contentTop + scrollY;
+    if (!activated && contentTop <= 1) {
       activated = true;
       geometryDirty = true;
     }
@@ -263,7 +295,7 @@ export function initAsciiPhysics() {
     drag.particle.vy = Math.max(-600, Math.min(600, (event.clientY - drag.clientY) / elapsed));
     const half = hitboxHalf(drag.particle);
     drag.particle.x = Math.max(half, Math.min(width - half, event.clientX + scrollX + drag.offsetX));
-    drag.particle.y = Math.max(half, Math.min(worldBottom - half, event.clientY + scrollY + drag.offsetY));
+    drag.particle.y = Math.max(spawnTop + half, Math.min(worldBottom - half, event.clientY + scrollY + drag.offsetY));
     Object.assign(drag, { clientX: event.clientX, clientY: event.clientY, time });
   });
   document.addEventListener('pointerup', release);
@@ -287,5 +319,6 @@ export function initAsciiPhysics() {
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   document.fonts?.ready.then(() => { geometryDirty = true; });
+  onHeroFrame?.(checkReveal);
   checkReveal();
 }

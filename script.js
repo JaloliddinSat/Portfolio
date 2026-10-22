@@ -1,4 +1,4 @@
-import { initAsciiPhysics } from './ascii-physics.js?v=20261022-ascii-physics-2';
+import { initAsciiPhysics } from './ascii-physics.js?v=20261022-ascii-physics-3';
 
 const year = document.querySelector("#year");
 
@@ -5332,7 +5332,7 @@ initHeroAboutTransition();
 initDesktopSidebar();
 initThemeToggle();
 initMobileDockNavigation();
-initAsciiPhysics();
+initAsciiPhysics({ onHeroFrame: (callback) => heroFrameDriver.subscribe(callback, 30) });
 initHeroActionLinks();
 initMobileHeroAutoScroll();
 initHeroMotion();
