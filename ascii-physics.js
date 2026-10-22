@@ -10,7 +10,12 @@ export function initAsciiPhysics() {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const storageKey = 'ascii-physics-enabled';
   const glyphs = '#@%+=*:.{}[]<>/01';
-  const half = 6;
+  const baseHalf = 6;
+  const cellSize = 32;
+  const grabPadding = 22;
+  const fullTurn = Math.PI * 2;
+  const hitboxHalf = (particle) => baseHalf * particle.scale *
+    (Math.abs(Math.cos(particle.angle)) + Math.abs(Math.sin(particle.angle)));
   const step = 1 / 120;
   const maxParticles = 240;
   const particles = [];
@@ -20,10 +25,9 @@ export function initAsciiPhysics() {
     if (saved !== null) enabled = saved === 'true';
   } catch { /* Storage is optional. */ }
   let activated = false;
-  let revealed = false;
   let width = 0;
   let height = 0;
-  let worldTop = 0;
+  let spawnTop = 0;
   let worldBottom = 0;
   let obstacles = [];
   let frame = null;
@@ -60,8 +64,8 @@ export function initAsciiPhysics() {
     context.font = '12px "JetBrains Mono", monospace';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    worldTop = content.getBoundingClientRect().top + scrollY;
-    worldBottom = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - half;
+    spawnTop = content.getBoundingClientRect().top + scrollY;
+    worldBottom = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
     // Whole cards are solid; standalone text uses individual line rectangles.
     const elements = content.querySelectorAll('.resume-item, .section-title, .subsection-title, h2, h3, p, li, img, video, .stepnote-splat-stage');
     obstacles = [];
@@ -78,17 +82,25 @@ export function initAsciiPhysics() {
       }
       for (const rect of rects) {
         if (rect.width < 1 || rect.height < 1) continue;
-        obstacles.push({ left: rect.left + scrollX - half, right: rect.right + scrollX + half,
-          top: rect.top + scrollY - half, bottom: rect.bottom + scrollY + half });
+        obstacles.push({ left: rect.left + scrollX, right: rect.right + scrollX,
+          top: rect.top + scrollY, bottom: rect.bottom + scrollY });
       }
     }
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
   };
 
   const spawn = () => {
-    particles.push({ x: half + Math.random() * Math.max(1, width - half * 2),
-      y: worldTop - 24, vx: (Math.random() - 0.5) * 90, vy: 65 + Math.random() * 95,
-      glyph: glyphs[Math.floor(Math.random() * glyphs.length)] });
+    const scale = 1 + Math.random() * 0.8;
+    const angle = Math.random() * fullTurn;
+    // Each glyph keeps its own direction and a gentle 5–45 degrees/second spin.
+    const angularVelocity = (5 + Math.random() * 40) * Math.PI / 180 *
+      (Math.random() < 0.5 ? -1 : 1);
+    const particle = { scale, angle, angularVelocity,
+      y: spawnTop - 24, vx: (Math.random() - 0.5) * 90, vy: 65 + Math.random() * 95,
+      glyph: glyphs[Math.floor(Math.random() * glyphs.length)] };
+    const half = hitboxHalf(particle);
+    particle.x = half + Math.random() * Math.max(1, width - half * 2);
+    particles.push(particle);
   };
 
   const simulate = () => {
@@ -99,36 +111,43 @@ export function initAsciiPhysics() {
     }
     if (particles.length === maxParticles) spawnTime = 0;
     for (const particle of particles) {
+      particle.angle = (particle.angle + particle.angularVelocity * step) % fullTurn;
       if (drag?.particle === particle) continue;
+      const half = hitboxHalf(particle);
       particle.x += particle.vx * step;
       particle.y += particle.vy * step;
       if (particle.x < half) { particle.x = half; particle.vx = Math.abs(particle.vx); }
       if (particle.x > width - half) { particle.x = width - half; particle.vx = -Math.abs(particle.vx); }
-      if (particle.y < worldTop - 48) { particle.y = worldTop - 48; particle.vy = Math.abs(particle.vy); }
-      if (particle.y > worldBottom) { particle.y = worldBottom; particle.vy = -Math.abs(particle.vy); }
-      for (const box of obstacles) {
-        if (particle.x <= box.left || particle.x >= box.right || particle.y <= box.top || particle.y >= box.bottom) continue;
-        const distances = [particle.x - box.left, box.right - particle.x, particle.y - box.top, box.bottom - particle.y];
+      if (particle.y < half) { particle.y = half; particle.vy = Math.abs(particle.vy); }
+      if (particle.y > worldBottom - half) { particle.y = worldBottom - half; particle.vy = -Math.abs(particle.vy); }
+      for (const obstacle of obstacles) {
+        const left = obstacle.left - half;
+        const right = obstacle.right + half;
+        const top = obstacle.top - half;
+        const bottom = obstacle.bottom + half;
+        if (particle.x <= left || particle.x >= right || particle.y <= top || particle.y >= bottom) continue;
+        const distances = [particle.x - left, right - particle.x, particle.y - top, bottom - particle.y];
         const side = distances.indexOf(Math.min(...distances));
-        if (side === 0) { particle.x = box.left; particle.vx = -Math.abs(particle.vx); }
-        if (side === 1) { particle.x = box.right; particle.vx = Math.abs(particle.vx); }
-        if (side === 2) { particle.y = box.top; particle.vy = -Math.abs(particle.vy); }
-        if (side === 3) { particle.y = box.bottom; particle.vy = Math.abs(particle.vy); }
+        if (side === 0) { particle.x = left; particle.vx = -Math.abs(particle.vx); }
+        if (side === 1) { particle.x = right; particle.vx = Math.abs(particle.vx); }
+        if (side === 2) { particle.y = top; particle.vy = -Math.abs(particle.vy); }
+        if (side === 3) { particle.y = bottom; particle.vy = Math.abs(particle.vy); }
       }
     }
     // A spatial hash keeps glyph-to-glyph collisions local, including off-screen.
     const cells = new Map();
     for (const particle of particles) {
-      const cx = Math.floor(particle.x / 24);
-      const cy = Math.floor(particle.y / 24);
+      const cx = Math.floor(particle.x / cellSize);
+      const cy = Math.floor(particle.y / cellSize);
       for (let x = cx - 1; x <= cx + 1; x++) {
         for (let y = cy - 1; y <= cy + 1; y++) {
           for (const other of cells.get(`${x},${y}`) || []) {
             if (drag?.particle === particle || drag?.particle === other) continue;
             const dx = particle.x - other.x;
             const dy = particle.y - other.y;
-            const overlapX = half * 2 - Math.abs(dx);
-            const overlapY = half * 2 - Math.abs(dy);
+            const combinedHalf = hitboxHalf(particle) + hitboxHalf(other);
+            const overlapX = combinedHalf - Math.abs(dx);
+            const overlapY = combinedHalf - Math.abs(dy);
             if (overlapX <= 0 || overlapY <= 0) continue;
             const axis = overlapX < overlapY ? 'x' : 'y';
             const velocity = axis === 'x' ? 'vx' : 'vy';
@@ -150,13 +169,19 @@ export function initAsciiPhysics() {
 
   const draw = () => {
     context.clearRect(0, 0, width, height);
-    if (!revealed) return;
+    if (!activated) return;
     context.fillStyle = color;
     for (const particle of particles) {
+      const half = hitboxHalf(particle);
       const x = particle.x - scrollX;
       const y = particle.y - scrollY;
       if (x < -half || x > width + half || y < -half || y > height + half) continue;
-      context.fillText(particle.glyph, x, y);
+      context.save();
+      context.translate(x, y);
+      context.rotate(particle.angle);
+      context.scale(particle.scale, particle.scale);
+      context.fillText(particle.glyph, 0, 0);
+      context.restore();
     }
   };
 
@@ -177,7 +202,7 @@ export function initAsciiPhysics() {
     toggle.title = enabled ? 'Turn off floating ASCII' : 'Turn on floating ASCII';
     toggle.setAttribute('aria-label', toggle.title);
     const shouldRun = desktop.matches && enabled && activated && !document.hidden;
-    canvas.hidden = !shouldRun || !revealed;
+    canvas.hidden = !shouldRun;
     if (shouldRun && frame === null) {
       lastTime = 0;
       accumulator = 0;
@@ -192,12 +217,11 @@ export function initAsciiPhysics() {
 
   const checkReveal = () => {
     // The content reaches the top only once the hero is fully covered.
-    revealed = content.getBoundingClientRect().top <= 1;
-    if (revealed && !activated) {
+    // Activation is permanent for this visit, including when scrolling back up.
+    if (!activated && content.getBoundingClientRect().top <= 1) {
       activated = true;
       geometryDirty = true;
     }
-    if (!revealed) release();
     sync();
   };
 
@@ -206,13 +230,22 @@ export function initAsciiPhysics() {
     try { localStorage.setItem(storageKey, String(enabled)); } catch { /* Optional. */ }
     checkReveal();
   });
-  const canGrab = (event) => desktop.matches && enabled && activated && revealed &&
+  const canGrab = (event) => desktop.matches && enabled && activated &&
     !event.target.closest('a, button, input, textarea, select, [contenteditable="true"]');
   document.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || !canGrab(event)) return;
     const x = event.clientX + scrollX;
     const y = event.clientY + scrollY;
-    const particle = particles.findLast(p => Math.abs(p.x - x) <= 10 && Math.abs(p.y - y) <= 10);
+    let particle = null;
+    let nearestDistance = Infinity;
+    for (const candidate of particles) {
+      const reach = hitboxHalf(candidate) + grabPadding;
+      const distance = (candidate.x - x) ** 2 + (candidate.y - y) ** 2;
+      if (distance <= reach * reach && distance < nearestDistance) {
+        particle = candidate;
+        nearestDistance = distance;
+      }
+    }
     if (!particle) return;
     drag = { particle, id: event.pointerId, offsetX: particle.x - x, offsetY: particle.y - y, time: performance.now(), clientX: event.clientX, clientY: event.clientY };
     particle.vx = particle.vy = 0;
@@ -228,8 +261,9 @@ export function initAsciiPhysics() {
     // Only mouse motion contributes throw velocity, never scroll displacement.
     drag.particle.vx = Math.max(-600, Math.min(600, (event.clientX - drag.clientX) / elapsed));
     drag.particle.vy = Math.max(-600, Math.min(600, (event.clientY - drag.clientY) / elapsed));
+    const half = hitboxHalf(drag.particle);
     drag.particle.x = Math.max(half, Math.min(width - half, event.clientX + scrollX + drag.offsetX));
-    drag.particle.y = Math.max(worldTop - 48, Math.min(worldBottom, event.clientY + scrollY + drag.offsetY));
+    drag.particle.y = Math.max(half, Math.min(worldBottom - half, event.clientY + scrollY + drag.offsetY));
     Object.assign(drag, { clientX: event.clientX, clientY: event.clientY, time });
   });
   document.addEventListener('pointerup', release);

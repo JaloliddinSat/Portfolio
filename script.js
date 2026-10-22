@@ -1,4 +1,4 @@
-import { initAsciiPhysics } from './ascii-physics.js';
+import { initAsciiPhysics } from './ascii-physics.js?v=20261022-ascii-physics-2';
 
 const year = document.querySelector("#year");
 
