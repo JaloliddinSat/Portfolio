@@ -2768,3 +2768,19 @@ html[data-theme="light"] .project-link:hover {
   border-color: rgba(23, 23, 23, 0.22);
   background: rgba(23, 23, 23, 0.05);
 }
+
+/* The canvas never intercepts page controls; glyph grabs are hit-tested in JS. */
+.ascii-curtain[hidden],
+.ascii-toggle[hidden] {
+  display: none;
+}
+
+.ascii-dragging,
+.ascii-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+@media (max-width: 700px), (hover: none), (pointer: coarse) {
+  #ascii-toggle, #ascii-curtain { display: none; }
+}
