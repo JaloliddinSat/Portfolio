@@ -1,4 +1,4 @@
-import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-cooldown-1';
+import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-history-1';
 
 const portfolioDiagnostics = window.__portfolioDiagnostics;
 

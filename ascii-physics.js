@@ -1,4 +1,4 @@
-import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-cooldown-1';
+import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-history-1';
 
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
@@ -80,6 +80,65 @@ export function initAsciiPhysics() {
   let spawnTime = 0;
   let geometryDirty = true;
   let drag = null;
+  // One fixed ring for the single active drag: 32 samples × 3 doubles = 768 bytes.
+  // Reuse it across drags; no sample objects, array shifts or per-frame work.
+  const throwSampleCount = 32;
+  const throwX = new Float64Array(throwSampleCount);
+  const throwY = new Float64Array(throwSampleCount);
+  const throwTime = new Float64Array(throwSampleCount);
+  let throwHead = 0;
+  let throwCount = 0;
+  const recordThrowMotion = (x, y, time) => {
+    const previous = (throwHead + throwSampleCount - 1) % throwSampleCount;
+    if (throwCount && throwX[previous] === x && throwY[previous] === y) return;
+    // Multiple events within the same timer tick update the newest position.
+    if (throwCount > 1 && throwTime[previous] === time) {
+      throwX[previous] = x;
+      throwY[previous] = y;
+      return;
+    }
+    throwX[throwHead] = x;
+    throwY[throwHead] = y;
+    throwTime[throwHead] = time;
+    throwHead = (throwHead + 1) % throwSampleCount;
+    throwCount = Math.min(throwSampleCount, throwCount + 1);
+  };
+  const updateThrowVelocity = (time) => {
+    const particle = drag.particle;
+    particle.vx = particle.vy = 0;
+    if (throwCount < 2) return;
+    const newest = (throwHead + throwSampleCount - 1) % throwSampleCount;
+    const pause = Math.max(0, time - throwTime[newest]);
+    // Preserve quick releases, then smoothly settle to a deliberate placement.
+    const followThrough = Math.max(0, Math.min(1, (260 - pause) / 180));
+    if (!followThrough) return;
+    let oldest = newest;
+    let next = newest;
+    for (let i = 1; i < throwCount; i++) {
+      next = oldest;
+      oldest = (newest - i + throwSampleCount) % throwSampleCount;
+      if (throwTime[newest] - throwTime[oldest] >= 80) break;
+    }
+    const span = throwTime[newest] - throwTime[oldest];
+    let startX = throwX[oldest];
+    let startY = throwY[oldest];
+    // Interpolate the window boundary so an old held position cannot dilute
+    // several recent quick moves. This also handles sparse events consistently.
+    if (span > 80) {
+      const blend = (span - 80) / (throwTime[next] - throwTime[oldest]);
+      startX += (throwX[next] - startX) * blend;
+      startY += (throwY[next] - startY) * blend;
+    }
+    const elapsed = Math.max(8, Math.min(80, span)) / 1000;
+    particle.vx = (throwX[newest] - startX) / elapsed * followThrough;
+    particle.vy = (throwY[newest] - startY) / elapsed * followThrough;
+    clampVelocity(particle);
+  };
+  const positionDraggedParticle = (clientX, clientY) => {
+    const half = hitboxHalf(drag.particle);
+    drag.particle.x = Math.max(half, Math.min(width - half, clientX + scrollX + drag.offsetX));
+    drag.particle.y = Math.max(spawnTop + half, Math.min(worldBottom - half, clientY + scrollY + drag.offsetY));
+  };
   let pointer = null;
   let lastPointerMovement = -Infinity;
   const trackPointer = (event) => {
@@ -125,14 +184,22 @@ export function initAsciiPhysics() {
     return true;
   };
 
-  const release = () => {
-    if (!drag) return;
-    if (performance.now() - drag.time > 100) {
-      drag.particle.vx = 0;
-      drag.particle.vy = 0;
+  const release = (event) => {
+    if (!drag || (event?.pointerId !== undefined && event.pointerId !== drag.id)) return;
+    const time = performance.now();
+    if (event?.type === 'pointercancel' || event?.type === 'lostpointercapture') {
+      drag.particle.vx = drag.particle.vy = 0;
+    } else {
+      if (event?.type === 'pointerup' && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+        recordThrowMotion(event.clientX, event.clientY, time);
+        positionDraggedParticle(event.clientX, event.clientY);
+      }
+      updateThrowVelocity(time);
     }
+    diagnostics?.state('asciiThrow', { vx: drag.particle.vx, vy: drag.particle.vy,
+      speed: Math.hypot(drag.particle.vx, drag.particle.vy), samples: throwCount });
     // A thrown glyph is immune to all cursor forces in either theme until this deadline.
-    drag.particle.forceCooldownUntil = performance.now() + throwCooldown * 1000;
+    drag.particle.forceCooldownUntil = time + throwCooldown * 1000;
     drag.particle.cursorReleased = false;
     drag.particle.cursorCooldownRemaining = 0;
     const pointerId = drag.id;
@@ -480,7 +547,9 @@ export function initAsciiPhysics() {
     const x = event.clientX + scrollX;
     const y = event.clientY + scrollY;
     setHover(false);
-    drag = { particle, id: event.pointerId, offsetX: particle.x - x, offsetY: particle.y - y, time: performance.now(), clientX: event.clientX, clientY: event.clientY };
+    drag = { particle, id: event.pointerId, offsetX: particle.x - x, offsetY: particle.y - y };
+    throwHead = throwCount = 0;
+    recordThrowMotion(event.clientX, event.clientY, performance.now());
     particle.vx = particle.vy = 0;
     document.documentElement.setPointerCapture(event.pointerId);
     document.documentElement.classList.add('ascii-dragging');
@@ -494,20 +563,14 @@ export function initAsciiPhysics() {
     if (!drag) { updateHover(); return; }
     if (drag.id !== event.pointerId) return;
     const time = performance.now();
-    const elapsed = Math.max(0.008, (time - drag.time) / 1000);
-    // Only mouse motion contributes throw velocity, never scroll displacement.
-    drag.particle.vx = Math.max(-600, Math.min(600, (event.clientX - drag.clientX) / elapsed));
-    drag.particle.vy = Math.max(-600, Math.min(600, (event.clientY - drag.clientY) / elapsed));
-    clampVelocity(drag.particle);
-    const half = hitboxHalf(drag.particle);
-    drag.particle.x = Math.max(half, Math.min(width - half, event.clientX + scrollX + drag.offsetX));
-    drag.particle.y = Math.max(spawnTop + half, Math.min(worldBottom - half, event.clientY + scrollY + drag.offsetY));
-    Object.assign(drag, { clientX: event.clientX, clientY: event.clientY, time });
+    // Client-coordinate history excludes scrolling from throw momentum.
+    recordThrowMotion(event.clientX, event.clientY, time);
+    positionDraggedParticle(event.clientX, event.clientY);
   });
   document.addEventListener('pointerup', release);
   document.addEventListener('pointercancel', release);
   document.documentElement.addEventListener('lostpointercapture', release);
-  window.addEventListener('blur', () => { release(); pointer = null; setHover(false); });
+  window.addEventListener('blur', () => { release({ type: 'pointercancel' }); pointer = null; setHover(false); });
   document.documentElement.addEventListener('pointerleave', () => { pointer = null; setHover(false); });
   window.addEventListener('scroll', () => {
     pointerTargetDirty = true;

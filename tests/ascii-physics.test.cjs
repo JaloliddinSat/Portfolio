@@ -49,8 +49,8 @@ const glyph={scale:1,angle:0,angularVelocity:0,x:100,y:2000,vx:10,vy:20};dragTes
 const target={closest:()=>null};
 dragTest.listeners.get('document:pointerdown')({button:0,target,clientX:100,clientY:400,pointerId:1,preventDefault(){},stopPropagation(){}});
 dragTest.listeners.get('document:pointermove')({clientX:120,clientY:420,pointerId:1});
-assert.equal(glyph.x,120);assert.equal(glyph.y,2020);assert(glyph.vx>0 && glyph.vy>0);
-dragTest.listeners.get('document:pointerup')();
+assert.equal(glyph.x,120);assert.equal(glyph.y,2020);
+dragTest.listeners.get('document:pointerup')();assert(glyph.vx>0 && glyph.vy>0);
 const thrownY=glyph.y;dragTest.api.simulate();assert(glyph.y>thrownY);
 const boxTest=setup();
 boxTest.content.querySelectorAll=()=>[{parentElement:{closest:()=>null},getClientRects:()=>[{}],matches:()=>false,getBoundingClientRect:()=>({left:80,right:180,top:450,bottom:500,width:100,height:50})}];
@@ -137,7 +137,7 @@ const leave=forceSetup();leave.listeners.get('root:pointerleave')();leave.api.si
 const blur=forceSetup();blur.listeners.get('window:blur')();blur.api.simulate();assert.equal(blur.particle.vx,0);
 const heroForce=forceSetup();heroForce.listeners.get('document:pointermove')({clientX:500,clientY:0,target:{closest:()=>null},pointerId:1});heroForce.scope.scrollY=0;heroForce.api.simulate();assert.equal(heroForce.particle.vx,0,'cursor above grid has no force');
 const held=forceSetup();held.listeners.get('document:pointerdown')({clientX:400,clientY:400,target:{closest:()=>null},pointerId:1,button:0,preventDefault(){},stopPropagation(){}});held.api.simulate();assert.equal(held.particle.vx,0,'dragged particles ignore force');
-const capThrow=forceSetup({asciiMaxVelocity:50});capThrow.listeners.get('document:pointerdown')({clientX:400,clientY:400,target:{closest:()=>null},pointerId:1,button:0,preventDefault(){},stopPropagation(){}});capThrow.listeners.get('document:pointermove')({clientX:500,clientY:500,pointerId:1});assert(Math.hypot(capThrow.particle.vx,capThrow.particle.vy)<=50+1e-10,'throw vector respects speed cap');
+const capThrow=forceSetup({asciiMaxVelocity:50});capThrow.listeners.get('document:pointerdown')({clientX:400,clientY:400,target:{closest:()=>null},pointerId:1,button:0,preventDefault(){},stopPropagation(){}});capThrow.listeners.get('document:pointermove')({clientX:500,clientY:500,pointerId:1});capThrow.listeners.get('document:pointerup')();assert(Math.hypot(capThrow.particle.vx,capThrow.particle.vy)<=50+1e-10,'throw vector respects speed cap');
 console.log('PASS: dark attraction, light repulsion, live theme changes, radius, soft core, falloff, zero force/radius/speed, speed/throw cap, scrolling, pointer leave/blur, hero exclusion, drag isolation');
 
 const collisionCap=setup({config:{asciiParticleLimit:0,asciiMaxVelocity:100}});collisionCap.api.measure();
@@ -224,3 +224,29 @@ const lightRadius=forceSetup({asciiLightCursorRadius:50},'light');lightRadius.ap
 const lightFalloff=forceSetup({asciiLightCursorFalloff:1},'light');lightFalloff.api.simulate();assert(Math.abs(lightFalloff.particle.vx)>Math.abs(darkIndependent.particle.vx));
 const lightSpeed=forceSetup({asciiLightMaxVelocity:40},'light');lightSpeed.particle.vx=200;lightSpeed.api.simulate();assert(Math.hypot(lightSpeed.particle.vx,lightSpeed.particle.vy)<=40+1e-10);
 console.log('PASS: throw momentum immunity in both themes, precise/custom/zero deadlines, theme-switch immunity, nudge suppression and independently configurable light force/radius/falloff/speed');
+
+function motionTrial(theme='dark') {
+  const s=forceSetup({asciiCursorStrength:0,asciiCursorIdleTimeout:0},theme);
+  let time=100;s.scope.performance.now=()=>time;const target={closest:()=>null};
+  s.listeners.get('document:pointerdown')({clientX:400,clientY:400,target,pointerId:1,button:0,preventDefault(){},stopPropagation(){}});
+  return {...s,move(t,x,y=400){time=t;s.listeners.get('document:pointermove')({clientX:x,clientY:y,target,pointerId:1})},
+    drop(t,x,y=400){time=t;s.listeners.get('document:pointerup')({type:'pointerup',clientX:x,clientY:y,pointerId:1})}};
+}
+for(const theme of ['dark','light']) {
+  const finalZero=motionTrial(theme);finalZero.move(120,450);finalZero.move(125,450);finalZero.drop(130,450);
+  assert.equal(finalZero.particle.vx,600,theme+' final stationary event must not erase fling');
+  const x=finalZero.particle.x;finalZero.api.simulate();assert(finalZero.particle.x>x);
+  const briefPause=motionTrial(theme);briefPause.move(120,450);briefPause.drop(221,450);assert(briefPause.particle.vx>0,'101ms pause must not kill fling');
+  const place=motionTrial(theme);place.move(120,450);place.move(350,450);place.drop(380,450);assert.equal(place.particle.vx,0,'holding still settles to placement despite repeated stationary events');
+}
+const reverse=motionTrial();reverse.move(200,500);reverse.move(300,450);reverse.drop(301,450);assert.equal(reverse.particle.vx,-500,'recent direction wins over the initial drag direction');
+const wrap=motionTrial();for(let i=1;i<=100;i++)wrap.move(100+i,400+i*0.2);wrap.drop(201,420);assert(Math.abs(wrap.particle.vx-200)<1e-8,'fixed buffer remains accurate after wrapping');
+const scrollOnly=motionTrial();scrollOnly.scope.scrollY+=1000;scrollOnly.move(120,400);scrollOnly.drop(130,400);assert.equal(scrollOnly.particle.vx,0);assert.equal(scrollOnly.particle.vy,0,'scroll cannot create throw momentum');
+const releasePosition=motionTrial();releasePosition.drop(300,430);assert.equal(releasePosition.particle.vx,150);assert.equal(releasePosition.particle.x,430,'release coordinates capture motion missed by pointermove');
+const cancelled=motionTrial();cancelled.move(120,450);cancelled.listeners.get('document:pointercancel')({type:'pointercancel',pointerId:1});assert.equal(cancelled.particle.vx,0,'cancel does not throw');
+const untouched=motionTrial();untouched.drop(130,400);assert.equal(untouched.particle.vx,0);assert.equal(untouched.particle.vy,0);
+const diagonal=motionTrial();diagonal.move(120,500,500);diagonal.drop(130,500,500);assert(Math.hypot(diagonal.particle.vx,diagonal.particle.vy)<=600+1e-10);
+const otherPointer=motionTrial();otherPointer.move(120,450);otherPointer.listeners.get('document:pointerup')({type:'pointerup',pointerId:2,clientX:450,clientY:400});assert.equal(otherPointer.particle.forceCooldownUntil,undefined);otherPointer.drop(130,450);assert(otherPointer.particle.vx>0);
+console.log('PASS: trailing-zero and 101ms-pause regressions in both themes, deliberate placement, reversal, ring wrap, scroll isolation, final release coordinates, cancellation, no-motion grab, speed cap and pointer ID isolation');
+
+const heldThenFlick=motionTrial();heldThenFlick.move(5010,410);heldThenFlick.move(5020,450);heldThenFlick.drop(5021,450);assert(heldThenFlick.particle.vx>400,'long-held initial sample cannot dilute recent flick');

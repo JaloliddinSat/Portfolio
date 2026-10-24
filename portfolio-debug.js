@@ -135,6 +135,7 @@
       `Saved tuning: rotation ${state.asciiConfig?.rotationMultiplier ?? 1}× · scale ${state.asciiConfig?.scaleMultiplier ?? 1}× · edge spawn ${state.asciiConfig?.spawnWidth ?? 100}%`,
       `Dark cursor: strength ${state.asciiConfig?.cursorStrength ?? 0}px/s² · radius ${state.asciiConfig?.cursorRadius ?? 300}px · falloff ${state.asciiConfig?.cursorFalloff ?? 2} · max ${state.asciiConfig?.maxVelocity ?? 600}px/s`,
       `Light cursor: strength ${state.asciiConfig?.lightCursorStrength ?? 0}px/s² · radius ${state.asciiConfig?.lightCursorRadius ?? 300}px · falloff ${state.asciiConfig?.lightCursorFalloff ?? 2} · max ${state.asciiConfig?.lightMaxVelocity ?? 600}px/s`,
+      `Last throw: ${(state.asciiThrow?.speed ?? 0).toFixed(1)}px/s · vx ${(state.asciiThrow?.vx ?? 0).toFixed(1)} · vy ${(state.asciiThrow?.vy ?? 0).toFixed(1)} · samples ${state.asciiThrow?.samples ?? 0}`,
       `Post-release force cooldown: ${state.asciiConfig?.throwCooldown ?? 1.5}s`,
       `Gravity dimming: ${state.asciiConfig?.gravityDimmingEnabled === false ? 'off' : 'on'} · multiplier ${state.asciiConfig?.gravityDimmingMultiplier ?? 0.25}`,
       `Cursor idle: ${state.ascii?.cursorIdle ? 'yes' : 'no'} · timeout ${state.asciiConfig?.cursorIdleTimeout ?? 2}s (dark theme only)`,

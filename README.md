@@ -86,6 +86,14 @@ escape nudges, until its release deadline. Normal movement, collisions, spin
 and the active theme's speed limit continue. Switching themes during this
 period does not bypass immunity. Set 0 for immediate cursor influence.
 
+Throw velocity uses a fixed 32-sample ring of client coordinates (768 bytes),
+reused across drags. Moves record samples in constant time; release alone scans
+up to 32 samples to estimate recent direction and speed. Duplicate stationary
+events do not erase momentum. A brief pause preserves the fling, then throw
+speed fades smoothly from 80 to 260 ms of stillness, allowing deliberate placement.
+Scrolling never contributes velocity. Cancellation releases without a fling.
+The private debugger shows the last release velocity and sample count.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens
