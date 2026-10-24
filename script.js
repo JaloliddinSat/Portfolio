@@ -1,3 +1,5 @@
+import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-content-1';
+
 const portfolioDiagnostics = window.__portfolioDiagnostics;
 
 const year = document.querySelector("#year");
@@ -11,6 +13,12 @@ const initGridCursorGlow = () => {
     return;
   }
 
+  const content = document.querySelector('#site-content-transition');
+  const configuredMultiplier = Number(document.documentElement.dataset.gridContentGlowMultiplier ?? 0.25);
+  const contentMultiplier = Number.isFinite(configuredMultiplier) && configuredMultiplier >= 0 && configuredMultiplier <= 1
+    ? configuredMultiplier : 0.25;
+  let contentBoxes = [];
+  let hitboxesDirty = true;
   const panelSelector = ".resume-item, .project-card";
   const panels = document.querySelectorAll(panelSelector);
   const cursorGlow = document.createElement("canvas");
@@ -98,6 +106,8 @@ const initGridCursorGlow = () => {
   };
 
   const drawGlow = () => {
+    updateFrame = null;
+    if (!hasPointer) return;
     const pointerX = pointerClientX + window.scrollX;
     const pointerY = pointerClientY + window.scrollY;
     const glowPageX = pointerX - glowRadius;
@@ -108,6 +118,18 @@ const initGridCursorGlow = () => {
     const hoveredPanel = hoveredElement instanceof Element
       ? hoveredElement.closest(panelSelector)
       : null;
+
+    // Cached line/card rectangles keep pointer updates cheap. Match the same
+    // local vertical origin as the collision system while the content slides.
+    const contentTop = content ? content.getBoundingClientRect().top + window.scrollY : 0;
+    if (hitboxesDirty) {
+      contentBoxes = collectContentHitboxes(content, contentTop);
+      hitboxesDirty = false;
+    }
+    const localY = pointerY - contentTop;
+    const overContent = contentBoxes.some(box => pointerX >= box.left && pointerX <= box.right &&
+      localY >= box.top && localY <= box.bottom);
+    const brightness = overContent ? contentMultiplier : 1;
 
     if (hoveredPanel !== activePanel) {
       hideActivePanelGlow();
@@ -125,7 +147,7 @@ const initGridCursorGlow = () => {
         "--grid-panel-translate-y",
         `${pointerClientY - rect.top - glowRadius}px`,
       );
-      activePanel.style.setProperty("--grid-panel-opacity", "1");
+      activePanel.style.setProperty("--grid-panel-opacity", String(brightness));
       drawGridTexture(
         activePanel.querySelector(".grid-panel-glow"),
         glowPageX,
@@ -137,7 +159,7 @@ const initGridCursorGlow = () => {
     cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowViewportX}px`);
     cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowViewportY}px`);
     drawGridTexture(cursorGlow, glowPageX, glowPageY, 0.42);
-    cursorGlow.style.opacity = "1";
+    cursorGlow.style.opacity = String(brightness);
     updateFrame = null;
   };
 
@@ -159,7 +181,12 @@ const initGridCursorGlow = () => {
   }, { passive: true });
 
   window.addEventListener("scroll", requestGlowUpdate, { passive: true });
-  window.addEventListener("resize", requestGlowUpdate, { passive: true });
+  const invalidateHitboxes = () => { hitboxesDirty = true; requestGlowUpdate(); };
+  window.addEventListener("resize", invalidateHitboxes, { passive: true });
+  window.addEventListener("load", invalidateHitboxes);
+  if (content) new ResizeObserver(invalidateHitboxes).observe(content);
+  document.fonts?.ready.then(invalidateHitboxes);
+  document.addEventListener("portfolio:hero-frame", requestGlowUpdate);
 
   document.documentElement.addEventListener("pointerleave", () => {
     hasPointer = false;

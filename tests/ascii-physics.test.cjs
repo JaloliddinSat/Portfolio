@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const original = fs.readFileSync('ascii-physics.js', 'utf8').replace(/\ninitAsciiPhysics\(\);\s*$/, '');
+const original = fs.readFileSync('ascii-physics.js', 'utf8').replace(/\ninitAsciiPhysics\(\);\s*$/, '').replace(/^import .*\n/, '');
 function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) {
   const listeners = new Map();
   const stored = new Map();
@@ -24,7 +24,7 @@ function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) 
   content.getBoundingClientRect=()=>({top:top+1600-scope.scrollY});
   vm.createContext(scope);
   const source=original.replace('export function','function').replace(/  checkReveal\(\);\n}\s*$/,`  checkReveal();\n return {particles,simulate,measure,checkReveal,sync,draw,tick,spawn,hitboxHalf,state:()=>({activated,enabled,frame,spawnTop,worldBottom})};\n}`);
-  vm.runInContext(source+'\nvar api = initAsciiPhysics();',scope);
+  vm.runInContext(fs.readFileSync('content-hitboxes.js','utf8').replace('export function','function')+'\n'+source+'\nvar api = initAsciiPhysics();',scope);
   return {scope,api:scope.api,listeners,stored,frames,canvas,toggle,content};
 }
 const s=setup(); s.api.measure();

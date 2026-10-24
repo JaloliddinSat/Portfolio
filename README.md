@@ -52,6 +52,16 @@ Clicks at the same position, scrolling, and duplicate pointer events do not
 restart the timer. Timing uses wall-clock time, including background pauses.
 Set 0 to disable the timeout. Light-theme repulsion remains active while idle.
 
+Grid glow has an independent `gridContentGlowMultiplier` setting (0–1, default
+0.25) in admin. When the pointer overlaps a content hitbox, both background and
+card-local glow brightness use this multiplier; empty space stays at 1×. A value
+of 0 hides the glow over content, and 1 disables dimming. This works in both
+themes with floating ASCII disabled. The main glow and physics share
+`content-hitboxes.js`: cards use full rectangles, standalone text uses line
+rectangles, and images/videos use their bounds. Glow geometry is cached and
+invalidated on resize, font readiness and content size changes; scrolling and
+hero transitions update the pointer overlap without a continuous animation loop.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

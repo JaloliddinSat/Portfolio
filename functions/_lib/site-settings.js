@@ -1,5 +1,6 @@
 export const SITE_SETTINGS_KEY = 'settings/site.json';
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
+  gridContentGlowMultiplier: 0.25,
   asciiEnabled: false,
   asciiRotationMultiplier: 1,
   asciiScaleMultiplier: 1,
@@ -16,6 +17,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 });
 
 const rules = {
+  gridContentGlowMultiplier: { min: 0, max: 1, label: 'Content glow multiplier' },
   asciiRotationMultiplier: { min: 0, max: 4, label: 'Rotation multiplier' },
   asciiScaleMultiplier: { min: 0.25, max: 3, label: 'Scale multiplier' },
   asciiSpawnWidth: { choices: [20, 40, 60, 80, 100], label: 'Spawn width' },

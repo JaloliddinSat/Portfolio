@@ -1,7 +1,7 @@
 import { isAuthenticated } from './_lib/admin-auth.js';
 import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js';
 
-const version = '20261024-cursor-idle-1';
+const version = '20261024-glow-content-1';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;
@@ -40,9 +40,14 @@ export async function onRequest(context) {
   const response = new Response(original.body, original);
   for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
   if (debug || debugAssets.has(path)) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-  if (!isHome || !enabled || !response.ok || !response.headers.get('Content-Type')?.includes('text/html')) return response;
+  if (!isHome || !response.ok || !response.headers.get('Content-Type')?.includes('text/html')) return response;
 
-  return new HTMLRewriter()
+  const rewriter = new HTMLRewriter()
+    .on('html', { element(element) {
+      element.setAttribute('data-grid-content-glow-multiplier', String(settings.gridContentGlowMultiplier));
+    } });
+  if (!enabled) return rewriter.transform(response);
+  return rewriter
     .on('head', { element(element) {
       if (debug) {
         element.append(`<link rel="stylesheet" href="/portfolio-debug.css?v=${version}"><script src="/portfolio-debug.js?v=${version}"></script>`, { html: true });

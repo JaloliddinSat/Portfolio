@@ -1,3 +1,5 @@
+import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-content-1';
+
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
   const diagnostics = window.__portfolioDiagnostics;
@@ -148,26 +150,7 @@ export function initAsciiPhysics() {
     context.textBaseline = 'middle';
     spawnTop = content.getBoundingClientRect().top + scrollY;
     worldBottom = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    // Whole cards are solid; standalone text uses individual line rectangles.
-    const elements = content.querySelectorAll('.resume-item, .section-title, .subsection-title, h2, h3, p, li, img, video, .stepnote-splat-stage');
-    obstacles = [];
-    for (const element of elements) {
-      if (element.parentElement.closest('.resume-item')) continue;
-      if (!element.getClientRects().length) continue;
-      let rects;
-      if (element.matches('p, h2, h3, li') && !element.matches('.resume-item')) {
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        rects = range.getClientRects();
-      } else {
-        rects = [element.getBoundingClientRect()];
-      }
-      for (const rect of rects) {
-        if (rect.width < 1 || rect.height < 1) continue;
-        obstacles.push({ left: rect.left + scrollX, right: rect.right + scrollX,
-          top: rect.top + scrollY - spawnTop, bottom: rect.bottom + scrollY - spawnTop });
-      }
-    }
+    obstacles = collectContentHitboxes(content, spawnTop);
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
     diagnostics?.sample('ascii.geometry', measureStart);
   };

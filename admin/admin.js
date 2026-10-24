@@ -78,6 +78,7 @@ const tuningForm = document.querySelector("#ascii-settings-form");
 const tuningFields = document.querySelector("#ascii-tuning-fields");
 const tuningStatus = document.querySelector("#ascii-tuning-status");
 const tuningInputs = {
+  gridContentGlowMultiplier: document.querySelector("#grid-content-glow-multiplier"),
   asciiCursorIdleTimeout: document.querySelector("#ascii-cursor-idle-timeout"),
   asciiCursorReleaseDistance: document.querySelector("#ascii-cursor-release-distance"),
   asciiCursorCooldown: document.querySelector("#ascii-cursor-cooldown"),

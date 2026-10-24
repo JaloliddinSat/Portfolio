@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=11" />
+    <link rel="stylesheet" href="/admin/styles.css?v=12" />
   </head>
   <body>
     <main class="admin-shell">
@@ -84,6 +84,14 @@
           <form id="ascii-settings-form" class="ascii-settings-form">
             <fieldset id="ascii-tuning-fields" disabled>
               <legend>Animation settings</legend>
+              <h3>Background grid glow</h3>
+              <div class="ascii-tuning-grid">
+                <label for="grid-content-glow-multiplier">Glow over content (multiplier)
+                  <input id="grid-content-glow-multiplier" name="gridContentGlowMultiplier" type="number" min="0" max="1" step="any" value="0.25" required />
+                  <small>Brightness when the cursor overlaps text or a content box. 0 hides the glow; 0.25 keeps 25%; 1 keeps full brightness. Works in both themes, even with floating ASCII off.</small>
+                </label>
+              </div>
+              <h3>Floating ASCII</h3>
               <div class="ascii-tuning-grid">
                 <label for="ascii-rotation-multiplier">Rotation speed multiplier
                   <input id="ascii-rotation-multiplier" name="asciiRotationMultiplier" type="number" min="0" max="4" step="0.1" value="1" required />
@@ -205,6 +213,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=11" defer></script>
+    <script src="/admin/admin.js?v=12" defer></script>
   </body>
 </html>
