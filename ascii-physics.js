@@ -1,4 +1,4 @@
-import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-content-1';
+import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-badges-1';
 
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
