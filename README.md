@@ -15,6 +15,10 @@ stored in `settings/site.json` in the existing R2 bucket and defaults to off.
 Disabled pages contain no effect UI or asset references; effect asset requests
 return 404. Changes apply to new page loads. Storage failures keep the effect off.
 
+Characters start spawning once the grid section reaches halfway up the viewport,
+while the upper half still shows the hero. They remain confined below the grid
+boundary, and activation persists if the visitor scrolls back up.
+
 Animation settings in admin also control rotation (0–4×), scale (0.25–3×),
 the total character limit (0–500), and an edge spawn width (20%, 40%, 60%,
 80%, or 100% of the top edge). For example, 20% uses the outer 10% on each

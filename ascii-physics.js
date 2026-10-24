@@ -481,11 +481,11 @@ export function initAsciiPhysics() {
   };
 
   const checkReveal = () => {
-    // The content reaches the top only once the hero is fully covered.
+    // Begin when the grid covers the lower half of the viewport.
     // Activation is permanent for this visit, including when scrolling back up.
     const contentTop = content.getBoundingClientRect().top;
     spawnTop = contentTop + scrollY;
-    if (!activated && contentTop <= 1) {
+    if (!activated && contentTop <= innerHeight * 0.5) {
       activated = true;
       geometryDirty = true;
     }

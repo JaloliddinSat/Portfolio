@@ -250,3 +250,10 @@ const otherPointer=motionTrial();otherPointer.move(120,450);otherPointer.listene
 console.log('PASS: trailing-zero and 101ms-pause regressions in both themes, deliberate placement, reversal, ring wrap, scroll isolation, final release coordinates, cancellation, no-motion grab, speed cap and pointer ID isolation');
 
 const heldThenFlick=motionTrial();heldThenFlick.move(5010,410);heldThenFlick.move(5020,450);heldThenFlick.drop(5021,450);assert(heldThenFlick.particle.vx>400,'long-held initial sample cannot dilute recent flick');
+
+const beforeHalf=setup({top:401});assert.equal(beforeHalf.api.state().activated,false,'wait until grid reaches halfway');
+const atHalf=setup({top:400});assert.equal(atHalf.api.state().activated,true,'start exactly halfway down an 800px viewport');
+atHalf.api.measure();for(let i=0;i<24;i++)atHalf.api.simulate();assert(atHalf.api.particles.length>0,'characters spawn while half the hero is still visible');assert(atHalf.api.particles.every(p=>p.y>=atHalf.api.state().spawnTop+atHalf.api.hitboxHalf(p)),'early spawning remains below grid boundary');
+atHalf.content.getBoundingClientRect=()=>({top:700});atHalf.api.checkReveal();assert(atHalf.api.state().activated,'scrolling back up never undoes activation');
+const resizeHalf=setup({top:500});assert.equal(resizeHalf.api.state().activated,false);resizeHalf.scope.innerHeight=1000;resizeHalf.listeners.get('window:resize')();assert(resizeHalf.api.state().activated,'halfway threshold follows viewport resizing');
+console.log('PASS: exact half-screen activation, no early start, spawning inside grid while hero visible, persistent activation and responsive threshold');
