@@ -1,3 +1,5 @@
+const portfolioDiagnostics = window.__portfolioDiagnostics;
+
 const year = document.querySelector("#year");
 
 if (year) {
@@ -1002,7 +1004,10 @@ const heroFrameDriver = (() => {
     // Subscribers run in priority order: style writes first, splat render last, so
     // the renderer's layout reads flush an already-clean tree once per frame.
     for (let index = 0; index < subscribers.length; index += 1) {
-      subscribers[index].callback(state);
+      const subscriber = subscribers[index];
+      const started = portfolioDiagnostics ? performance.now() : 0;
+      subscriber.callback(state);
+      portfolioDiagnostics?.sample(`hero.${subscriber.callback.name || subscriber.priority || index}`, started);
     }
 
     if (now < activeUntil) {
@@ -1961,6 +1966,7 @@ const initSplat = async () => {
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
+    portfolioDiagnostics?.registerViewer('hero', viewer);
     splatLoadDebug.viewer = viewer;
     recordSplatLoadDebug("viewer-created", manualRendering ? "manual" : "self-driven");
 
@@ -3760,6 +3766,7 @@ const initStepNoteSplat = async () => {
       sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
+    portfolioDiagnostics?.registerViewer('stepnote', viewer);
     const sceneOptions = {
       progressiveLoad: true,
       showLoadingUI: false,
@@ -3923,6 +3930,7 @@ const initStepNoteSplat = async () => {
         return;
       }
 
+      const transformStart = portfolioDiagnostics ? performance.now() : 0;
       const durationMs = Math.max(1, config.loopSeconds) * 1000;
       const cycleLegs = config.pingPong ? 2 : 1;
       playbackPhase = ((time - loopStart) / durationMs) % cycleLegs;
@@ -3938,6 +3946,7 @@ const initStepNoteSplat = async () => {
         direction: playbackPhase <= 1 ? "forward" : "reverse",
       });
 
+      portfolioDiagnostics?.sample('stepnote.transform', transformStart);
       animationFrameId = requestAnimationFrame(animate);
     };
 

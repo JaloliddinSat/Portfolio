@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=5" />
+    <link rel="stylesheet" href="/admin/styles.css?v=6" />
   </head>
   <body>
     <main class="admin-shell">
@@ -71,6 +71,8 @@
 
         <section class="site-settings" aria-labelledby="site-settings-title">
           <h2 id="site-settings-title">Site features</h2>
+          <a class="secondary-button debug-portfolio-link" href="/?debugPortfolio" target="_blank" rel="noopener noreferrer">Open portfolio debug mode ↗</a>
+          <p class="debug-portfolio-note">Private preview with ASCII, frame timings, pause history, and comparison controls. Public settings stay unchanged.</p>
           <label class="feature-switch" for="ascii-feature-toggle">
             <span><strong>Floating ASCII</strong><span id="ascii-feature-detail">Checking current setting…</span></span>
             <input id="ascii-feature-toggle" type="checkbox" role="switch" aria-describedby="ascii-feature-detail" disabled />
@@ -132,6 +134,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=5" defer></script>
+    <script src="/admin/admin.js?v=6" defer></script>
   </body>
 </html>

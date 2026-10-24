@@ -1,5 +1,6 @@
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
+  const diagnostics = window.__portfolioDiagnostics;
   const canvas = document.querySelector('#ascii-curtain');
   const toggle = document.querySelector('#ascii-toggle');
   const content = document.querySelector('#site-content-transition');
@@ -21,10 +22,10 @@ export function initAsciiPhysics() {
   const particles = [];
   const cells = new Map();
   const cellPool = [];
-  let enabled = !reducedMotion.matches;
+  let enabled = diagnostics ? true : !reducedMotion.matches;
   try {
     const saved = localStorage.getItem(storageKey);
-    if (saved !== null) enabled = saved === 'true';
+    if (!diagnostics && saved !== null) enabled = saved === 'true';
   } catch { /* Storage is optional. */ }
   let activated = false;
   let width = 0;
@@ -40,6 +41,34 @@ export function initAsciiPhysics() {
   let drag = null;
   let revealFrame = null;
   let color = '#777';
+  let geometryRebuilds = 0;
+  let pairChecks = 0;
+  let overlaps = 0;
+  let maxBucket = 0;
+  let visible = 0;
+  let glyphAtlas = null;
+  let atlasColor = '';
+  const atlasRatio = 3;
+  const atlasCell = 32;
+
+  const prepareGlyphAtlas = () => {
+    if (glyphAtlas && atlasColor === color) return true;
+    const started = diagnostics ? performance.now() : 0;
+    glyphAtlas = document.createElement('canvas');
+    glyphAtlas.width = glyphs.length * atlasCell * atlasRatio;
+    glyphAtlas.height = atlasCell * atlasRatio;
+    const atlasContext = glyphAtlas.getContext('2d');
+    if (!atlasContext) { glyphAtlas = null; return false; }
+    atlasContext.setTransform(atlasRatio, 0, 0, atlasRatio, 0, 0);
+    atlasContext.font = '12px "JetBrains Mono", monospace';
+    atlasContext.textAlign = 'center';
+    atlasContext.textBaseline = 'middle';
+    atlasContext.fillStyle = color;
+    [...glyphs].forEach((glyph, index) => atlasContext.fillText(glyph, index * atlasCell + atlasCell / 2, atlasCell / 2));
+    atlasColor = color;
+    diagnostics?.sample('ascii.atlasBuild', started);
+    return true;
+  };
 
   const release = () => {
     if (!drag) return;
@@ -56,6 +85,8 @@ export function initAsciiPhysics() {
   };
 
   const measure = () => {
+    const measureStart = diagnostics ? performance.now() : 0;
+    geometryRebuilds += 1;
     geometryDirty = false;
     width = innerWidth;
     height = innerHeight;
@@ -91,6 +122,7 @@ export function initAsciiPhysics() {
       }
     }
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
+    diagnostics?.sample('ascii.geometry', measureStart);
   };
 
   const spawn = () => {
@@ -110,11 +142,11 @@ export function initAsciiPhysics() {
 
   const simulate = () => {
     spawnTime += step;
-    while (particles.length < maxParticles && spawnTime >= 1 / 12) {
+    while (particles.length < (diagnostics?.flags.particleLimit ?? maxParticles) && spawnTime >= 1 / 12) {
       spawnTime -= 1 / 12;
       spawn();
     }
-    if (particles.length === maxParticles) spawnTime = 0;
+    if (particles.length >= (diagnostics?.flags.particleLimit ?? maxParticles)) spawnTime = 0;
     for (const particle of particles) {
       particle.angle = (particle.angle + particle.angularVelocity * step) % fullTurn;
       if (drag?.particle === particle) continue;
@@ -140,6 +172,7 @@ export function initAsciiPhysics() {
       }
     }
     // A spatial hash keeps glyph-to-glyph collisions local, including off-screen.
+    if (diagnostics?.flags.glyphCollisions === false) return;
     cells.clear();
     let usedCells = 0;
     const columns = Math.ceil(width / cellSize) + 2;
@@ -154,6 +187,7 @@ export function initAsciiPhysics() {
           const neighbors = cells.get(y * columns + x);
           if (!neighbors) continue;
           for (const other of neighbors) {
+            if (diagnostics) pairChecks += 1;
             if (drag?.particle === particle || drag?.particle === other) continue;
             const dx = particle.x - other.x;
             const dy = particle.y - other.y;
@@ -161,6 +195,7 @@ export function initAsciiPhysics() {
             const overlapX = combinedHalf - Math.abs(dx);
             const overlapY = combinedHalf - Math.abs(dy);
             if (overlapX <= 0 || overlapY <= 0) continue;
+            if (diagnostics) overlaps += 1;
             const axis = overlapX < overlapY ? 'x' : 'y';
             const velocity = axis === 'x' ? 'vx' : 'vy';
             const direction = (axis === 'x' ? dx : dy) >= 0 ? 1 : -1;
@@ -182,27 +217,37 @@ export function initAsciiPhysics() {
         cells.set(key, bucket);
       }
       bucket.push(particle);
+      if (diagnostics) maxBucket = Math.max(maxBucket, bucket.length);
     }
   };
 
   const draw = () => {
     context.clearRect(0, 0, width, height);
-    if (!activated) return;
+    visible = 0;
+    if (!activated || diagnostics?.flags.drawingPaused) return;
     context.save();
     context.beginPath();
     context.rect(0, Math.max(0, spawnTop - scrollY), width, height);
     context.clip();
     context.fillStyle = color;
+    const useAtlas = (diagnostics?.flags.cachedGlyphs ?? true) && prepareGlyphAtlas();
     for (const particle of particles) {
       const half = hitboxHalf(particle);
       const x = particle.x - scrollX;
       const y = particle.y - scrollY;
       if (x < -half || x > width + half || y < -half || y > height + half) continue;
+      visible += 1;
       context.save();
       context.translate(x, y);
       context.rotate(particle.angle);
       context.scale(particle.scale, particle.scale);
-      context.fillText(particle.glyph, 0, 0);
+      if (useAtlas) {
+        const sourceCell = atlasCell * atlasRatio;
+        context.drawImage(glyphAtlas, glyphs.indexOf(particle.glyph) * sourceCell, 0, sourceCell, sourceCell,
+          -atlasCell / 2, -atlasCell / 2, atlasCell, atlasCell);
+      } else {
+        context.fillText(particle.glyph, 0, 0);
+      }
       context.restore();
     }
     context.restore();
@@ -210,19 +255,30 @@ export function initAsciiPhysics() {
 
   const tick = (time) => {
     frame = null;
+    const frameStart = diagnostics ? performance.now() : 0;
+    pairChecks = overlaps = maxBucket = 0;
+    if (diagnostics && particles.length > diagnostics.flags.particleLimit) particles.length = diagnostics.flags.particleLimit;
     if (geometryDirty) measure();
+    const physicsStart = diagnostics ? performance.now() : 0;
     // Fixed small steps prevent fast throws tunneling through thin obstacles.
     // Carry dropped-frame time forward instead of discarding it. Limit work per
     // frame so catching up cannot monopolize the main thread.
     accumulator = Math.min(0.5, accumulator + (time - (lastTime || time)) / 1000);
     lastTime = time;
     let steps = 0;
+    if (diagnostics?.flags.physicsPaused) accumulator = 0;
     while (accumulator >= step && steps < 12) {
       simulate();
       accumulator -= step;
       steps += 1;
     }
+    diagnostics?.sample('ascii.physics', physicsStart, { steps, pairChecks, overlaps });
+    const drawStart = diagnostics ? performance.now() : 0;
     draw();
+    diagnostics?.sample('ascii.draw', drawStart);
+    diagnostics?.sample('ascii.frame', frameStart);
+    diagnostics?.state('ascii', { particles: particles.length, visible, steps, pairChecks, overlaps, maxBucket,
+      backlogMs: Math.round(accumulator * 1000), obstacles: obstacles.length, geometryRebuilds });
     frame = requestAnimationFrame(tick);
   };
 
@@ -237,8 +293,12 @@ export function initAsciiPhysics() {
       lastTime = 0;
       accumulator = 0;
       frame = requestAnimationFrame(tick);
+      diagnostics?.event('ascii-start', { activated, enabled });
     } else if (!shouldRun) {
-      if (frame !== null) cancelAnimationFrame(frame);
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+        diagnostics?.event('ascii-stop', { enabled, activated, hidden: document.hidden, desktop: desktop.matches });
+      }
       frame = null;
       release();
       context.clearRect(0, 0, width, height);
@@ -259,11 +319,11 @@ export function initAsciiPhysics() {
 
   toggle.addEventListener('click', () => {
     enabled = !enabled;
-    try { localStorage.setItem(storageKey, String(enabled)); } catch { /* Optional. */ }
+    try { if (!diagnostics) localStorage.setItem(storageKey, String(enabled)); } catch { /* Optional. */ }
     checkReveal();
   });
   const canGrab = (event) => desktop.matches && enabled && activated &&
-    !event.target.closest('a, button, input, textarea, select, [contenteditable="true"]');
+    !event.target.closest('#portfolio-debug-panel, a, button, input, textarea, select, [contenteditable="true"]');
   document.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || !canGrab(event)) return;
     const x = event.clientX + scrollX;
@@ -318,7 +378,7 @@ export function initAsciiPhysics() {
   new MutationObserver(() => {
     color = document.documentElement.dataset.theme === 'light' ? '#888' : '#777';
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  document.fonts?.ready.then(() => { geometryDirty = true; });
+  document.fonts?.ready.then(() => { geometryDirty = true; glyphAtlas = null; });
   document.addEventListener('portfolio:hero-frame', checkReveal);
   checkReveal();
 }

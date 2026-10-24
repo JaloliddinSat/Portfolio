@@ -377,3 +377,6 @@ input:focus {
 .feature-switch input:checked::before { transform: translateX(20px); background: var(--button-text); }
 .feature-switch input:disabled { opacity: 0.45; cursor: wait; }
 .feature-switch input:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+.debug-portfolio-link { display: inline-block; margin-bottom: 10px; }
+.debug-portfolio-note { margin: 0 0 24px; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
