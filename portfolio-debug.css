@@ -12,6 +12,8 @@
 #portfolio-debug-panel .debug-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 12px 0; }
 #portfolio-debug-panel label { display: flex; align-items: center; gap: 5px; }
 #portfolio-debug-panel .debug-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
-#portfolio-debug-panel button, #portfolio-debug-panel select { padding: 5px 8px; border: 1px solid #59606b; border-radius: 5px; color: #ecf0f6; background: #222a36; font: inherit; cursor: pointer; }
+#portfolio-debug-panel button, #portfolio-debug-panel select, #portfolio-debug-panel input[type="number"] { padding: 5px 8px; border: 1px solid #59606b; border-radius: 5px; color: #ecf0f6; background: #222a36; font: inherit; cursor: pointer; }
 #portfolio-debug-panel a { color: #9dc9fa; }
 #portfolio-debug-panel :focus-visible { outline: 2px solid #9dc9fa; outline-offset: 2px; }
+
+#portfolio-debug-panel input[type="number"] { width: 70px; }

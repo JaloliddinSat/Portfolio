@@ -1,7 +1,7 @@
 import { isAuthenticated } from './_lib/admin-auth.js';
-import { readSiteSettings } from './_lib/site-settings.js';
+import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js';
 
-const version = '20261024-performance-1';
+const version = '20261024-site-controls-2';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;
@@ -22,9 +22,11 @@ export async function onRequest(context) {
   }
   const debug = wantsDebug && authenticated;
 
+  let settings = { ...DEFAULT_SITE_SETTINGS };
   let enabled = false;
   try {
-    enabled = (await readSiteSettings(context.env.RESUMES)).asciiEnabled;
+    settings = await readSiteSettings(context.env.RESUMES);
+    enabled = settings.asciiEnabled;
   } catch {
     // Missing or unavailable settings must never enable an unpublished feature.
   }
@@ -49,7 +51,7 @@ export async function onRequest(context) {
     } })
     .on('.header-controls', { element(element) { element.prepend(button, { html: true }); } })
     .on('body', { element(element) {
-      element.prepend('<canvas class="ascii-curtain" id="ascii-curtain" aria-hidden="true" hidden></canvas>', { html: true });
+      element.prepend(`<canvas class="ascii-curtain" id="ascii-curtain" aria-hidden="true" data-ascii-config='${JSON.stringify(settings)}' hidden></canvas>`, { html: true });
       element.append(`<script type="module" src="/ascii-physics.js?v=${version}"></script>`, { html: true });
     } })
     .transform(response);

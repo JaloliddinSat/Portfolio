@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 const root = process.cwd();
+const { DEFAULT_SITE_SETTINGS } = await import(pathToFileURL(root + '/functions/_lib/site-settings.js'));
 const { onRequest: admin } = await import(pathToFileURL(root + '/functions/api/admin/[[path]].js'));
 const { onRequest: middleware } = await import(pathToFileURL(root + '/functions/_middleware.js'));
 let value = null;
@@ -16,9 +17,23 @@ assert.equal((await call('settings')).status,401);
 assert.equal((await call('settings','POST',{asciiEnabled:true})).status,401);
 const login=await call('login','POST',{email:'jsatimov@uwaterloo.ca',password:'test-password'});assert.equal(login.status,200);
 const cookie=login.headers.get('set-cookie').split(';')[0];
-assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{asciiEnabled:false});
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:false});
 assert.equal((await call('settings','POST',{asciiEnabled:'true'},cookie)).status,400);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie,'https://other.test')).status,403);
+// Existing enable-only records must hydrate all new controls without migration.
+value=JSON.stringify({asciiEnabled:false});
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS});
+const tuning={asciiRotationMultiplier:0.5,asciiScaleMultiplier:1.5,asciiSpawnWidth:20,asciiParticleLimit:180};
+assert.equal((await call('settings','POST',tuning,cookie)).status,200);
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{asciiEnabled:false,...tuning});
+await call('settings','POST',{asciiEnabled:true},cookie);
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{asciiEnabled:true,...tuning},'enable switch preserves tuning');
+await call('settings','POST',{asciiParticleLimit:180},cookie);
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{asciiEnabled:true,...tuning},'partial tuning preserves enable switch');
+for(const bad of [{asciiScaleMultiplier:0},{asciiScaleMultiplier:4},{asciiRotationMultiplier:-1},{asciiRotationMultiplier:5},{asciiParticleLimit:501},{asciiParticleLimit:1.5},{asciiSpawnWidth:30},{asciiParticleLimit:'180'},{unknown:1},null,{}]) {
+  assert.equal((await call('settings','POST',bad,cookie)).status,400,JSON.stringify(bad));
+}
+await call('settings','POST',{...DEFAULT_SITE_SETTINGS},cookie);
 let transforms=0;
 globalThis.HTMLRewriter=class {
   handlers=[];
@@ -31,7 +46,7 @@ const page=(path='/')=>middleware({env,request:new Request('https://portfolio.te
 let response=await page();assert.equal(await response.text(),html);assert.equal(transforms,0);assert.equal(response.headers.get('Cache-Control'),'no-store');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
-assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{asciiEnabled:true});
+assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});
 response=await page();const injected=await response.text();assert(injected.includes('ascii-toggle'));assert(injected.includes('ascii-physics.js'));assert(injected.includes('ascii-physics.css'));assert.equal(transforms,1);
 assert.equal((await page('/ascii-physics.js')).status,200);
 await call('settings','POST',{asciiEnabled:false},cookie);assert.equal((await page('/ascii-physics.js')).status,404);assert.equal(await (await page()).text(),html);
@@ -45,6 +60,12 @@ assert.equal(privateResponse.headers.get('Cache-Control'),'no-store');
 assert.equal(privateResponse.headers.get('X-Robots-Tag'),'noindex, nofollow');
 const privateMarkup=await privateResponse.text();
 assert(privateMarkup.includes('portfolio-debug.js') && privateMarkup.includes('ascii-physics.js'));
+assert(privateMarkup.includes('data-ascii-config'));
+await call('settings','POST',tuning,cookie);
+const previewHtml=JSON.parse(await (await authenticatedPage('/?debugPortfolio')).text()).flat().join('');
+const previewConfig=JSON.parse(previewHtml.match(/data-ascii-config='([^']+)'/)[1]);
+assert.equal(previewConfig.asciiParticleLimit,180,'saved tuning reaches private preview');
+assert.equal(await (await page()).text(),html,'saving tuning leaves public feature off');
 assert.equal((await authenticatedPage('/portfolio-debug.js')).status,200);
 assert.equal((await authenticatedPage('/ascii-physics.js')).status,200);
 assert.equal(await (await authenticatedPage('/')).text(),html,'normal admin visit must not enable disabled effect');

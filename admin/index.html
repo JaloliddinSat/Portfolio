@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=6" />
+    <link rel="stylesheet" href="/admin/styles.css?v=7" />
   </head>
   <body>
     <main class="admin-shell">
@@ -78,6 +78,34 @@
             <input id="ascii-feature-toggle" type="checkbox" role="switch" aria-describedby="ascii-feature-detail" disabled />
           </label>
           <p class="form-status" id="settings-status" role="status" aria-live="polite"></p>
+          <form id="ascii-settings-form" class="ascii-settings-form">
+            <fieldset id="ascii-tuning-fields" disabled>
+              <legend>Animation settings</legend>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-rotation-multiplier">Rotation speed multiplier
+                  <input id="ascii-rotation-multiplier" name="asciiRotationMultiplier" type="number" min="0" max="4" step="0.1" value="1" required />
+                  <small>1× is the current speed. 0 stops rotation.</small>
+                </label>
+                <label for="ascii-scale-multiplier">Scale multiplier
+                  <input id="ascii-scale-multiplier" name="asciiScaleMultiplier" type="number" min="0.25" max="3" step="0.05" value="1" required />
+                  <small>Multiplies every character’s randomized size.</small>
+                </label>
+                <label for="ascii-particle-limit">Total character limit
+                  <input id="ascii-particle-limit" name="asciiParticleLimit" type="number" min="0" max="500" step="1" value="240" required />
+                  <small>0–500 characters. Lower counts are lighter.</small>
+                </label>
+              </div>
+              <label class="ascii-spawn-label" for="ascii-spawn-width">Spawn width from the center <output id="ascii-spawn-output" for="ascii-spawn-width">100%</output></label>
+              <input id="ascii-spawn-width" name="asciiSpawnWidth" type="range" min="20" max="100" step="20" value="100" aria-describedby="ascii-spawn-help" />
+              <div class="ascii-spawn-preview" id="ascii-spawn-preview" aria-hidden="true">
+                <span>20%</span><span>20%</span><span>20%</span><span>20%</span><span>20%</span><i></i>
+              </div>
+              <p class="debug-portfolio-note" id="ascii-spawn-help">20% spawns only in the middle fifth. Expand symmetrically in 20% steps to cover the whole top edge.</p>
+              <button class="primary-button" type="submit">Save animation settings</button>
+            </fieldset>
+            <p class="form-status" id="ascii-tuning-status" role="status" aria-live="polite"></p>
+            <p class="debug-portfolio-note">Saved settings apply to new page loads, including the private debug preview. Saving does not turn the public effect on.</p>
+          </form>
         </section>
 
         <form id="upload-form">
@@ -134,6 +162,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=6" defer></script>
+    <script src="/admin/admin.js?v=7" defer></script>
   </body>
 </html>

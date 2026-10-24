@@ -1,4 +1,4 @@
-import { readSiteSettings, SITE_SETTINGS_KEY } from '../../_lib/site-settings.js';
+import { readSiteSettings, SITE_SETTINGS_KEY, validateSiteSettingsPatch } from '../../_lib/site-settings.js';
 
 import { ADMIN_EMAIL, SESSION_TTL_SECONDS, constantTimeEqual, digest, makeSession, isAuthenticated } from '../../_lib/admin-auth.js';
 
@@ -82,10 +82,8 @@ export async function onRequest(context) {
       if (request.method === "GET") return json(await readSiteSettings(env.RESUMES));
       let body;
       try { body = await request.json(); } catch { return json({ error: "Invalid settings request." }, 400); }
-      if (typeof body?.asciiEnabled !== "boolean") {
-        return json({ error: "Choose whether floating ASCII is enabled." }, 400);
-      }
-      const settings = { asciiEnabled: body.asciiEnabled };
+      try { validateSiteSettingsPatch(body); } catch (error) { return json({ error: error.message }, 400); }
+      const settings = { ...await readSiteSettings(env.RESUMES), ...body };
       await env.RESUMES.put(SITE_SETTINGS_KEY, JSON.stringify(settings), {
         httpMetadata: { contentType: "application/json", cacheControl: "no-store" },
       });

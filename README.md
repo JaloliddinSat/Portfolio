@@ -15,6 +15,13 @@ stored in `settings/site.json` in the existing R2 bucket and defaults to off.
 Disabled pages contain no effect UI or asset references; effect asset requests
 return 404. Changes apply to new page loads. Storage failures keep the effect off.
 
+Animation settings in admin also control rotation (0–4×), scale (0.25–3×),
+the total character limit (0–500), and a centered spawn band (20%, 40%, 60%,
+80%, or 100% of the top edge). Saving these controls preserves the public
+enable switch. Reload the portfolio or private debug preview to apply changes.
+Existing settings keep the original defaults: 1× rotation, 1× scale, 240
+characters, and full-width spawning.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens
@@ -37,4 +44,5 @@ Run regression checks with:
 node tests/ascii-physics.test.cjs
 node tests/site-settings.test.mjs
 node tests/portfolio-debug.test.cjs
+node tests/admin-settings.test.cjs
 ```

@@ -123,13 +123,16 @@
   const paint = () => {
     if (!panel) return;
     const report = snapshot();
+    const limitInput = panel.querySelector('[data-limit]');
+    if (document.activeElement !== limitInput) limitInput.value = flags.particleLimit;
     const timingLines = Object.entries(report.timings).map(([name, timing]) => `${name.padEnd(23)} avg ${timing.mean.toFixed(2).padStart(6)}  p95 ${timing.p95.toFixed(2).padStart(6)}  max ${timing.max.toFixed(2).padStart(7)} ms`);
     snapshotText.textContent = [
       `${recording ? 'RECORDING' : 'PAUSED'} · ${document.visibilityState} · scroll ${report.scrollY}`,
       `Capture ${(report.captureDurationMs / 1000).toFixed(1)}s · frames ${totalFrames} · median ${report.frames.median ? Math.round(1000 / report.frames.median) : '--'} FPS`,
       `Frame gaps: median ${report.frames.median}ms · p95 ${report.frames.p95}ms`,
       `Stalls >80ms: ${frameGaps} · worst ${round(maxGap)}ms`,
-      `ASCII: ${state.ascii?.particles ?? 0}/240 · visible ${state.ascii?.visible ?? 0} · steps ${state.ascii?.steps ?? 0} · backlog ${state.ascii?.backlogMs ?? 0}ms`,
+      `ASCII: ${state.ascii?.particles ?? 0}/${state.ascii?.limit ?? flags.particleLimit} · visible ${state.ascii?.visible ?? 0} · steps ${state.ascii?.steps ?? 0} · backlog ${state.ascii?.backlogMs ?? 0}ms`,
+      `Saved tuning: rotation ${state.asciiConfig?.rotationMultiplier ?? 1}× · scale ${state.asciiConfig?.scaleMultiplier ?? 1}× · centered spawn ${state.asciiConfig?.spawnWidth ?? 100}%`,
       `Pair checks ${state.ascii?.pairChecks ?? 0} · overlaps ${state.ascii?.overlaps ?? 0} · bucket max ${state.ascii?.maxBucket ?? 0}`,
       `Obstacles ${state.ascii?.obstacles ?? 0} · geometry rebuilds ${state.ascii?.geometryRebuilds ?? 0}`,
       `Observers: long tasks ${capabilities.longtask ? 'yes' : 'unavailable'} · script attribution ${capabilities.longAnimationFrame ? 'yes' : 'unavailable'}`,
@@ -177,7 +180,7 @@
         <label><input type="checkbox" data-flag="splatsPaused"> Pause splat rendering</label>
         <label><input type="checkbox" data-flag="glyphCollisions" checked> Glyph collisions</label>
         <label><input type="checkbox" data-flag="cachedGlyphs" checked> Cached glyph rendering</label>
-        <label>Particle cap <select data-limit><option>240</option><option>160</option><option>80</option></select></label>
+        <label>Particle cap <input type="number" data-limit min="0" max="500" step="1" value="${flags.particleLimit}"></label>
       </div>
       <div class="debug-buttons"><button data-record>Pause recording</button><button data-clear>Clear measurements</button><button data-export>Download report</button></div>
       <pre id="portfolio-debug-summary"></pre>
@@ -190,7 +193,7 @@
     graph = panel.querySelector('canvas');
     panel.addEventListener('change', event => {
       if (event.target.dataset.flag) flags[event.target.dataset.flag] = event.target.checked;
-      if (event.target.matches('[data-limit]')) flags.particleLimit = Number(event.target.value);
+      if (event.target.matches('[data-limit]') && event.target.checkValidity()) flags.particleLimit = Number(event.target.value);
       recordEvent('comparison-change', { flags: { ...flags } });
     });
     panel.querySelector('[data-record]').addEventListener('click', event => {

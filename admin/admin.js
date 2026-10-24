@@ -74,10 +74,28 @@ const featureToggle = document.querySelector("#ascii-feature-toggle");
 const featureDetail = document.querySelector("#ascii-feature-detail");
 const settingsStatus = document.querySelector("#settings-status");
 let publishedAsciiEnabled = false;
+const tuningForm = document.querySelector("#ascii-settings-form");
+const tuningFields = document.querySelector("#ascii-tuning-fields");
+const tuningStatus = document.querySelector("#ascii-tuning-status");
+const tuningInputs = {
+  asciiRotationMultiplier: document.querySelector("#ascii-rotation-multiplier"),
+  asciiScaleMultiplier: document.querySelector("#ascii-scale-multiplier"),
+  asciiSpawnWidth: document.querySelector("#ascii-spawn-width"),
+  asciiParticleLimit: document.querySelector("#ascii-particle-limit"),
+};
+const updateSpawnPreview = () => {
+  const width = tuningInputs.asciiSpawnWidth.value;
+  document.querySelector("#ascii-spawn-output").textContent = `${width}%`;
+  document.querySelector("#ascii-spawn-preview").style.setProperty("--spawn-width", `${width}%`);
+};
 
-const renderSiteSettings = (settings) => {
+const renderSiteSettings = (settings, preserveDraft = false) => {
   publishedAsciiEnabled = settings.asciiEnabled === true;
   featureToggle.checked = publishedAsciiEnabled;
+  if (!preserveDraft) {
+    for (const [key, input] of Object.entries(tuningInputs)) input.value = settings[key];
+    updateSpawnPreview();
+  }
   featureDetail.textContent = publishedAsciiEnabled
     ? "Available on desktop. Visitors can switch it off for themselves."
     : "Hidden site-wide. Visitors receive no effect, control, or effect assets.";
@@ -85,10 +103,12 @@ const renderSiteSettings = (settings) => {
 
 const loadSiteSettings = async () => {
   featureToggle.disabled = true;
+  tuningFields.disabled = true;
   setStatus(settingsStatus);
   try {
     renderSiteSettings(await request("settings"));
     featureToggle.disabled = false;
+    tuningFields.disabled = false;
   } catch (error) {
     featureDetail.textContent = "Setting unavailable.";
     setStatus(settingsStatus, error.message, "error");
@@ -98,13 +118,14 @@ const loadSiteSettings = async () => {
 featureToggle.addEventListener("change", async () => {
   const desired = featureToggle.checked;
   featureToggle.disabled = true;
+  tuningFields.disabled = true;
   setStatus(settingsStatus, "Saving…");
   try {
     renderSiteSettings(await request("settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ asciiEnabled: desired }),
-    }));
+    }), true);
     setStatus(settingsStatus, desired ? "Enabled for new page loads." : "Disabled for new page loads.", "success");
   } catch (error) {
     featureToggle.checked = publishedAsciiEnabled;
@@ -115,6 +136,33 @@ featureToggle.addEventListener("change", async () => {
     }
   } finally {
     featureToggle.disabled = false;
+    tuningFields.disabled = false;
+  }
+});
+
+tuningForm.addEventListener("input", () => {
+  updateSpawnPreview();
+  setStatus(tuningStatus, "Unsaved changes.");
+});
+tuningForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!tuningForm.reportValidity()) return;
+  const settings = Object.fromEntries(Object.entries(tuningInputs).map(([key, input]) => [key, Number(input.value)]));
+  tuningFields.disabled = featureToggle.disabled = true;
+  setStatus(tuningStatus, "Saving…");
+  try {
+    renderSiteSettings(await request("settings", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings),
+    }));
+    setStatus(tuningStatus, "Saved. Reload the portfolio or debug preview to see the changes.", "success");
+  } catch (error) {
+    setStatus(tuningStatus, error.message, "error");
+    if (error.status === 401) {
+      showView(loginView);
+      setStatus(loginStatus, "Your session expired. Please sign in again.", "error");
+    }
+  } finally {
+    tuningFields.disabled = featureToggle.disabled = false;
   }
 });
 

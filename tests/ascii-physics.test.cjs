@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const original = fs.readFileSync('ascii-physics.js', 'utf8').replace(/\ninitAsciiPhysics\(\);\s*$/, '');
-function setup({mobile=false, reduced=false, top=-10,diagnostics}={}) {
+function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) {
   const listeners = new Map();
   const stored = new Map();
   const frames = new Map();
@@ -12,7 +12,7 @@ function setup({mobile=false, reduced=false, top=-10,diagnostics}={}) {
     classList:{add(){},remove(){}}, setAttribute(k,v){this[k]=v},
     addEventListener(k,fn){listeners.set(name+':'+k,fn)},
     hasPointerCapture(){return false}, setPointerCapture(){}, releasePointerCapture(){},getBoundingClientRect(){return {top}},querySelectorAll(){return []}});
-  const canvas = element('canvas'); canvas.getContext=()=>context;
+  const canvas = element('canvas'); canvas.dataset.asciiConfig=JSON.stringify(config); canvas.getContext=()=>context;
   const toggle=element('toggle'), content=element('content'), root=element('root'), doc=element('document');
   Object.assign(doc,{createElement:()=>({getContext:()=>context}),hidden:false,documentElement:root,body:element('body'),querySelector:s=>({'#ascii-curtain':canvas,'#ascii-toggle':toggle,'#site-content-transition':content}[s])});
   const win=element('window');win.__portfolioDiagnostics=diagnostics;
@@ -78,7 +78,16 @@ atlas.api.draw();const built=glyphRasterizations;assert(built>0);atlas.api.draw(
 console.log('PASS: glyph atlas is reused across animated frames');
 
 const diagnosticFlags={particleLimit:80,glyphCollisions:true,cachedGlyphs:true,physicsPaused:false,drawingPaused:false};
-const diagnosticPreview=setup({diagnostics:{flags:diagnosticFlags,sample(){},state(){},event(){}}});diagnosticPreview.api.measure();
+const diagnosticPreview=setup({diagnostics:{flags:diagnosticFlags,sample(){},state(){},event(){}}});diagnosticPreview.api.measure();diagnosticFlags.particleLimit=80;
 for(let i=0;i<1500;i++)diagnosticPreview.api.simulate();assert.equal(diagnosticPreview.api.particles.length,80,'debug cap must stop spawning at selected count');
 diagnosticPreview.listeners.get('toggle:click')();assert.equal(diagnosticPreview.stored.has('ascii-physics-enabled'),false,'private preview must not change visitor preference');
 console.log('PASS: private particle cap and visitor preference isolation');
+
+const tuned=setup({config:{asciiRotationMultiplier:0,asciiScaleMultiplier:3,asciiSpawnWidth:20,asciiParticleLimit:180}});tuned.api.measure();
+for(let i=0;i<2400;i++)tuned.api.simulate();assert.equal(tuned.api.particles.length,180);
+assert(tuned.api.particles.every(p=>p.scale>=3&&p.scale<=5.4));assert(tuned.api.particles.every(p=>p.angularVelocity===0));
+const band=setup({config:{asciiSpawnWidth:20,asciiScaleMultiplier:3}});band.api.measure();for(let i=0;i<200;i++)band.api.spawn();
+assert(band.api.particles.every(p=>p.x-band.api.hitboxHalf(p)>=480&&p.x+band.api.hitboxHalf(p)<=720),'spawn boxes fit inside central fifth');
+const larger=setup({config:{asciiScaleMultiplier:3}});larger.api.measure();larger.api.particles.push({scale:5.4,angle:Math.PI/4,angularVelocity:0,x:100,y:2000,vx:20,vy:0},{scale:5.4,angle:Math.PI/4,angularVelocity:0,x:180,y:2000,vx:-20,vy:0});larger.api.simulate();assert(larger.api.particles[0].vx<0,'scaled characters collide across old cell boundaries');
+const zero=setup({config:{asciiParticleLimit:0}});zero.api.measure();for(let i=0;i<120;i++)zero.api.simulate();assert.equal(zero.api.particles.length,0);
+console.log('PASS: saved count, scale and rotation multipliers, centered spawn band, large collision boxes, zero count');

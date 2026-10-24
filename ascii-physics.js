@@ -11,14 +11,25 @@ export function initAsciiPhysics() {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const storageKey = 'ascii-physics-enabled';
   const glyphs = '#@%+=*:.{}[]<>/01';
+  let savedConfig = {};
+  try { savedConfig = JSON.parse(canvas.dataset.asciiConfig || '{}') || {}; } catch { /* Defaults remain usable. */ }
+  const bounded = (key, fallback, min, max) => typeof savedConfig[key] === 'number' &&
+    Number.isFinite(savedConfig[key]) && savedConfig[key] >= min && savedConfig[key] <= max ? savedConfig[key] : fallback;
+  const rotationMultiplier = bounded('asciiRotationMultiplier', 1, 0, 4);
+  const scaleMultiplier = bounded('asciiScaleMultiplier', 1, 0.25, 3);
+  const spawnWidth = [20, 40, 60, 80, 100].includes(savedConfig.asciiSpawnWidth) ? savedConfig.asciiSpawnWidth : 100;
+  const configuredLimit = bounded('asciiParticleLimit', 240, 0, 500);
   const baseHalf = 6;
-  const cellSize = 32;
+  // Neighbor cells must cover the largest scaled, rotated collision box.
+  const cellSize = Math.max(32, Math.ceil(baseHalf * 2 * 1.8 * scaleMultiplier * Math.SQRT2));
   const grabPadding = 22;
   const fullTurn = Math.PI * 2;
   const hitboxHalf = (particle) => baseHalf * particle.scale *
     (Math.abs(Math.cos(particle.angle)) + Math.abs(Math.sin(particle.angle)));
   const step = 1 / 120;
-  const maxParticles = 240;
+  const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
+  if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
@@ -48,7 +59,7 @@ export function initAsciiPhysics() {
   let visible = 0;
   let glyphAtlas = null;
   let atlasColor = '';
-  const atlasRatio = 3;
+  const atlasRatio = Math.max(3, Math.ceil(3 * scaleMultiplier));
   const atlasCell = 32;
 
   const prepareGlyphAtlas = () => {
@@ -126,17 +137,20 @@ export function initAsciiPhysics() {
   };
 
   const spawn = () => {
-    const scale = 1 + Math.random() * 0.8;
+    const scale = (1 + Math.random() * 0.8) * scaleMultiplier;
     const angle = Math.random() * fullTurn;
-    // Each glyph keeps its own direction and a gentle 5–45 degrees/second spin.
+    // Preserve the randomized 5–45 degrees/second base spin, then apply the admin multiplier.
     const angularVelocity = (5 + Math.random() * 40) * Math.PI / 180 *
-      (Math.random() < 0.5 ? -1 : 1);
+      (Math.random() < 0.5 ? -1 : 1) * rotationMultiplier;
     const particle = { scale, angle, angularVelocity,
       y: 0, vx: (Math.random() - 0.5) * 90, vy: 65 + Math.random() * 95,
       glyph: glyphs[Math.floor(Math.random() * glyphs.length)] };
     const half = hitboxHalf(particle);
     particle.y = spawnTop + half + 1;
-    particle.x = half + Math.random() * Math.max(1, width - half * 2);
+    const bandWidth = width * spawnWidth / 100;
+    const left = Math.max(half, (width - bandWidth) / 2 + half);
+    const right = Math.min(width - half, (width + bandWidth) / 2 - half);
+    particle.x = right > left ? left + Math.random() * (right - left) : width / 2;
     particles.push(particle);
   };
 
@@ -277,7 +291,7 @@ export function initAsciiPhysics() {
     draw();
     diagnostics?.sample('ascii.draw', drawStart);
     diagnostics?.sample('ascii.frame', frameStart);
-    diagnostics?.state('ascii', { particles: particles.length, visible, steps, pairChecks, overlaps, maxBucket,
+    diagnostics?.state('ascii', { particles: particles.length, limit: diagnostics.flags.particleLimit, rotationMultiplier, scaleMultiplier, spawnWidth, visible, steps, pairChecks, overlaps, maxBucket,
       backlogMs: Math.round(accumulator * 1000), obstacles: obstacles.length, geometryRebuilds });
     frame = requestAnimationFrame(tick);
   };
