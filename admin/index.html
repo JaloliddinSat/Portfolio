@@ -19,17 +19,19 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=7" />
+    <link rel="stylesheet" href="/admin/styles.css?v=8" />
   </head>
   <body>
     <main class="admin-shell">
       <section class="auth-card" id="loading-view" aria-live="polite">
+        <a class="admin-home-link" href="/">← Back to portfolio</a>
         <span class="eyebrow">Private access</span>
         <h1>Checking your session</h1>
         <p class="lede">One moment.</p>
       </section>
 
       <section class="auth-card" id="login-view" hidden>
+        <a class="admin-home-link" href="/">← Back to portfolio</a>
         <span class="eyebrow">Portfolio admin</span>
         <h1>Welcome back.</h1>
         <p class="lede">Sign in to manage your portfolio.</p>
@@ -62,6 +64,7 @@
       <section class="upload-card" id="upload-view" hidden>
         <div class="upload-heading">
           <div>
+            <a class="admin-home-link" href="/">← Back to portfolio</a>
             <span class="eyebrow">Portfolio admin</span>
             <h1>Update résumé</h1>
             <p class="lede">Drop in a PDF to replace the résumé shown across the site.</p>
@@ -95,12 +98,12 @@
                   <small>0–500 characters. Lower counts are lighter.</small>
                 </label>
               </div>
-              <label class="ascii-spawn-label" for="ascii-spawn-width">Spawn width from the center <output id="ascii-spawn-output" for="ascii-spawn-width">100%</output></label>
+              <label class="ascii-spawn-label" for="ascii-spawn-width">Spawn width from the sides <output id="ascii-spawn-output" for="ascii-spawn-width">100%</output></label>
               <input id="ascii-spawn-width" name="asciiSpawnWidth" type="range" min="20" max="100" step="20" value="100" aria-describedby="ascii-spawn-help" />
               <div class="ascii-spawn-preview" id="ascii-spawn-preview" aria-hidden="true">
-                <span>20%</span><span>20%</span><span>20%</span><span>20%</span><span>20%</span><i></i>
+                <span>20%</span><span>20%</span><span>20%</span><span>20%</span><span>20%</span><i></i><i></i>
               </div>
-              <p class="debug-portfolio-note" id="ascii-spawn-help">20% spawns only in the middle fifth. Expand symmetrically in 20% steps to cover the whole top edge.</p>
+              <p class="debug-portfolio-note" id="ascii-spawn-help">20% spawns in the outer 10% on each side, leaving the middle 80% empty. Increase to 100% to use the whole top edge.</p>
               <button class="primary-button" type="submit">Save animation settings</button>
             </fieldset>
             <p class="form-status" id="ascii-tuning-status" role="status" aria-live="polite"></p>
@@ -162,6 +165,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=7" defer></script>
+    <script src="/admin/admin.js?v=8" defer></script>
   </body>
 </html>

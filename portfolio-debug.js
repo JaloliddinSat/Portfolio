@@ -132,7 +132,7 @@
       `Frame gaps: median ${report.frames.median}ms · p95 ${report.frames.p95}ms`,
       `Stalls >80ms: ${frameGaps} · worst ${round(maxGap)}ms`,
       `ASCII: ${state.ascii?.particles ?? 0}/${state.ascii?.limit ?? flags.particleLimit} · visible ${state.ascii?.visible ?? 0} · steps ${state.ascii?.steps ?? 0} · backlog ${state.ascii?.backlogMs ?? 0}ms`,
-      `Saved tuning: rotation ${state.asciiConfig?.rotationMultiplier ?? 1}× · scale ${state.asciiConfig?.scaleMultiplier ?? 1}× · centered spawn ${state.asciiConfig?.spawnWidth ?? 100}%`,
+      `Saved tuning: rotation ${state.asciiConfig?.rotationMultiplier ?? 1}× · scale ${state.asciiConfig?.scaleMultiplier ?? 1}× · edge spawn ${state.asciiConfig?.spawnWidth ?? 100}%`,
       `Pair checks ${state.ascii?.pairChecks ?? 0} · overlaps ${state.ascii?.overlaps ?? 0} · bucket max ${state.ascii?.maxBucket ?? 0}`,
       `Obstacles ${state.ascii?.obstacles ?? 0} · geometry rebuilds ${state.ascii?.geometryRebuilds ?? 0}`,
       `Observers: long tasks ${capabilities.longtask ? 'yes' : 'unavailable'} · script attribution ${capabilities.longAnimationFrame ? 'yes' : 'unavailable'}`,

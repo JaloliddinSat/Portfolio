@@ -97,6 +97,9 @@
   display: none;
 }
 
+.ascii-hovering { cursor: grab; }
+.ascii-grabbable { cursor: grab !important; }
+
 .ascii-dragging,
 .ascii-dragging * {
   cursor: grabbing !important;

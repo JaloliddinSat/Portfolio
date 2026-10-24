@@ -1,7 +1,7 @@
 import { isAuthenticated } from './_lib/admin-auth.js';
 import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js';
 
-const version = '20261024-site-controls-2';
+const version = '20261024-site-controls-3';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;

@@ -9,12 +9,12 @@ function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) 
   let id=0;
   const context = {setTransform(){},clearRect(){},fillText(){},save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(){},beginPath(){},rect(){},clip(){}};
   const element = name => ({hidden:false,dataset:{theme:'dark'},scrollHeight:8000,
-    classList:{add(){},remove(){}}, setAttribute(k,v){this[k]=v},
+    classList:{values:new Set(),add(name){this.values.add(name)},remove(name){this.values.delete(name)},toggle(name,force){if(force)this.values.add(name);else this.values.delete(name)},contains(name){return this.values.has(name)}}, setAttribute(k,v){this[k]=v},
     addEventListener(k,fn){listeners.set(name+':'+k,fn)},
     hasPointerCapture(){return false}, setPointerCapture(){}, releasePointerCapture(){},getBoundingClientRect(){return {top}},querySelectorAll(){return []}});
   const canvas = element('canvas'); canvas.dataset.asciiConfig=JSON.stringify(config); canvas.getContext=()=>context;
   const toggle=element('toggle'), content=element('content'), root=element('root'), doc=element('document');
-  Object.assign(doc,{createElement:()=>({getContext:()=>context}),hidden:false,documentElement:root,body:element('body'),querySelector:s=>({'#ascii-curtain':canvas,'#ascii-toggle':toggle,'#site-content-transition':content}[s])});
+  Object.assign(doc,{elementFromPoint:()=>({closest:()=>null}),createElement:()=>({getContext:()=>context}),hidden:false,documentElement:root,body:element('body'),querySelector:s=>({'#ascii-curtain':canvas,'#ascii-toggle':toggle,'#site-content-transition':content}[s])});
   const win=element('window');win.__portfolioDiagnostics=diagnostics;
   const scope = { document:doc, window:win, innerWidth:1200,innerHeight:800,devicePixelRatio:1,scrollY:1600,scrollX:0,performance:{now:()=>100},
     localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)},
@@ -87,7 +87,23 @@ const tuned=setup({config:{asciiRotationMultiplier:0,asciiScaleMultiplier:3,asci
 for(let i=0;i<2400;i++)tuned.api.simulate();assert.equal(tuned.api.particles.length,180);
 assert(tuned.api.particles.every(p=>p.scale>=3&&p.scale<=5.4));assert(tuned.api.particles.every(p=>p.angularVelocity===0));
 const band=setup({config:{asciiSpawnWidth:20,asciiScaleMultiplier:3}});band.api.measure();for(let i=0;i<200;i++)band.api.spawn();
-assert(band.api.particles.every(p=>p.x-band.api.hitboxHalf(p)>=480&&p.x+band.api.hitboxHalf(p)<=720),'spawn boxes fit inside central fifth');
+assert(band.api.particles.every(p=>p.x+band.api.hitboxHalf(p)<=120||p.x-band.api.hitboxHalf(p)>=1080),'spawn boxes stay inside the two outer tenths');
 const larger=setup({config:{asciiScaleMultiplier:3}});larger.api.measure();larger.api.particles.push({scale:5.4,angle:Math.PI/4,angularVelocity:0,x:100,y:2000,vx:20,vy:0},{scale:5.4,angle:Math.PI/4,angularVelocity:0,x:180,y:2000,vx:-20,vy:0});larger.api.simulate();assert(larger.api.particles[0].vx<0,'scaled characters collide across old cell boundaries');
 const zero=setup({config:{asciiParticleLimit:0}});zero.api.measure();for(let i=0;i<120;i++)zero.api.simulate();assert.equal(zero.api.particles.length,0);
-console.log('PASS: saved count, scale and rotation multipliers, centered spawn band, large collision boxes, zero count');
+console.log('PASS: saved count, scale and rotation multipliers, edge spawn bands, large collision boxes, zero count');
+
+const hover=setup();hover.api.measure();const hoveringGlyph={scale:1,angle:0,angularVelocity:0,x:100,y:2000,vx:0,vy:0,glyph:'#'};hover.api.particles.push(hoveringGlyph);
+const surface={closest:()=>null};const root=hover.scope.document.documentElement;
+hover.listeners.get('document:pointermove')({clientX:100,clientY:400,target:surface,pointerId:1});
+assert(root.classList.contains('ascii-hovering'),'grab cursor appears inside catch radius');
+hoveringGlyph.x=300;hover.api.tick(1000);assert(!root.classList.contains('ascii-hovering'),'stationary cursor clears when glyph floats away');
+hoveringGlyph.x=100;hover.api.tick(1017);assert(root.classList.contains('ascii-hovering'),'stationary cursor updates when glyph returns');
+hover.listeners.get('document:pointermove')({clientX:100,clientY:400,target:{closest:()=>({})},pointerId:1});assert(!root.classList.contains('ascii-hovering'),'links and controls retain their cursors');
+hover.listeners.get('document:pointermove')({clientX:100,clientY:400,target:surface,pointerId:1});
+hover.listeners.get('document:pointerdown')({clientX:100,clientY:400,target:surface,pointerId:1,button:0,preventDefault(){},stopPropagation(){}});
+assert(root.classList.contains('ascii-dragging'));assert(!root.classList.contains('ascii-hovering'));
+hover.listeners.get('document:pointerup')();assert(!root.classList.contains('ascii-dragging'));assert(root.classList.contains('ascii-hovering'));
+hover.listeners.get('window:blur')();assert(!root.classList.contains('ascii-hovering'));
+hover.listeners.get('document:pointermove')({clientX:100,clientY:400,target:surface,pointerId:1});hover.listeners.get('toggle:click')();assert(!root.classList.contains('ascii-hovering'),'disabled effect clears grab cursor');
+assert(band.api.particles.some(p=>p.x<120)&&band.api.particles.some(p=>p.x>1080),'spawning uses both sides');
+console.log('PASS: edge-only spawns, live hover cursor, stationary-pointer updates, control exclusion, dragging and cleanup');

@@ -50,6 +50,10 @@ export function initAsciiPhysics() {
   let spawnTime = 0;
   let geometryDirty = true;
   let drag = null;
+  let pointer = null;
+  let pointerTargetDirty = false;
+  let hovering = false;
+  let hoverElement = null;
   let revealFrame = null;
   let color = '#777';
   let geometryRebuilds = 0;
@@ -93,6 +97,8 @@ export function initAsciiPhysics() {
       document.documentElement.releasePointerCapture(pointerId);
     }
     document.documentElement.classList.remove('ascii-dragging');
+    pointerTargetDirty = true;
+    updateHover();
   };
 
   const measure = () => {
@@ -147,10 +153,14 @@ export function initAsciiPhysics() {
       glyph: glyphs[Math.floor(Math.random() * glyphs.length)] };
     const half = hitboxHalf(particle);
     particle.y = spawnTop + half + 1;
-    const bandWidth = width * spawnWidth / 100;
-    const left = Math.max(half, (width - bandWidth) / 2 + half);
-    const right = Math.min(width - half, (width + bandWidth) / 2 - half);
-    particle.x = right > left ? left + Math.random() * (right - left) : width / 2;
+    if (spawnWidth === 100) {
+      particle.x = half + Math.random() * Math.max(0, width - half * 2);
+    } else {
+      // Split the allowed width equally between the two outer edges.
+      const edgeWidth = width * spawnWidth / 200;
+      const offset = half + Math.random() * Math.max(0, edgeWidth - half * 2);
+      particle.x = Math.random() < 0.5 ? offset : width - offset;
+    }
     particles.push(particle);
   };
 
@@ -289,6 +299,7 @@ export function initAsciiPhysics() {
     diagnostics?.sample('ascii.physics', physicsStart, { steps, pairChecks, overlaps });
     const drawStart = diagnostics ? performance.now() : 0;
     draw();
+    updateHover();
     diagnostics?.sample('ascii.draw', drawStart);
     diagnostics?.sample('ascii.frame', frameStart);
     diagnostics?.state('ascii', { particles: particles.length, limit: diagnostics.flags.particleLimit, rotationMultiplier, scaleMultiplier, spawnWidth, visible, steps, pairChecks, overlaps, maxBucket,
@@ -315,6 +326,7 @@ export function initAsciiPhysics() {
       }
       frame = null;
       release();
+      setHover(false);
       context.clearRect(0, 0, width, height);
     }
   };
@@ -336,12 +348,12 @@ export function initAsciiPhysics() {
     try { if (!diagnostics) localStorage.setItem(storageKey, String(enabled)); } catch { /* Optional. */ }
     checkReveal();
   });
-  const canGrab = (event) => desktop.matches && enabled && activated &&
-    !event.target.closest('#portfolio-debug-panel, a, button, input, textarea, select, [contenteditable="true"]');
-  document.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0 || !canGrab(event)) return;
-    const x = event.clientX + scrollX;
-    const y = event.clientY + scrollY;
+  const canGrabTarget = (target) => desktop.matches && enabled && activated && !document.hidden &&
+    target && !target.closest('#portfolio-debug-panel, a, button, input, textarea, select, [contenteditable="true"]');
+  const pickParticle = (clientX, clientY) => {
+    if (clientX < 0 || clientX > width || clientY < 0 || clientY > height || clientY + scrollY < spawnTop) return null;
+    const x = clientX + scrollX;
+    const y = clientY + scrollY;
     let particle = null;
     let nearestDistance = Infinity;
     for (const candidate of particles) {
@@ -352,7 +364,40 @@ export function initAsciiPhysics() {
         nearestDistance = distance;
       }
     }
+    return particle;
+  };
+  const setHover = (active) => {
+    const nextElement = active ? pointer?.target : null;
+    if (hovering === active && hoverElement === nextElement) return;
+    hoverElement?.classList?.remove('ascii-grabbable');
+    hoverElement = nextElement;
+    hoverElement?.classList?.add('ascii-grabbable');
+    hovering = active;
+    document.documentElement.classList.toggle('ascii-hovering', active);
+  };
+  const updateHover = () => {
+    if (!pointer || drag || !desktop.matches || !enabled || !activated || document.hidden || canvas.hidden) {
+      setHover(false);
+      return;
+    }
+    const particle = pickParticle(pointer.clientX, pointer.clientY);
+    if (particle && pointerTargetDirty) {
+      pointer.target = document.elementFromPoint(pointer.clientX, pointer.clientY);
+      pointerTargetDirty = false;
+    }
+    setHover(Boolean(particle && canGrabTarget(pointer.target)));
+  };
+  document.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'touch') { pointer = null; setHover(false); return; }
+    pointer = { clientX: event.clientX, clientY: event.clientY, target: event.target };
+    pointerTargetDirty = false;
+    updateHover();
+    if (event.button !== 0 || !canGrabTarget(event.target)) return;
+    const particle = pickParticle(event.clientX, event.clientY);
     if (!particle) return;
+    const x = event.clientX + scrollX;
+    const y = event.clientY + scrollY;
+    setHover(false);
     drag = { particle, id: event.pointerId, offsetX: particle.x - x, offsetY: particle.y - y, time: performance.now(), clientX: event.clientX, clientY: event.clientY };
     particle.vx = particle.vy = 0;
     document.documentElement.setPointerCapture(event.pointerId);
@@ -361,7 +406,11 @@ export function initAsciiPhysics() {
     event.stopPropagation();
   }, true);
   document.addEventListener('pointermove', (event) => {
-    if (!drag || drag.id !== event.pointerId) return;
+    if (event.pointerType === 'touch') { pointer = null; setHover(false); return; }
+    pointer = { clientX: event.clientX, clientY: event.clientY, target: event.target || pointer?.target };
+    pointerTargetDirty = false;
+    if (!drag) { updateHover(); return; }
+    if (drag.id !== event.pointerId) return;
     const time = performance.now();
     const elapsed = Math.max(0.008, (time - drag.time) / 1000);
     // Only mouse motion contributes throw velocity, never scroll displacement.
@@ -375,15 +424,17 @@ export function initAsciiPhysics() {
   document.addEventListener('pointerup', release);
   document.addEventListener('pointercancel', release);
   document.documentElement.addEventListener('lostpointercapture', release);
-  window.addEventListener('blur', release);
+  window.addEventListener('blur', () => { release(); pointer = null; setHover(false); });
+  document.documentElement.addEventListener('pointerleave', () => { pointer = null; setHover(false); });
   window.addEventListener('scroll', () => {
+    pointerTargetDirty = true;
     if (revealFrame !== null) return;
     revealFrame = requestAnimationFrame(() => {
       revealFrame = null;
       checkReveal();
     });
   }, { passive: true });
-  window.addEventListener('resize', () => { geometryDirty = true; checkReveal(); });
+  window.addEventListener('resize', () => { pointerTargetDirty = true; geometryDirty = true; checkReveal(); });
   window.addEventListener('load', () => { geometryDirty = true; checkReveal(); });
   document.addEventListener('visibilitychange', sync);
   desktop.addEventListener('change', () => { geometryDirty = true; checkReveal(); });

@@ -58,5 +58,5 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   node('#ascii-feature-toggle').checked = false;
   await node('#ascii-feature-toggle').events.change();
   assert.equal(node('#ascii-feature-toggle').checked, true, 'failed toggle rolls back');
-  console.log('PASS: admin tuning load/save, centered preview, flag preservation, draft preservation, failed-save recovery');
+  console.log('PASS: admin tuning load/save, edge preview, flag preservation, draft preservation, failed-save recovery');
 })().catch(error => { console.error(error); process.exitCode = 1; });
