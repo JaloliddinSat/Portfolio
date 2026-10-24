@@ -20,7 +20,7 @@ function setup(multiplier=0.25) {
   const window={matchMedia(){return {matches:true}},addEventListener:(k,fn)=>events.set(k,fn),get scrollY(){return scope.scrollY},scrollX:0,devicePixelRatio:1};
   const scope={document,window,Element,scrollX:0,scrollY:0,requestAnimationFrame(fn){frames.push(fn);return frames.length},ResizeObserver:class{constructor(fn){resize=fn}observe(){}}};
   vm.createContext(scope);
-  const helper=fs.readFileSync('content-hitboxes.js','utf8').replace('export function','function');
+  const helper=fs.readFileSync('content-hitboxes.js','utf8').replaceAll('export function','function');
   const script=fs.readFileSync('script.js','utf8').split('const DEBUG_SPLAT =')[0].replace(/^import .*\n/,'');
   vm.runInContext(helper+'\n'+script+'\ninitGridCursorGlow();',scope);
   const move=(x,y,target=null)=>{hovered=target;events.get('pointermove')({clientX:x,clientY:y});frames.shift()()};

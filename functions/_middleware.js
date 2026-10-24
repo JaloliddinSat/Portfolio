@@ -1,7 +1,7 @@
 import { isAuthenticated } from './_lib/admin-auth.js';
 import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js';
 
-const version = '20261024-glow-badges-1';
+const version = '20261024-gravity-dimming-1';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;
@@ -54,7 +54,7 @@ export async function onRequest(context) {
       }
       element.append(`<link rel="stylesheet" href="/ascii-physics.css?v=${version}">`, { html: true });
     } })
-    .on('.header-controls', { element(element) { element.prepend(button, { html: true }); } })
+    .on('.header-controls', { element(element) { if (debug) element.prepend(button, { html: true }); } })
     .on('body', { element(element) {
       element.prepend(`<canvas class="ascii-curtain" id="ascii-curtain" aria-hidden="true" data-ascii-config='${JSON.stringify(settings)}' hidden></canvas>`, { html: true });
       element.append(`<script type="module" src="/ascii-physics.js?v=${version}"></script>`, { html: true });

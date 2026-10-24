@@ -2,9 +2,10 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const original = fs.readFileSync('ascii-physics.js', 'utf8').replace(/\ninitAsciiPhysics\(\);\s*$/, '').replace(/^import .*\n/, '');
-function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) {
+function setup({mobile=false, reduced=false, top=-10,diagnostics,config={},noToggle=false,savedPreference}={}) {
   const listeners = new Map();
   const stored = new Map();
+  if (savedPreference !== undefined) stored.set('ascii-physics-enabled',savedPreference);
   const frames = new Map();
   let id=0;
   const context = {setTransform(){},clearRect(){},fillText(){},save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(){},beginPath(){},rect(){},clip(){}};
@@ -14,7 +15,7 @@ function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) 
     hasPointerCapture(){return false}, setPointerCapture(){}, releasePointerCapture(){},getBoundingClientRect(){return {top}},querySelectorAll(){return []}});
   const canvas = element('canvas'); canvas.dataset.asciiConfig=JSON.stringify(config); canvas.getContext=()=>context;
   const toggle=element('toggle'), content=element('content'), root=element('root'), doc=element('document');
-  Object.assign(doc,{elementFromPoint:()=>({closest:()=>null}),createElement:()=>({getContext:()=>context}),hidden:false,documentElement:root,body:element('body'),querySelector:s=>({'#ascii-curtain':canvas,'#ascii-toggle':toggle,'#site-content-transition':content}[s])});
+  Object.assign(doc,{elementFromPoint:()=>({closest:()=>null}),createElement:()=>({getContext:()=>context}),hidden:false,documentElement:root,body:element('body'),querySelector:s=>({'#ascii-curtain':canvas,'#ascii-toggle':noToggle?null:toggle,'#site-content-transition':content}[s])});
   const win=element('window');win.__portfolioDiagnostics=diagnostics;
   const scope = { document:doc, window:win, innerWidth:1200,innerHeight:800,devicePixelRatio:1,scrollY:1600,scrollX:0,performance:{now:()=>100},
     localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)},
@@ -23,8 +24,8 @@ function setup({mobile=false, reduced=false, top=-10,diagnostics,config={}}={}) 
     ResizeObserver:class{observe(){}},MutationObserver:class{observe(){}} };
   content.getBoundingClientRect=()=>({top:top+1600-scope.scrollY});
   vm.createContext(scope);
-  const source=original.replace('export function','function').replace(/  checkReveal\(\);\n}\s*$/,`  checkReveal();\n return {particles,simulate,measure,checkReveal,sync,draw,tick,spawn,hitboxHalf,state:()=>({activated,enabled,frame,spawnTop,worldBottom})};\n}`);
-  vm.runInContext(fs.readFileSync('content-hitboxes.js','utf8').replace('export function','function')+'\n'+source+'\nvar api = initAsciiPhysics();',scope);
+  const source=original.replaceAll('export function','function').replace(/  checkReveal\(\);\n}\s*$/,`  checkReveal();\n return {particles,simulate,measure,checkReveal,sync,draw,tick,spawn,hitboxHalf,state:()=>({activated,enabled,frame,spawnTop,worldBottom})};\n}`);
+  vm.runInContext(fs.readFileSync('content-hitboxes.js','utf8').replaceAll('export function','function')+'\n'+source+'\nvar api = initAsciiPhysics();',scope);
   return {scope,api:scope.api,listeners,stored,frames,canvas,toggle,content};
 }
 const s=setup(); s.api.measure();
@@ -183,3 +184,19 @@ const idleNudge=forceSetup({asciiCursorReleaseDistance:40},'dark',480);idleNudge
 const customIdle=forceSetup({asciiCursorIdleTimeout:3.5});customIdle.scope.performance.now=()=>3599;customIdle.api.simulate();assert(customIdle.particle.vx>0);customIdle.scope.performance.now=()=>3600;customIdle.particle.vx=0;customIdle.api.simulate();assert.equal(customIdle.particle.vx,0,'admin timeout controls cutoff');
 const idleDisabled=forceSetup({asciiCursorIdleTimeout:0});idleDisabled.scope.performance.now=()=>1e8;idleDisabled.api.simulate();assert(idleDisabled.particle.vx>0,'timeout zero keeps attraction active');
 console.log('PASS: precise idle cutoff, preserved motion, movement reactivation, duplicate/click/scroll exclusion, continuous light repulsion, nudge cutoff and configurable/disabled timeout');
+
+function dimmedForce(theme='dark',config={}) {
+  const s=forceSetup({asciiGravityDimmingMultiplier:0.25,...config},theme);
+  s.content.querySelectorAll=()=>[{parentElement:{closest:()=>null},getClientRects:()=>[{}],matches:()=>false,getBoundingClientRect:()=>({left:490,right:510,top:390,bottom:410,width:20,height:20})}];
+  s.api.measure();return s;
+}
+const normal=forceSetup();normal.api.simulate();
+const dimDark=dimmedForce();dimDark.api.simulate();assert(Math.abs(dimDark.particle.vx-normal.particle.vx*0.25)<1e-10,'dark attraction uses content multiplier');
+const dimLight=dimmedForce('light');dimLight.api.simulate();assert(Math.abs(dimLight.particle.vx+normal.particle.vx*0.25)<1e-10,'light repulsion uses same multiplier');
+const dimOff=dimmedForce('dark',{asciiGravityDimmingEnabled:false});dimOff.api.simulate();assert.equal(dimOff.particle.vx,normal.particle.vx,'disabled dimming keeps full strength over content');
+const dimZero=dimmedForce('dark',{asciiGravityDimmingMultiplier:0});dimZero.api.simulate();assert.equal(dimZero.particle.vx,0);
+const dimOne=dimmedForce('dark',{asciiGravityDimmingMultiplier:1});dimOne.api.simulate();assert.equal(dimOne.particle.vx,normal.particle.vx);
+const outsideMap=forceSetup({asciiGravityDimmingMultiplier:0});outsideMap.api.simulate();assert.equal(outsideMap.particle.vx,normal.particle.vx,'empty space keeps full strength');
+const publicNoToggle=setup({noToggle:true,savedPreference:'false'});publicNoToggle.api.measure();publicNoToggle.api.tick(1000);publicNoToggle.api.tick(1100);assert(publicNoToggle.api.particles.length>0,'public effect runs without switch, ignoring obsolete visitor opt-out');
+assert.equal(setup({noToggle:true,reduced:true}).api.state().enabled,false,'public effect still respects reduced motion');
+console.log('PASS: content gravity multiplier in both themes, disabled/zero/full dimming, full-strength empty space, public startup without menu switch, legacy preference and reduced-motion handling');

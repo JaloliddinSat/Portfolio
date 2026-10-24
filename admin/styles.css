@@ -405,3 +405,5 @@ input:focus {
 
 .ascii-settings-form h3 { margin: 26px 0 10px; font-size: 0.85rem; }
 .ascii-settings-form h3 + .debug-portfolio-note { margin-bottom: 18px; }
+.ascii-settings-form .feature-switch { margin: 18px 0; }
+.ascii-settings-form .feature-switch small { color: var(--muted); font-size: 0.75rem; font-weight: 400; line-height: 1.5; }

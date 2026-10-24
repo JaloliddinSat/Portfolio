@@ -24,3 +24,7 @@ export function collectContentHitboxes(content, originY = 0) {
   }
   return boxes;
 }
+
+export function isPointInContentHitboxes(boxes, x, y) {
+  return boxes.some(box => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom);
+}

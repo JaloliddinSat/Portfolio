@@ -62,6 +62,18 @@ rectangles, and images/videos use their bounds. Glow geometry is cached and
 invalidated on resize, font readiness and content size changes; scrolling and
 hero transitions update the pointer overlap without a continuous animation loop.
 
+Gravity dimming is independently controlled in admin (enabled by default,
+multiplier 0.25, range 0–1). When the cursor overlaps the shared content map,
+both dark attraction and light repulsion use this strength multiplier; escape
+nudges scale with it too. A multiplier of 0 disables cursor forces over content,
+and 1 preserves full strength. Empty space retains full strength. The glow
+brightness setting does not change the gravity multiplier.
+
+The public portfolio has no ASCII menu switch. The admin site-wide control
+remains authoritative, and reduced-motion preferences still suppress the effect.
+Old visitor toggle preferences are ignored on the public page. A comparison
+switch remains available only in the authenticated debug preview.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

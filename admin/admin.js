@@ -78,6 +78,8 @@ const tuningForm = document.querySelector("#ascii-settings-form");
 const tuningFields = document.querySelector("#ascii-tuning-fields");
 const tuningStatus = document.querySelector("#ascii-tuning-status");
 const tuningInputs = {
+  asciiGravityDimmingEnabled: document.querySelector("#ascii-gravity-dimming-enabled"),
+  asciiGravityDimmingMultiplier: document.querySelector("#ascii-gravity-dimming-multiplier"),
   gridContentGlowMultiplier: document.querySelector("#grid-content-glow-multiplier"),
   asciiCursorIdleTimeout: document.querySelector("#ascii-cursor-idle-timeout"),
   asciiCursorReleaseDistance: document.querySelector("#ascii-cursor-release-distance"),
@@ -102,11 +104,14 @@ const renderSiteSettings = (settings, preserveDraft = false) => {
   publishedAsciiEnabled = settings.asciiEnabled === true;
   featureToggle.checked = publishedAsciiEnabled;
   if (!preserveDraft) {
-    for (const [key, input] of Object.entries(tuningInputs)) input.value = settings[key];
+    for (const [key, input] of Object.entries(tuningInputs)) {
+      if (key === 'asciiGravityDimmingEnabled') input.checked = settings[key];
+      else input.value = settings[key];
+    }
     updateSpawnPreview();
   }
   featureDetail.textContent = publishedAsciiEnabled
-    ? "Available on desktop. Visitors can switch it off for themselves."
+    ? "Available on desktop. Controlled here in admin; no public ASCII switch."
     : "Hidden site-wide. Visitors receive no effect, control, or effect assets.";
 };
 
@@ -156,7 +161,7 @@ tuningForm.addEventListener("input", () => {
 tuningForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!tuningForm.reportValidity()) return;
-  const settings = Object.fromEntries(Object.entries(tuningInputs).map(([key, input]) => [key, Number(input.value)]));
+  const settings = Object.fromEntries(Object.entries(tuningInputs).map(([key, input]) => [key, key === 'asciiGravityDimmingEnabled' ? input.checked : Number(input.value)]));
   tuningFields.disabled = featureToggle.disabled = true;
   setStatus(tuningStatus, "Saving…");
   try {

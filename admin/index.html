@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=12" />
+    <link rel="stylesheet" href="/admin/styles.css?v=13" />
   </head>
   <body>
     <main class="admin-shell">
@@ -89,6 +89,16 @@
                 <label for="grid-content-glow-multiplier">Glow over content (multiplier)
                   <input id="grid-content-glow-multiplier" name="gridContentGlowMultiplier" type="number" min="0" max="1" step="any" value="0.25" required />
                   <small>Brightness when the cursor overlaps text or a content box. 0 hides the glow; 0.25 keeps 25%; 1 keeps full brightness. Works in both themes, even with floating ASCII off.</small>
+                </label>
+              </div>
+              <label class="feature-switch" for="ascii-gravity-dimming-enabled">
+                <span><strong>Gravity dimming</strong><small>Weaken cursor forces over the same content regions that dim the grid glow, in both themes.</small></span>
+                <input id="ascii-gravity-dimming-enabled" name="asciiGravityDimmingEnabled" type="checkbox" role="switch" checked />
+              </label>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-gravity-dimming-multiplier">Gravity dimming (multiplier)
+                  <input id="ascii-gravity-dimming-multiplier" name="asciiGravityDimmingMultiplier" type="number" min="0" max="1" step="any" value="0.25" required />
+                  <small>0 disables cursor forces over content; 0.25 keeps 25% strength; 1 keeps full strength. Empty space keeps full strength. Independent of glow brightness.</small>
                 </label>
               </div>
               <h3>Floating ASCII</h3>
@@ -213,6 +223,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=12" defer></script>
+    <script src="/admin/admin.js?v=13" defer></script>
   </body>
 </html>

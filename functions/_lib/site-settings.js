@@ -2,6 +2,8 @@ export const SITE_SETTINGS_KEY = 'settings/site.json';
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   gridContentGlowMultiplier: 0.25,
   asciiEnabled: false,
+  asciiGravityDimmingEnabled: true,
+  asciiGravityDimmingMultiplier: 0.25,
   asciiRotationMultiplier: 1,
   asciiScaleMultiplier: 1,
   asciiSpawnWidth: 100,
@@ -17,6 +19,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 });
 
 const rules = {
+  asciiGravityDimmingMultiplier: { min: 0, max: 1, label: 'Gravity dimming' },
   gridContentGlowMultiplier: { min: 0, max: 1, label: 'Content glow multiplier' },
   asciiRotationMultiplier: { min: 0, max: 4, label: 'Rotation multiplier' },
   asciiScaleMultiplier: { min: 0.25, max: 3, label: 'Scale multiplier' },
@@ -32,7 +35,7 @@ const rules = {
   asciiCursorEscapeNudge: { min: 0, max: 600, label: 'Escape nudge' },
 };
 const valid = (key, value) => {
-  if (key === 'asciiEnabled') return typeof value === 'boolean';
+  if (key === 'asciiEnabled' || key === 'asciiGravityDimmingEnabled') return typeof value === 'boolean';
   const rule = rules[key];
   return rule && typeof value === 'number' && Number.isFinite(value) &&
     (rule.choices ? rule.choices.includes(value) : value >= rule.min && value <= rule.max) &&
@@ -54,7 +57,7 @@ export function validateSiteSettingsPatch(raw) {
       const rule = rules[key];
       throw new Error(rule
         ? `${rule.label} must be ${rule.choices ? '20, 40, 60, 80, or 100 percent' : `${rule.integer ? 'a whole number ' : ''}between ${rule.min} and ${rule.max}`}.`
-        : 'Choose whether floating ASCII is enabled.');
+        : key === 'asciiGravityDimmingEnabled' ? 'Choose whether gravity dimming is enabled.' : 'Choose whether floating ASCII is enabled.');
     }
   }
   return raw;

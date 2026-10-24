@@ -1,4 +1,4 @@
-import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-badges-1';
+import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-gravity-dimming-1';
 
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
@@ -7,7 +7,7 @@ export function initAsciiPhysics() {
   const toggle = document.querySelector('#ascii-toggle');
   const content = document.querySelector('#site-content-transition');
   const context = canvas?.getContext('2d');
-  if (!context || !toggle || !content) return;
+  if (!context || !content) return;
 
   const desktop = matchMedia('(min-width: 701px) and (hover: hover) and (pointer: fine)');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -21,6 +21,8 @@ export function initAsciiPhysics() {
   const scaleMultiplier = bounded('asciiScaleMultiplier', 1, 0.25, 3);
   const spawnWidth = [20, 40, 60, 80, 100].includes(savedConfig.asciiSpawnWidth) ? savedConfig.asciiSpawnWidth : 100;
   const configuredLimit = bounded('asciiParticleLimit', 240, 0, 500);
+  const gravityDimmingEnabled = savedConfig.asciiGravityDimmingEnabled !== false;
+  const gravityDimmingMultiplier = bounded('asciiGravityDimmingMultiplier', 0.25, 0, 1);
   const cursorStrength = bounded('asciiCursorStrength', 0, 0, 3000);
   const cursorRadius = bounded('asciiCursorRadius', 300, 0, 2000);
   const cursorFalloff = bounded('asciiCursorFalloff', 2, 0.25, 6);
@@ -51,13 +53,13 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
   if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
-  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge, cursorIdleTimeout });
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge, cursorIdleTimeout, gravityDimmingEnabled, gravityDimmingMultiplier });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
   let enabled = diagnostics ? true : !reducedMotion.matches;
   try {
-    const saved = localStorage.getItem(storageKey);
+    const saved = toggle ? localStorage.getItem(storageKey) : null;
     if (!diagnostics && saved !== null) enabled = saved === 'true';
   } catch { /* Storage is optional. */ }
   let activated = false;
@@ -185,7 +187,11 @@ export function initAsciiPhysics() {
     const cursorY = pointer ? pointer.clientY + scrollY : 0;
     const forceSign = document.documentElement.dataset.theme === 'light' ? -1 : 1;
     const idleAttraction = forceSign > 0 && cursorIsIdle();
-    const forceActive = !idleAttraction && cursorStrength > 0 && cursorRadius > 0 && pointer &&
+    const overContent = Boolean(pointer && isPointInContentHitboxes(obstacles, cursorX, cursorY - spawnTop));
+    const gravityMultiplier = gravityDimmingEnabled && overContent ? gravityDimmingMultiplier : 1;
+    const effectiveStrength = cursorStrength * gravityMultiplier;
+    const effectiveNudge = escapeNudge * gravityMultiplier;
+    const forceActive = !idleAttraction && effectiveStrength > 0 && cursorRadius > 0 && pointer &&
       pointer.clientX >= 0 && pointer.clientX <= width &&
       pointer.clientY >= 0 && pointer.clientY <= height && cursorY >= spawnTop &&
       desktop.matches && enabled && activated && !document.hidden && !canvas.hidden;
@@ -213,18 +219,18 @@ export function initAsciiPhysics() {
             particle.cursorReleased = true;
             particle.cursorCooldownRemaining = cursorCooldown;
           }
-          if (particle.cursorReleased && distanceSquared <= releaseSquared && escapeNudge > 0 &&
-              particle.vx * particle.vx + particle.vy * particle.vy < escapeNudge * escapeNudge) {
+          if (particle.cursorReleased && distanceSquared <= releaseSquared && effectiveNudge > 0 &&
+              particle.vx * particle.vx + particle.vy * particle.vy < effectiveNudge * effectiveNudge) {
             const distance = Math.sqrt(distanceSquared);
             // At the exact center, the glyph's randomized angle supplies a finite escape direction.
-            particle.vx = distance > 0.001 ? -dx / distance * escapeNudge : Math.cos(particle.angle) * escapeNudge;
-            particle.vy = distance > 0.001 ? -dy / distance * escapeNudge : Math.sin(particle.angle) * escapeNudge;
+            particle.vx = distance > 0.001 ? -dx / distance * effectiveNudge : Math.cos(particle.angle) * effectiveNudge;
+            particle.vy = distance > 0.001 ? -dy / distance * effectiveNudge : Math.sin(particle.angle) * effectiveNudge;
           }
         }
         if (!(forceSign > 0 && particle.cursorReleased) && distanceSquared < radiusSquared && distanceSquared > 0) {
           const distance = Math.sqrt(distanceSquared);
           // Soft core avoids a singularity or an arbitrary kick at the exact center.
-          const impulse = forceSign * cursorStrength * Math.pow(1 - distance / cursorRadius, cursorFalloff) *
+          const impulse = forceSign * effectiveStrength * Math.pow(1 - distance / cursorRadius, cursorFalloff) *
             step / Math.max(24, distance);
           particle.vx += dx * impulse;
           particle.vy += dy * impulse;
@@ -367,10 +373,12 @@ export function initAsciiPhysics() {
   };
 
   const sync = () => {
-    toggle.hidden = !desktop.matches;
-    toggle.setAttribute('aria-pressed', String(enabled));
-    toggle.title = enabled ? 'Turn off floating ASCII' : 'Turn on floating ASCII';
-    toggle.setAttribute('aria-label', toggle.title);
+    if (toggle) {
+      toggle.hidden = !desktop.matches;
+      toggle.setAttribute('aria-pressed', String(enabled));
+      toggle.title = enabled ? 'Turn off floating ASCII' : 'Turn on floating ASCII';
+      toggle.setAttribute('aria-label', toggle.title);
+    }
     const shouldRun = desktop.matches && enabled && activated && !document.hidden;
     canvas.hidden = !shouldRun;
     if (shouldRun && frame === null) {
@@ -402,7 +410,7 @@ export function initAsciiPhysics() {
     sync();
   };
 
-  toggle.addEventListener('click', () => {
+  toggle?.addEventListener('click', () => {
     enabled = !enabled;
     try { if (!diagnostics) localStorage.setItem(storageKey, String(enabled)); } catch { /* Optional. */ }
     checkReveal();

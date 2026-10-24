@@ -1,4 +1,4 @@
-import { collectContentHitboxes } from './content-hitboxes.js?v=20261024-glow-badges-1';
+import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-gravity-dimming-1';
 
 const portfolioDiagnostics = window.__portfolioDiagnostics;
 
@@ -127,8 +127,7 @@ const initGridCursorGlow = () => {
       hitboxesDirty = false;
     }
     const localY = pointerY - contentTop;
-    const overContent = contentBoxes.some(box => pointerX >= box.left && pointerX <= box.right &&
-      localY >= box.top && localY <= box.bottom);
+    const overContent = isPointInContentHitboxes(contentBoxes, pointerX, localY);
     const brightness = overContent ? contentMultiplier : 1;
 
     if (hoveredPanel !== activePanel) {
