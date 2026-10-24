@@ -30,9 +30,17 @@ await call('settings','POST',{asciiEnabled:true},cookie);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true,...tuning},'enable switch preserves tuning');
 await call('settings','POST',{asciiParticleLimit:180},cookie);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true,...tuning},'partial tuning preserves enable switch');
-for(const bad of [{asciiGravityDimmingEnabled:1},{asciiGravityDimmingMultiplier:-0.1},{asciiGravityDimmingMultiplier:1.1},{gridContentGlowMultiplier:-0.1},{gridContentGlowMultiplier:1.1},{gridContentGlowMultiplier:"0.25"},{asciiCursorIdleTimeout:-1},{asciiCursorIdleTimeout:61},{asciiCursorIdleTimeout:"2"},{asciiCursorReleaseDistance:-1},{asciiCursorReleaseDistance:501},{asciiCursorCooldown:-1},{asciiCursorCooldown:11},{asciiCursorEscapeNudge:-1},{asciiCursorEscapeNudge:601},{asciiCursorStrength:-1},{asciiCursorStrength:3001},{asciiCursorRadius:2001},{asciiCursorRadius:-1},{asciiCursorFalloff:0},{asciiCursorFalloff:7},{asciiMaxVelocity:601},{asciiMaxVelocity:-1},{asciiCursorStrength:"400"},{asciiScaleMultiplier:0},{asciiScaleMultiplier:4},{asciiRotationMultiplier:-1},{asciiRotationMultiplier:5},{asciiParticleLimit:501},{asciiParticleLimit:1.5},{asciiSpawnWidth:30},{asciiParticleLimit:'180'},{unknown:1},null,{}]) {
+for(const bad of [{asciiThrowCooldown:-1},{asciiThrowCooldown:11},{asciiLightCursorStrength:3001},{asciiLightCursorRadius:-1},{asciiLightCursorFalloff:0},{asciiLightMaxVelocity:601},{asciiGravityDimmingEnabled:1},{asciiGravityDimmingMultiplier:-0.1},{asciiGravityDimmingMultiplier:1.1},{gridContentGlowMultiplier:-0.1},{gridContentGlowMultiplier:1.1},{gridContentGlowMultiplier:"0.25"},{asciiCursorIdleTimeout:-1},{asciiCursorIdleTimeout:61},{asciiCursorIdleTimeout:"2"},{asciiCursorReleaseDistance:-1},{asciiCursorReleaseDistance:501},{asciiCursorCooldown:-1},{asciiCursorCooldown:11},{asciiCursorEscapeNudge:-1},{asciiCursorEscapeNudge:601},{asciiCursorStrength:-1},{asciiCursorStrength:3001},{asciiCursorRadius:2001},{asciiCursorRadius:-1},{asciiCursorFalloff:0},{asciiCursorFalloff:7},{asciiMaxVelocity:601},{asciiMaxVelocity:-1},{asciiCursorStrength:"400"},{asciiScaleMultiplier:0},{asciiScaleMultiplier:4},{asciiRotationMultiplier:-1},{asciiRotationMultiplier:5},{asciiParticleLimit:501},{asciiParticleLimit:1.5},{asciiSpawnWidth:30},{asciiParticleLimit:'180'},{unknown:1},null,{}]) {
   assert.equal((await call('settings','POST',bad,cookie)).status,400,JSON.stringify(bad));
 }
+
+// Legacy shared gravity values hydrate both themes without modifying stored settings.
+value=JSON.stringify({asciiEnabled:false,asciiCursorStrength:750,asciiCursorRadius:450,asciiCursorFalloff:3,asciiMaxVelocity:350});
+const migrated=await (await call('settings','GET',undefined,cookie)).json();
+assert.equal(migrated.asciiLightCursorStrength,750);assert.equal(migrated.asciiLightCursorRadius,450);assert.equal(migrated.asciiLightCursorFalloff,3);assert.equal(migrated.asciiLightMaxVelocity,350);assert.equal(migrated.asciiThrowCooldown,1.5);
+await call('settings','POST',{asciiLightCursorStrength:250,asciiThrowCooldown:2.5},cookie);
+const separate=await (await call('settings','GET',undefined,cookie)).json();assert.equal(separate.asciiCursorStrength,750);assert.equal(separate.asciiLightCursorStrength,250);assert.equal(separate.asciiThrowCooldown,2.5);
+
 await call('settings','POST',{...DEFAULT_SITE_SETTINGS},cookie);
 let transforms=0;
 globalThis.HTMLRewriter=class {

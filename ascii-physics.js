@@ -1,4 +1,4 @@
-import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-gravity-dimming-1';
+import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-cooldown-1';
 
 // Coordinates and velocities belong to the document; scrolling only moves the camera.
 export function initAsciiPhysics() {
@@ -27,18 +27,24 @@ export function initAsciiPhysics() {
   const cursorRadius = bounded('asciiCursorRadius', 300, 0, 2000);
   const cursorFalloff = bounded('asciiCursorFalloff', 2, 0.25, 6);
   const maxVelocity = bounded('asciiMaxVelocity', 600, 0, 600);
+  const lightCursorStrength = bounded('asciiLightCursorStrength', cursorStrength, 0, 3000);
+  const lightCursorRadius = bounded('asciiLightCursorRadius', cursorRadius, 0, 2000);
+  const lightCursorFalloff = bounded('asciiLightCursorFalloff', cursorFalloff, 0.25, 6);
+  const lightMaxVelocity = bounded('asciiLightMaxVelocity', maxVelocity, 0, 600);
+  const throwCooldown = bounded('asciiThrowCooldown', 1.5, 0, 10);
   const releaseDistance = Math.min(cursorRadius, bounded('asciiCursorReleaseDistance', 40, 0, 500));
   const cursorCooldown = bounded('asciiCursorCooldown', 1, 0, 10);
   const cursorIdleTimeout = bounded('asciiCursorIdleTimeout', 2, 0, 60);
   const escapeNudge = bounded('asciiCursorEscapeNudge', 100, 0, 600);
   const releaseSquared = releaseDistance * releaseDistance;
   const resumeSquared = releaseSquared * 2.25;
-  const radiusSquared = cursorRadius * cursorRadius;
-  const maxSpeedSquared = maxVelocity * maxVelocity;
+
   const clampVelocity = (particle) => {
+    const limit = document.documentElement.dataset.theme === 'light' ? lightMaxVelocity : maxVelocity;
+    const maxSpeedSquared = limit * limit;
     const speedSquared = particle.vx * particle.vx + particle.vy * particle.vy;
     if (speedSquared > maxSpeedSquared) {
-      const ratio = maxVelocity / Math.sqrt(speedSquared);
+      const ratio = limit / Math.sqrt(speedSquared);
       particle.vx *= ratio;
       particle.vy *= ratio;
     }
@@ -53,7 +59,7 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
   if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
-  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge, cursorIdleTimeout, gravityDimmingEnabled, gravityDimmingMultiplier });
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge, cursorIdleTimeout, gravityDimmingEnabled, gravityDimmingMultiplier, lightCursorStrength, lightCursorRadius, lightCursorFalloff, lightMaxVelocity, throwCooldown });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
@@ -125,6 +131,10 @@ export function initAsciiPhysics() {
       drag.particle.vx = 0;
       drag.particle.vy = 0;
     }
+    // A thrown glyph is immune to all cursor forces in either theme until this deadline.
+    drag.particle.forceCooldownUntil = performance.now() + throwCooldown * 1000;
+    drag.particle.cursorReleased = false;
+    drag.particle.cursorCooldownRemaining = 0;
     const pointerId = drag.id;
     drag = null;
     if (document.documentElement.hasPointerCapture(pointerId)) {
@@ -186,12 +196,17 @@ export function initAsciiPhysics() {
     const cursorX = pointer ? pointer.clientX + scrollX : 0;
     const cursorY = pointer ? pointer.clientY + scrollY : 0;
     const forceSign = document.documentElement.dataset.theme === 'light' ? -1 : 1;
+    const now = performance.now();
+    const activeStrength = forceSign < 0 ? lightCursorStrength : cursorStrength;
+    const activeRadius = forceSign < 0 ? lightCursorRadius : cursorRadius;
+    const activeFalloff = forceSign < 0 ? lightCursorFalloff : cursorFalloff;
+    const activeRadiusSquared = activeRadius * activeRadius;
     const idleAttraction = forceSign > 0 && cursorIsIdle();
     const overContent = Boolean(pointer && isPointInContentHitboxes(obstacles, cursorX, cursorY - spawnTop));
     const gravityMultiplier = gravityDimmingEnabled && overContent ? gravityDimmingMultiplier : 1;
-    const effectiveStrength = cursorStrength * gravityMultiplier;
+    const effectiveStrength = activeStrength * gravityMultiplier;
     const effectiveNudge = escapeNudge * gravityMultiplier;
-    const forceActive = !idleAttraction && effectiveStrength > 0 && cursorRadius > 0 && pointer &&
+    const forceActive = !idleAttraction && effectiveStrength > 0 && activeRadius > 0 && pointer &&
       pointer.clientX >= 0 && pointer.clientX <= width &&
       pointer.clientY >= 0 && pointer.clientY <= height && cursorY >= spawnTop &&
       desktop.matches && enabled && activated && !document.hidden && !canvas.hidden;
@@ -206,7 +221,7 @@ export function initAsciiPhysics() {
       if (drag?.particle === particle) continue;
       particle.cursorCooldownRemaining = Math.max(0, (particle.cursorCooldownRemaining || 0) - step);
       if (forceSign < 0) particle.cursorReleased = false;
-      if (forceActive) {
+      if (forceActive && now >= (particle.forceCooldownUntil || 0)) {
         const dx = cursorX - particle.x;
         const dy = cursorY - particle.y;
         const distanceSquared = dx * dx + dy * dy;
@@ -227,10 +242,10 @@ export function initAsciiPhysics() {
             particle.vy = distance > 0.001 ? -dy / distance * effectiveNudge : Math.sin(particle.angle) * effectiveNudge;
           }
         }
-        if (!(forceSign > 0 && particle.cursorReleased) && distanceSquared < radiusSquared && distanceSquared > 0) {
+        if (!(forceSign > 0 && particle.cursorReleased) && distanceSquared < activeRadiusSquared && distanceSquared > 0) {
           const distance = Math.sqrt(distanceSquared);
           // Soft core avoids a singularity or an arbitrary kick at the exact center.
-          const impulse = forceSign * effectiveStrength * Math.pow(1 - distance / cursorRadius, cursorFalloff) *
+          const impulse = forceSign * effectiveStrength * Math.pow(1 - distance / activeRadius, activeFalloff) *
             step / Math.max(24, distance);
           particle.vx += dx * impulse;
           particle.vy += dy * impulse;

@@ -13,7 +13,7 @@ const node = id => {
   });
   return elements.get(id);
 };
-let published = { asciiGravityDimmingEnabled: true, asciiGravityDimmingMultiplier: 0.25, gridContentGlowMultiplier: 0.25, asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240, asciiCursorStrength: 0, asciiCursorRadius: 300, asciiCursorFalloff: 2, asciiMaxVelocity: 600, asciiCursorReleaseDistance: 40, asciiCursorCooldown: 1, asciiCursorIdleTimeout: 2, asciiCursorEscapeNudge: 100 };
+let published = { asciiThrowCooldown: 1.5, asciiLightCursorStrength: 0, asciiLightCursorRadius: 300, asciiLightCursorFalloff: 2, asciiLightMaxVelocity: 600, asciiGravityDimmingEnabled: true, asciiGravityDimmingMultiplier: 0.25, gridContentGlowMultiplier: 0.25, asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240, asciiCursorStrength: 0, asciiCursorRadius: 300, asciiCursorFalloff: 2, asciiMaxVelocity: 600, asciiCursorReleaseDistance: 40, asciiCursorCooldown: 1, asciiCursorIdleTimeout: 2, asciiCursorEscapeNudge: 100 };
 let fail = false;
 const scope = {
   document: { querySelector: node }, window: {}, URL, Intl, Date,
@@ -34,6 +34,12 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(Number(node('#ascii-particle-limit').value), 240);
   assert.equal(Number(node('#grid-content-glow-multiplier').value),0.25);
   node('#grid-content-glow-multiplier').value='0.4';
+  assert.equal(Number(node('#ascii-throw-cooldown').value),1.5);
+  node('#ascii-throw-cooldown').value='2.5';
+  node('#ascii-light-cursor-strength').value='700';
+  node('#ascii-light-cursor-radius').value='450';
+  node('#ascii-light-cursor-falloff').value='2.5';
+  node('#ascii-light-max-velocity').value='350';
   assert.equal(node('#ascii-gravity-dimming-enabled').checked,true);
   node('#ascii-gravity-dimming-enabled').checked=false;
   node('#ascii-gravity-dimming-multiplier').value='0.4';
@@ -56,7 +62,7 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(node('#ascii-spawn-output').textContent, '20%');
   assert.equal(node('#ascii-spawn-preview').style['--spawn-width'], '20%');
   await node('#ascii-settings-form').events.submit({ preventDefault() {} });
-  assert.deepEqual(published, { asciiGravityDimmingEnabled: false, asciiGravityDimmingMultiplier: 0.4, gridContentGlowMultiplier: 0.4, asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180, asciiCursorStrength: 400, asciiCursorRadius: 350, asciiCursorFalloff: 1.5, asciiMaxVelocity: 250, asciiCursorReleaseDistance: 55, asciiCursorCooldown: 1.5, asciiCursorIdleTimeout: 3.5, asciiCursorEscapeNudge: 120 });
+  assert.deepEqual(published, { asciiThrowCooldown: 2.5, asciiLightCursorStrength: 700, asciiLightCursorRadius: 450, asciiLightCursorFalloff: 2.5, asciiLightMaxVelocity: 350, asciiGravityDimmingEnabled: false, asciiGravityDimmingMultiplier: 0.4, gridContentGlowMultiplier: 0.4, asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180, asciiCursorStrength: 400, asciiCursorRadius: 350, asciiCursorFalloff: 1.5, asciiMaxVelocity: 250, asciiCursorReleaseDistance: 55, asciiCursorCooldown: 1.5, asciiCursorIdleTimeout: 3.5, asciiCursorEscapeNudge: 120 });
   assert.equal(node('#ascii-tuning-status').dataset.state, 'success');
   node('#ascii-scale-multiplier').value = '2';
   node('#ascii-feature-toggle').checked = true;

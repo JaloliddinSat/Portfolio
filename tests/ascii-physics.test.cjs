@@ -200,3 +200,27 @@ const outsideMap=forceSetup({asciiGravityDimmingMultiplier:0});outsideMap.api.si
 const publicNoToggle=setup({noToggle:true,savedPreference:'false'});publicNoToggle.api.measure();publicNoToggle.api.tick(1000);publicNoToggle.api.tick(1100);assert(publicNoToggle.api.particles.length>0,'public effect runs without switch, ignoring obsolete visitor opt-out');
 assert.equal(setup({noToggle:true,reduced:true}).api.state().enabled,false,'public effect still respects reduced motion');
 console.log('PASS: content gravity multiplier in both themes, disabled/zero/full dimming, full-strength empty space, public startup without menu switch, legacy preference and reduced-motion handling');
+
+function makeThrow(theme='dark',config={}) {
+  const s=forceSetup({asciiCursorStrength:3000,asciiCursorRadius:2000,asciiCursorIdleTimeout:0,asciiCursorReleaseDistance:0,...config},theme);
+  let now=100;s.scope.performance.now=()=>now;
+  const target={closest:()=>null};
+  s.listeners.get('document:pointerdown')({clientX:400,clientY:400,target,pointerId:1,button:0,preventDefault(){},stopPropagation(){}});
+  now=300;s.listeners.get('document:pointermove')({clientX:430,clientY:400,target,pointerId:1});
+  s.listeners.get('document:pointerup')();
+  return {...s,setNow:n=>{now=n}};
+}
+for(const theme of ['dark','light']) {
+  const thrown=makeThrow(theme);assert.equal(thrown.particle.vx,150);assert.equal(thrown.particle.forceCooldownUntil,1800);
+  thrown.setNow(1799);thrown.api.simulate();assert.equal(thrown.particle.vx,150,theme+' throw ignores cursor force before deadline');
+  thrown.setNow(1800);thrown.api.simulate();assert.notEqual(thrown.particle.vx,150,theme+' force resumes at deadline');
+}
+const switchingThrow=makeThrow();switchingThrow.scope.document.documentElement.dataset.theme='light';switchingThrow.setNow(1700);switchingThrow.api.simulate();assert.equal(switchingThrow.particle.vx,150,'switching themes cannot bypass throw cooldown');
+const longThrow=makeThrow('light',{asciiThrowCooldown:3});longThrow.setNow(2000);longThrow.api.simulate();assert.equal(longThrow.particle.vx,150);longThrow.setNow(3300);longThrow.api.simulate();assert.notEqual(longThrow.particle.vx,150);
+const immediateThrow=makeThrow('light',{asciiThrowCooldown:0});immediateThrow.particle.x+=10;immediateThrow.api.simulate();assert(immediateThrow.particle.vx>150,'zero disables immunity');
+const nudgeThrow=makeThrow('dark',{asciiCursorReleaseDistance:40});nudgeThrow.particle.vx=0;nudgeThrow.api.simulate();assert.equal(nudgeThrow.particle.vx,0,'release cooldown blocks escape nudges too');
+const lightIndependent=forceSetup({asciiLightCursorStrength:100},'light');lightIndependent.api.simulate();const darkIndependent=forceSetup({asciiLightCursorStrength:100});darkIndependent.api.simulate();assert(Math.abs(lightIndependent.particle.vx+darkIndependent.particle.vx*0.25)<1e-10);
+const lightRadius=forceSetup({asciiLightCursorRadius:50},'light');lightRadius.api.simulate();assert.equal(lightRadius.particle.vx,0);
+const lightFalloff=forceSetup({asciiLightCursorFalloff:1},'light');lightFalloff.api.simulate();assert(Math.abs(lightFalloff.particle.vx)>Math.abs(darkIndependent.particle.vx));
+const lightSpeed=forceSetup({asciiLightMaxVelocity:40},'light');lightSpeed.particle.vx=200;lightSpeed.api.simulate();assert(Math.hypot(lightSpeed.particle.vx,lightSpeed.particle.vy)<=40+1e-10);
+console.log('PASS: throw momentum immunity in both themes, precise/custom/zero deadlines, theme-switch immunity, nudge suppression and independently configurable light force/radius/falloff/speed');

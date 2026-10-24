@@ -74,6 +74,18 @@ remains authoritative, and reduced-motion preferences still suppress the effect.
 Old visitor toggle preferences are ignored on the public page. A comparison
 switch remains available only in the authenticated debug preview.
 
+Cursor gravity is split into **Light theme — cursor repulsion** and **Dark theme
+— cursor attraction** in admin. Strength, radius, falloff and maximum speed are
+independent. Old shared settings initialize the new light controls on first
+load; saving one theme does not change the other. Idle cutoff and pass-through
+settings remain dark-only; gravity dimming continues to affect both themes.
+
+**Post-release force cooldown** is shared across themes (default 1.5 seconds,
+range 0–10). Each dropped or thrown glyph ignores all cursor forces, including
+escape nudges, until its release deadline. Normal movement, collisions, spin
+and the active theme's speed limit continue. Switching themes during this
+period does not bypass immunity. Set 0 for immediate cursor influence.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

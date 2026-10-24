@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=13" />
+    <link rel="stylesheet" href="/admin/styles.css?v=14" />
   </head>
   <body>
     <main class="admin-shell">
@@ -122,8 +122,35 @@
                 <span>20%</span><span>20%</span><span>20%</span><span>20%</span><span>20%</span><i></i><i></i>
               </div>
               <p class="debug-portfolio-note" id="ascii-spawn-help">20% spawns in the outer 10% on each side, leaving the middle 80% empty. Increase to 100% to use the whole top edge.</p>
-              <h3>Cursor gravity</h3>
-              <p class="debug-portfolio-note">Attracts characters in dark theme and repels them in light theme. The force softens near the cursor and reaches zero at the radius.</p>
+              <h3>Dragging and throwing — both themes</h3>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-throw-cooldown">Post-release force cooldown (seconds)
+                  <input id="ascii-throw-cooldown" name="asciiThrowCooldown" type="number" min="0" max="10" step="any" value="1.5" required />
+                  <small>After letting go, that character ignores attraction, repulsion and escape nudges for this long. Keeps its throw velocity, with normal collisions and speed limits. 0 disables the cooldown.</small>
+                </label>
+              </div>
+              <h3>Light theme — cursor repulsion</h3>
+              <p class="debug-portfolio-note">Repels characters away from the cursor. The force softens near the cursor and reaches zero at the radius.</p>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-light-cursor-strength">Cursor strength (px/s²)
+                  <input id="ascii-light-cursor-strength" name="asciiLightCursorStrength" type="number" min="0" max="3000" step="any" value="0" required />
+                  <small>0 disables cursor forces. Try 400 to start.</small>
+                </label>
+                <label for="ascii-light-cursor-radius">Influence radius (px)
+                  <input id="ascii-light-cursor-radius" name="asciiLightCursorRadius" type="number" min="0" max="2000" step="any" value="300" required />
+                  <small>Only characters inside this distance feel the force. 0 disables it.</small>
+                </label>
+                <label for="ascii-light-cursor-falloff">Falloff exponent
+                  <input id="ascii-light-cursor-falloff" name="asciiLightCursorFalloff" type="number" min="0.25" max="6" step="any" value="2" required />
+                  <small>1 is linear. Higher values concentrate the force near the cursor; lower values spread it farther. At half the radius, 2 gives 25% strength.</small>
+                </label>
+                <label for="ascii-light-max-velocity">Maximum speed (px/s)
+                  <input id="ascii-light-max-velocity" name="asciiLightMaxVelocity" type="number" min="0" max="600" step="any" value="600" required />
+                  <small>Caps total character speed, including throws and collisions. 0 stops travel; manual dragging still works.</small>
+                </label>
+              </div>
+              <h3>Dark theme — cursor attraction</h3>
+              <p class="debug-portfolio-note">Attracts characters toward the cursor. The force softens near the cursor and reaches zero at the radius.</p>
               <div class="ascii-tuning-grid">
                 <label for="ascii-cursor-strength">Cursor strength (px/s²)
                   <input id="ascii-cursor-strength" name="asciiCursorStrength" type="number" min="0" max="3000" step="any" value="0" required />
@@ -223,6 +250,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=13" defer></script>
+    <script src="/admin/admin.js?v=14" defer></script>
   </body>
 </html>

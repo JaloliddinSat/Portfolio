@@ -8,6 +8,11 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   asciiScaleMultiplier: 1,
   asciiSpawnWidth: 100,
   asciiParticleLimit: 240,
+  asciiThrowCooldown: 1.5,
+  asciiLightCursorStrength: 0,
+  asciiLightCursorRadius: 300,
+  asciiLightCursorFalloff: 2,
+  asciiLightMaxVelocity: 600,
   asciiCursorStrength: 0,
   asciiCursorRadius: 300,
   asciiCursorFalloff: 2,
@@ -19,6 +24,11 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 });
 
 const rules = {
+  asciiThrowCooldown: { min: 0, max: 10, label: 'Post-release force cooldown' },
+  asciiLightCursorStrength: { min: 0, max: 3000, label: 'Light cursor strength' },
+  asciiLightCursorRadius: { min: 0, max: 2000, label: 'Light cursor radius' },
+  asciiLightCursorFalloff: { min: 0.25, max: 6, label: 'Light cursor falloff' },
+  asciiLightMaxVelocity: { min: 0, max: 600, label: 'Light maximum speed' },
   asciiGravityDimmingMultiplier: { min: 0, max: 1, label: 'Gravity dimming' },
   gridContentGlowMultiplier: { min: 0, max: 1, label: 'Content glow multiplier' },
   asciiRotationMultiplier: { min: 0, max: 4, label: 'Rotation multiplier' },
@@ -43,8 +53,11 @@ const valid = (key, value) => {
 };
 
 export function normalizeSiteSettings(raw) {
+  // Existing shared values initialize light settings until explicitly saved separately.
+  const legacyKeys = { asciiLightCursorStrength: 'asciiCursorStrength', asciiLightCursorRadius: 'asciiCursorRadius',
+    asciiLightCursorFalloff: 'asciiCursorFalloff', asciiLightMaxVelocity: 'asciiMaxVelocity' };
   return Object.fromEntries(Object.entries(DEFAULT_SITE_SETTINGS).map(([key, fallback]) =>
-    [key, valid(key, raw?.[key]) ? raw[key] : fallback]));
+    [key, valid(key, raw?.[key]) ? raw[key] : valid(key, raw?.[legacyKeys[key]]) ? raw[legacyKeys[key]] : fallback]));
 }
 
 export function validateSiteSettingsPatch(raw) {

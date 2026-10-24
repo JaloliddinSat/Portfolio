@@ -78,6 +78,11 @@ const tuningForm = document.querySelector("#ascii-settings-form");
 const tuningFields = document.querySelector("#ascii-tuning-fields");
 const tuningStatus = document.querySelector("#ascii-tuning-status");
 const tuningInputs = {
+  asciiThrowCooldown: document.querySelector("#ascii-throw-cooldown"),
+  asciiLightCursorStrength: document.querySelector("#ascii-light-cursor-strength"),
+  asciiLightCursorRadius: document.querySelector("#ascii-light-cursor-radius"),
+  asciiLightCursorFalloff: document.querySelector("#ascii-light-cursor-falloff"),
+  asciiLightMaxVelocity: document.querySelector("#ascii-light-max-velocity"),
   asciiGravityDimmingEnabled: document.querySelector("#ascii-gravity-dimming-enabled"),
   asciiGravityDimmingMultiplier: document.querySelector("#ascii-gravity-dimming-multiplier"),
   gridContentGlowMultiplier: document.querySelector("#grid-content-glow-multiplier"),
