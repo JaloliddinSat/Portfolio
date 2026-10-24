@@ -23,6 +23,17 @@ enable switch. Reload the portfolio or private debug preview to apply changes.
 Existing settings keep the original defaults: 1× rotation, 1× scale, 240
 characters, and full-width spawning.
 
+Cursor gravity controls include strength (0–3000 px/s², default 0/off), influence
+radius (0–2000 px, default 300), falloff exponent (0.25–6, default 2), and maximum
+speed (0–600 px/s, default 600). Dark theme attracts; light theme repels. Inside
+the radius, acceleration scales by `(1 - distance / radius)^falloff`, softened
+within 24 px of the cursor. A higher exponent concentrates influence nearer the
+cursor; at half the radius, exponent 2 gives 25% strength. Strength or radius 0
+skips force calculations. Speed caps include spawns, throws, and collisions;
+speed 0 stops travel but allows manual dragging and rotation. Forces ignore the
+hero, a cursor outside the window, and the particle being dragged. The private
+debugger reports the saved force configuration alongside existing timing data.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

@@ -5,6 +5,10 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   asciiScaleMultiplier: 1,
   asciiSpawnWidth: 100,
   asciiParticleLimit: 240,
+  asciiCursorStrength: 0,
+  asciiCursorRadius: 300,
+  asciiCursorFalloff: 2,
+  asciiMaxVelocity: 600,
 });
 
 const rules = {
@@ -12,6 +16,10 @@ const rules = {
   asciiScaleMultiplier: { min: 0.25, max: 3, label: 'Scale multiplier' },
   asciiSpawnWidth: { choices: [20, 40, 60, 80, 100], label: 'Spawn width' },
   asciiParticleLimit: { min: 0, max: 500, integer: true, label: 'Particle count' },
+  asciiCursorStrength: { min: 0, max: 3000, label: 'Cursor strength' },
+  asciiCursorRadius: { min: 0, max: 2000, label: 'Cursor radius' },
+  asciiCursorFalloff: { min: 0.25, max: 6, label: 'Cursor falloff' },
+  asciiMaxVelocity: { min: 0, max: 600, label: 'Maximum speed' },
 };
 const valid = (key, value) => {
   if (key === 'asciiEnabled') return typeof value === 'boolean';

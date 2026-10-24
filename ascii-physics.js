@@ -19,6 +19,20 @@ export function initAsciiPhysics() {
   const scaleMultiplier = bounded('asciiScaleMultiplier', 1, 0.25, 3);
   const spawnWidth = [20, 40, 60, 80, 100].includes(savedConfig.asciiSpawnWidth) ? savedConfig.asciiSpawnWidth : 100;
   const configuredLimit = bounded('asciiParticleLimit', 240, 0, 500);
+  const cursorStrength = bounded('asciiCursorStrength', 0, 0, 3000);
+  const cursorRadius = bounded('asciiCursorRadius', 300, 0, 2000);
+  const cursorFalloff = bounded('asciiCursorFalloff', 2, 0.25, 6);
+  const maxVelocity = bounded('asciiMaxVelocity', 600, 0, 600);
+  const radiusSquared = cursorRadius * cursorRadius;
+  const maxSpeedSquared = maxVelocity * maxVelocity;
+  const clampVelocity = (particle) => {
+    const speedSquared = particle.vx * particle.vx + particle.vy * particle.vy;
+    if (speedSquared > maxSpeedSquared) {
+      const ratio = maxVelocity / Math.sqrt(speedSquared);
+      particle.vx *= ratio;
+      particle.vy *= ratio;
+    }
+  };
   const baseHalf = 6;
   // Neighbor cells must cover the largest scaled, rotated collision box.
   const cellSize = Math.max(32, Math.ceil(baseHalf * 2 * 1.8 * scaleMultiplier * Math.SQRT2));
@@ -29,7 +43,7 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
   if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
-  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles });
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
@@ -161,10 +175,20 @@ export function initAsciiPhysics() {
       const offset = half + Math.random() * Math.max(0, edgeWidth - half * 2);
       particle.x = Math.random() < 0.5 ? offset : width - offset;
     }
+    clampVelocity(particle);
     particles.push(particle);
   };
 
   const simulate = () => {
+    // Convert the viewport pointer to document coordinates once per step.
+    // With strength/radius zero, skip all cursor distance and falloff work.
+    const cursorX = pointer ? pointer.clientX + scrollX : 0;
+    const cursorY = pointer ? pointer.clientY + scrollY : 0;
+    const forceActive = cursorStrength > 0 && cursorRadius > 0 && pointer &&
+      pointer.clientX >= 0 && pointer.clientX <= width &&
+      pointer.clientY >= 0 && pointer.clientY <= height && cursorY >= spawnTop &&
+      desktop.matches && enabled && activated && !document.hidden && !canvas.hidden;
+    const forceSign = document.documentElement.dataset.theme === 'light' ? -1 : 1;
     spawnTime += step;
     while (particles.length < (diagnostics?.flags.particleLimit ?? maxParticles) && spawnTime >= 1 / 12) {
       spawnTime -= 1 / 12;
@@ -174,6 +198,20 @@ export function initAsciiPhysics() {
     for (const particle of particles) {
       particle.angle = (particle.angle + particle.angularVelocity * step) % fullTurn;
       if (drag?.particle === particle) continue;
+      if (forceActive) {
+        const dx = cursorX - particle.x;
+        const dy = cursorY - particle.y;
+        const distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared < radiusSquared && distanceSquared > 0) {
+          const distance = Math.sqrt(distanceSquared);
+          // Soft core avoids a singularity or an arbitrary kick at the exact center.
+          const impulse = forceSign * cursorStrength * Math.pow(1 - distance / cursorRadius, cursorFalloff) *
+            step / Math.max(24, distance);
+          particle.vx += dx * impulse;
+          particle.vy += dy * impulse;
+        }
+      }
+      clampVelocity(particle);
       const half = hitboxHalf(particle);
       particle.x += particle.vx * step;
       particle.y += particle.vy * step;
@@ -243,6 +281,8 @@ export function initAsciiPhysics() {
       bucket.push(particle);
       if (diagnostics) maxBucket = Math.max(maxBucket, bucket.length);
     }
+    // Axis exchanges can combine two velocities into a faster diagonal.
+    for (const particle of particles) clampVelocity(particle);
   };
 
   const draw = () => {
@@ -416,6 +456,7 @@ export function initAsciiPhysics() {
     // Only mouse motion contributes throw velocity, never scroll displacement.
     drag.particle.vx = Math.max(-600, Math.min(600, (event.clientX - drag.clientX) / elapsed));
     drag.particle.vy = Math.max(-600, Math.min(600, (event.clientY - drag.clientY) / elapsed));
+    clampVelocity(drag.particle);
     const half = hitboxHalf(drag.particle);
     drag.particle.x = Math.max(half, Math.min(width - half, event.clientX + scrollX + drag.offsetX));
     drag.particle.y = Math.max(spawnTop + half, Math.min(worldBottom - half, event.clientY + scrollY + drag.offsetY));

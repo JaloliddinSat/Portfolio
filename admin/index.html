@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=8" />
+    <link rel="stylesheet" href="/admin/styles.css?v=9" />
   </head>
   <body>
     <main class="admin-shell">
@@ -104,6 +104,26 @@
                 <span>20%</span><span>20%</span><span>20%</span><span>20%</span><span>20%</span><i></i><i></i>
               </div>
               <p class="debug-portfolio-note" id="ascii-spawn-help">20% spawns in the outer 10% on each side, leaving the middle 80% empty. Increase to 100% to use the whole top edge.</p>
+              <h3>Cursor gravity</h3>
+              <p class="debug-portfolio-note">Attracts characters in dark theme and repels them in light theme. The force softens near the cursor and reaches zero at the radius.</p>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-cursor-strength">Cursor strength (px/s²)
+                  <input id="ascii-cursor-strength" name="asciiCursorStrength" type="number" min="0" max="3000" step="any" value="0" required />
+                  <small>0 disables cursor forces. Try 400 to start.</small>
+                </label>
+                <label for="ascii-cursor-radius">Influence radius (px)
+                  <input id="ascii-cursor-radius" name="asciiCursorRadius" type="number" min="0" max="2000" step="any" value="300" required />
+                  <small>Only characters inside this distance feel the force. 0 disables it.</small>
+                </label>
+                <label for="ascii-cursor-falloff">Falloff exponent
+                  <input id="ascii-cursor-falloff" name="asciiCursorFalloff" type="number" min="0.25" max="6" step="any" value="2" required />
+                  <small>1 is linear. Higher values concentrate the force near the cursor; lower values spread it farther. At half the radius, 2 gives 25% strength.</small>
+                </label>
+                <label for="ascii-max-velocity">Maximum speed (px/s)
+                  <input id="ascii-max-velocity" name="asciiMaxVelocity" type="number" min="0" max="600" step="any" value="600" required />
+                  <small>Caps total character speed, including throws and collisions. 0 stops travel; manual dragging still works.</small>
+                </label>
+              </div>
               <button class="primary-button" type="submit">Save animation settings</button>
             </fieldset>
             <p class="form-status" id="ascii-tuning-status" role="status" aria-live="polite"></p>
@@ -165,6 +185,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=8" defer></script>
+    <script src="/admin/admin.js?v=9" defer></script>
   </body>
 </html>

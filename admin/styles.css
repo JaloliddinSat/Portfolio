@@ -402,3 +402,6 @@ input:focus {
 .ascii-settings-form .primary-button { width: 100%; }
 .ascii-settings-form .debug-portfolio-note { margin-bottom: 0; }
 @media (max-width: 520px) { .ascii-tuning-grid { grid-template-columns: 1fr; } }
+
+.ascii-settings-form h3 { margin: 26px 0 10px; font-size: 0.85rem; }
+.ascii-settings-form h3 + .debug-portfolio-note { margin-bottom: 18px; }

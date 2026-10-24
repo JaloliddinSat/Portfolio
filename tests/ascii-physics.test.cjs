@@ -107,3 +107,42 @@ hover.listeners.get('window:blur')();assert(!root.classList.contains('ascii-hove
 hover.listeners.get('document:pointermove')({clientX:100,clientY:400,target:surface,pointerId:1});hover.listeners.get('toggle:click')();assert(!root.classList.contains('ascii-hovering'),'disabled effect clears grab cursor');
 assert(band.api.particles.some(p=>p.x<120)&&band.api.particles.some(p=>p.x>1080),'spawning uses both sides');
 console.log('PASS: edge-only spawns, live hover cursor, stationary-pointer updates, control exclusion, dragging and cleanup');
+
+// Isolate force integration from rendering, spawning, and collision responses.
+function forceSetup(config = {}, theme = 'dark', x = 400, y = 2000) {
+  const result = setup({config:{asciiParticleLimit:0,asciiCursorStrength:400,asciiCursorRadius:300,asciiCursorFalloff:2,...config}});
+  result.api.measure();
+  result.scope.document.documentElement.dataset.theme = theme;
+  const particle = {scale:1,angle:0,angularVelocity:0,x,y,vx:0,vy:0,glyph:'#'};
+  result.api.particles.push(particle);
+  result.listeners.get('document:pointermove')({clientX:500,clientY:400,target:{closest:()=>null},pointerId:1});
+  return {...result,particle};
+}
+const pull=forceSetup();pull.api.simulate();assert(pull.particle.vx>0);assert.equal(pull.particle.vy,0);
+const repel=forceSetup({},'light');repel.api.simulate();assert(repel.particle.vx<0);assert.equal(repel.particle.vx,-pull.particle.vx,'themes reverse identical force');
+pull.scope.document.documentElement.dataset.theme='light';pull.particle.vx=0;pull.api.simulate();assert(pull.particle.vx<0,'theme changes apply without reloading');
+const outside=forceSetup({},'dark',100);outside.api.simulate();assert.equal(outside.particle.vx,0);
+const edge=forceSetup({},'dark',200);edge.api.simulate();assert.equal(edge.particle.vx,0,'force is zero at radius');
+const center=forceSetup({},'dark',500);center.api.simulate();assert.equal(center.particle.vx,0);assert(Number.isFinite(center.particle.vy));
+const soft=forceSetup({},'dark',499);soft.api.simulate();assert(soft.particle.vx>0&&soft.particle.vx<400/120/24,'force softens near cursor');
+const linear=forceSetup({asciiCursorFalloff:1});linear.api.simulate();
+const concentrated=forceSetup({asciiCursorFalloff:4});concentrated.api.simulate();assert(linear.particle.vx>concentrated.particle.vx);
+const noForce=forceSetup({asciiCursorStrength:0});noForce.api.simulate();assert.equal(noForce.particle.vx,0);
+const noRadius=forceSetup({asciiCursorRadius:0});noRadius.api.simulate();assert.equal(noRadius.particle.vx,0);
+const capped=forceSetup({asciiCursorStrength:3000,asciiMaxVelocity:50});capped.particle.vx=400;capped.particle.vy=400;capped.api.simulate();assert(Math.hypot(capped.particle.vx,capped.particle.vy)<=50+1e-10);
+const still=forceSetup({asciiMaxVelocity:0});still.api.simulate();assert.equal(still.particle.x,400);assert.equal(still.particle.y,2000);
+const scrollForce=forceSetup();scrollForce.scope.scrollY=1800;scrollForce.api.simulate();assert(scrollForce.particle.vx>0&&scrollForce.particle.vy>0,'cursor uses document coordinates after scrolling');
+const leave=forceSetup();leave.listeners.get('root:pointerleave')();leave.api.simulate();assert.equal(leave.particle.vx,0);
+const blur=forceSetup();blur.listeners.get('window:blur')();blur.api.simulate();assert.equal(blur.particle.vx,0);
+const heroForce=forceSetup();heroForce.listeners.get('document:pointermove')({clientX:500,clientY:0,target:{closest:()=>null},pointerId:1});heroForce.scope.scrollY=0;heroForce.api.simulate();assert.equal(heroForce.particle.vx,0,'cursor above grid has no force');
+const held=forceSetup();held.listeners.get('document:pointerdown')({clientX:400,clientY:400,target:{closest:()=>null},pointerId:1,button:0,preventDefault(){},stopPropagation(){}});held.api.simulate();assert.equal(held.particle.vx,0,'dragged particles ignore force');
+const capThrow=forceSetup({asciiMaxVelocity:50});capThrow.listeners.get('document:pointerdown')({clientX:400,clientY:400,target:{closest:()=>null},pointerId:1,button:0,preventDefault(){},stopPropagation(){}});capThrow.listeners.get('document:pointermove')({clientX:500,clientY:500,pointerId:1});assert(Math.hypot(capThrow.particle.vx,capThrow.particle.vy)<=50+1e-10,'throw vector respects speed cap');
+console.log('PASS: dark attraction, light repulsion, live theme changes, radius, soft core, falloff, zero force/radius/speed, speed/throw cap, scrolling, pointer leave/blur, hero exclusion, drag isolation');
+
+const collisionCap=setup({config:{asciiParticleLimit:0,asciiMaxVelocity:100}});collisionCap.api.measure();
+collisionCap.api.particles.push({scale:1,angle:0,angularVelocity:0,x:100,y:2000,vx:100,vy:0},{scale:1,angle:0,angularVelocity:0,x:110,y:2000,vx:0,vy:100});
+collisionCap.api.simulate();assert(collisionCap.api.particles.every(p=>Math.hypot(p.vx,p.vy)<=100+1e-10),'collision exchange cannot exceed total speed cap');
+const stress=forceSetup({asciiCursorStrength:3000,asciiCursorRadius:2000,asciiCursorFalloff:0.25,asciiMaxVelocity:600});
+for(let i=0;i<2400;i++)stress.api.simulate();
+assert([stress.particle.x,stress.particle.y,stress.particle.vx,stress.particle.vy].every(Number.isFinite));assert(Math.hypot(stress.particle.vx,stress.particle.vy)<=600+1e-10);
+console.log('PASS: collision speed cap and sustained maximum-force stability');

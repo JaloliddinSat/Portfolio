@@ -13,7 +13,7 @@ const node = id => {
   });
   return elements.get(id);
 };
-let published = { asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240 };
+let published = { asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240, asciiCursorStrength: 0, asciiCursorRadius: 300, asciiCursorFalloff: 2, asciiMaxVelocity: 600 };
 let fail = false;
 const scope = {
   document: { querySelector: node }, window: {}, URL, Intl, Date,
@@ -32,6 +32,11 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(node('#ascii-feature-toggle').checked, false);
   assert.equal(node('#ascii-tuning-fields').disabled, false);
   assert.equal(Number(node('#ascii-particle-limit').value), 240);
+  assert.equal(Number(node('#ascii-cursor-strength').value), 0);
+  node('#ascii-cursor-strength').value = '400';
+  node('#ascii-cursor-radius').value = '350';
+  node('#ascii-cursor-falloff').value = '1.5';
+  node('#ascii-max-velocity').value = '250';
   node('#ascii-rotation-multiplier').value = '0.5';
   node('#ascii-scale-multiplier').value = '1.5';
   node('#ascii-spawn-width').value = '20';
@@ -40,7 +45,7 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(node('#ascii-spawn-output').textContent, '20%');
   assert.equal(node('#ascii-spawn-preview').style['--spawn-width'], '20%');
   await node('#ascii-settings-form').events.submit({ preventDefault() {} });
-  assert.deepEqual(published, { asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180 });
+  assert.deepEqual(published, { asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180, asciiCursorStrength: 400, asciiCursorRadius: 350, asciiCursorFalloff: 1.5, asciiMaxVelocity: 250 });
   assert.equal(node('#ascii-tuning-status').dataset.state, 'success');
   node('#ascii-scale-multiplier').value = '2';
   node('#ascii-feature-toggle').checked = true;
