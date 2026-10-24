@@ -167,3 +167,19 @@ const noPass=forceSetup({asciiCursorReleaseDistance:0},'dark',480);noPass.api.si
 const noGravityNudge=forceSetup({asciiCursorStrength:0,asciiCursorReleaseDistance:40},'dark',480);noGravityNudge.api.simulate();assert.equal(noGravityNudge.particle.vx,0);
 const limitedRadius=forceSetup({asciiCursorRadius:20,asciiCursorReleaseDistance:500},'dark',470);limitedRadius.api.simulate();assert(!limitedRadius.particle.cursorReleased,'release distance cannot exceed influence radius');
 console.log('PASS: per-glyph cooldown, escape-distance hysteresis, momentum preservation, repeated slow escape, exact-center nudge, light-theme isolation, speed limit, disable controls and bounded radius');
+
+const idle=forceSetup();
+let idleNow=2099;idle.scope.performance.now=()=>idleNow;
+idle.api.simulate();assert(idle.particle.vx>0,'attraction works just before two seconds');
+idleNow=2100;idle.particle.vx=0;idle.api.simulate();assert.equal(idle.particle.vx,0,'attraction stops exactly at the idle deadline');
+idle.particle.vx=30;const idleX=idle.particle.x;idle.api.simulate();assert.equal(idle.particle.vx,30);assert(idle.particle.x>idleX,'idle cutoff preserves free motion');
+idle.listeners.get('document:pointermove')({clientX:500,clientY:400,target:{closest:()=>null},pointerId:1});idle.particle.vx=0;idle.api.simulate();assert.equal(idle.particle.vx,0,'duplicate coordinates do not reset idle timer');
+idle.listeners.get('document:pointerdown')({clientX:500,clientY:400,target:{closest:()=>({})},pointerId:1,button:0});idle.api.simulate();assert.equal(idle.particle.vx,0,'click at same position does not restore attraction');
+idle.scope.scrollY=1610;idle.listeners.get('window:scroll')();idle.api.simulate();assert.equal(idle.particle.vx,0,'scroll does not restore attraction');
+idle.listeners.get('document:pointermove')({clientX:501,clientY:400,target:{closest:()=>null},pointerId:1});idle.api.simulate();assert(idle.particle.vx>0,'real cursor movement restores attraction');
+idleNow=4100;idle.particle.vx=0;idle.api.simulate();assert.equal(idle.particle.vx,0,'idle timer restarts from latest movement');
+idle.scope.document.documentElement.dataset.theme='light';idle.api.simulate();assert(idle.particle.vx<0,'light theme still repels an idle cursor');
+const idleNudge=forceSetup({asciiCursorReleaseDistance:40},'dark',480);idleNudge.scope.performance.now=()=>2100;idleNudge.api.simulate();assert.equal(idleNudge.particle.vx,0,'escape nudge also stops while dark cursor is idle');
+const customIdle=forceSetup({asciiCursorIdleTimeout:3.5});customIdle.scope.performance.now=()=>3599;customIdle.api.simulate();assert(customIdle.particle.vx>0);customIdle.scope.performance.now=()=>3600;customIdle.particle.vx=0;customIdle.api.simulate();assert.equal(customIdle.particle.vx,0,'admin timeout controls cutoff');
+const idleDisabled=forceSetup({asciiCursorIdleTimeout:0});idleDisabled.scope.performance.now=()=>1e8;idleDisabled.api.simulate();assert(idleDisabled.particle.vx>0,'timeout zero keeps attraction active');
+console.log('PASS: precise idle cutoff, preserved motion, movement reactivation, duplicate/click/scroll exclusion, continuous light repulsion, nudge cutoff and configurable/disabled timeout');

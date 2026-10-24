@@ -25,6 +25,7 @@ export function initAsciiPhysics() {
   const maxVelocity = bounded('asciiMaxVelocity', 600, 0, 600);
   const releaseDistance = Math.min(cursorRadius, bounded('asciiCursorReleaseDistance', 40, 0, 500));
   const cursorCooldown = bounded('asciiCursorCooldown', 1, 0, 10);
+  const cursorIdleTimeout = bounded('asciiCursorIdleTimeout', 2, 0, 60);
   const escapeNudge = bounded('asciiCursorEscapeNudge', 100, 0, 600);
   const releaseSquared = releaseDistance * releaseDistance;
   const resumeSquared = releaseSquared * 2.25;
@@ -48,7 +49,7 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
   if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
-  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge });
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge, cursorIdleTimeout });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
@@ -70,6 +71,16 @@ export function initAsciiPhysics() {
   let geometryDirty = true;
   let drag = null;
   let pointer = null;
+  let lastPointerMovement = -Infinity;
+  const trackPointer = (event) => {
+    // Clicks, scrolling and duplicate same-position events do not restart the idle timer.
+    if (!pointer || pointer.clientX !== event.clientX || pointer.clientY !== event.clientY) {
+      lastPointerMovement = performance.now();
+    }
+    pointer = { clientX: event.clientX, clientY: event.clientY, target: event.target || pointer?.target };
+  };
+  const cursorIsIdle = () => cursorIdleTimeout > 0 &&
+    performance.now() - lastPointerMovement >= cursorIdleTimeout * 1000;
   let pointerTargetDirty = false;
   let hovering = false;
   let hoverElement = null;
@@ -189,11 +200,12 @@ export function initAsciiPhysics() {
     // With strength/radius zero, skip all cursor distance and falloff work.
     const cursorX = pointer ? pointer.clientX + scrollX : 0;
     const cursorY = pointer ? pointer.clientY + scrollY : 0;
-    const forceActive = cursorStrength > 0 && cursorRadius > 0 && pointer &&
+    const forceSign = document.documentElement.dataset.theme === 'light' ? -1 : 1;
+    const idleAttraction = forceSign > 0 && cursorIsIdle();
+    const forceActive = !idleAttraction && cursorStrength > 0 && cursorRadius > 0 && pointer &&
       pointer.clientX >= 0 && pointer.clientX <= width &&
       pointer.clientY >= 0 && pointer.clientY <= height && cursorY >= spawnTop &&
       desktop.matches && enabled && activated && !document.hidden && !canvas.hidden;
-    const forceSign = document.documentElement.dataset.theme === 'light' ? -1 : 1;
     spawnTime += step;
     while (particles.length < (diagnostics?.flags.particleLimit ?? maxParticles) && spawnTime >= 1 / 12) {
       spawnTime -= 1 / 12;
@@ -367,7 +379,7 @@ export function initAsciiPhysics() {
     diagnostics?.sample('ascii.draw', drawStart);
     diagnostics?.sample('ascii.frame', frameStart);
     diagnostics?.state('ascii', { particles: particles.length, limit: diagnostics.flags.particleLimit, rotationMultiplier, scaleMultiplier, spawnWidth, visible, steps, pairChecks, overlaps, maxBucket,
-      backlogMs: Math.round(accumulator * 1000), obstacles: obstacles.length, geometryRebuilds });
+      cursorIdle: Boolean(pointer && cursorIsIdle()), backlogMs: Math.round(accumulator * 1000), obstacles: obstacles.length, geometryRebuilds });
     frame = requestAnimationFrame(tick);
   };
 
@@ -453,7 +465,7 @@ export function initAsciiPhysics() {
   };
   document.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'touch') { pointer = null; setHover(false); return; }
-    pointer = { clientX: event.clientX, clientY: event.clientY, target: event.target };
+    trackPointer(event);
     pointerTargetDirty = false;
     updateHover();
     if (event.button !== 0 || !canGrabTarget(event.target)) return;
@@ -471,7 +483,7 @@ export function initAsciiPhysics() {
   }, true);
   document.addEventListener('pointermove', (event) => {
     if (event.pointerType === 'touch') { pointer = null; setHover(false); return; }
-    pointer = { clientX: event.clientX, clientY: event.clientY, target: event.target || pointer?.target };
+    trackPointer(event);
     pointerTargetDirty = false;
     if (!drag) { updateHover(); return; }
     if (drag.id !== event.pointerId) return;

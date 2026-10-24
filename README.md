@@ -44,6 +44,14 @@ their momentum. A slowdown after a collision can trigger another nudge while
 inside the zone. Release distance 0 disables pass-through; nudge 0 keeps only
 the cooldown. Light-theme repulsion is unchanged.
 
+The cursor idle timeout (default 2 seconds, configurable 0–60) switches off all
+cursor forces in dark theme, including escape nudges, once the pointer stops
+moving. Characters keep their velocity and collisions; dragging still works.
+Real pointer movement restores attraction, subject to per-character cooldowns.
+Clicks at the same position, scrolling, and duplicate pointer events do not
+restart the timer. Timing uses wall-clock time, including background pauses.
+Set 0 to disable the timeout. Light-theme repulsion remains active while idle.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

@@ -11,6 +11,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   asciiMaxVelocity: 600,
   asciiCursorReleaseDistance: 40,
   asciiCursorCooldown: 1,
+  asciiCursorIdleTimeout: 2,
   asciiCursorEscapeNudge: 100,
 });
 
@@ -25,6 +26,7 @@ const rules = {
   asciiMaxVelocity: { min: 0, max: 600, label: 'Maximum speed' },
   asciiCursorReleaseDistance: { min: 0, max: 500, label: 'Release distance' },
   asciiCursorCooldown: { min: 0, max: 10, label: 'Attraction cooldown' },
+  asciiCursorIdleTimeout: { min: 0, max: 60, label: 'Cursor idle timeout' },
   asciiCursorEscapeNudge: { min: 0, max: 600, label: 'Escape nudge' },
 };
 const valid = (key, value) => {

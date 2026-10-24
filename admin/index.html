@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=10" />
+    <link rel="stylesheet" href="/admin/styles.css?v=11" />
   </head>
   <body>
     <main class="admin-shell">
@@ -127,6 +127,10 @@
               <h3>Pass-through attraction</h3>
               <p class="debug-portfolio-note">In dark theme, characters near the cursor temporarily stop feeling attraction so they can fly past. Attraction returns after the cooldown and once they are at least 1.5× the release distance away. Light-theme repulsion stays continuous.</p>
               <div class="ascii-tuning-grid">
+                <label for="ascii-cursor-idle-timeout">Cursor idle timeout (seconds)
+                  <input id="ascii-cursor-idle-timeout" name="asciiCursorIdleTimeout" type="number" min="0" max="60" step="any" value="2" required />
+                  <small>In dark theme, turns cursor attraction and escape nudges off after the cursor stops moving. Move it again to restore them. Scrolling does not reset the timer. 0 disables the timeout.</small>
+                </label>
                 <label for="ascii-cursor-release-distance">Release distance (px)
                   <input id="ascii-cursor-release-distance" name="asciiCursorReleaseDistance" type="number" min="0" max="500" step="any" value="40" required />
                   <small>Distance that starts the cooldown. Limited to the influence radius. 0 disables pass-through.</small>
@@ -201,6 +205,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=10" defer></script>
+    <script src="/admin/admin.js?v=11" defer></script>
   </body>
 </html>

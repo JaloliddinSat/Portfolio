@@ -13,7 +13,7 @@ const node = id => {
   });
   return elements.get(id);
 };
-let published = { asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240, asciiCursorStrength: 0, asciiCursorRadius: 300, asciiCursorFalloff: 2, asciiMaxVelocity: 600, asciiCursorReleaseDistance: 40, asciiCursorCooldown: 1, asciiCursorEscapeNudge: 100 };
+let published = { asciiEnabled: false, asciiRotationMultiplier: 1, asciiScaleMultiplier: 1, asciiSpawnWidth: 100, asciiParticleLimit: 240, asciiCursorStrength: 0, asciiCursorRadius: 300, asciiCursorFalloff: 2, asciiMaxVelocity: 600, asciiCursorReleaseDistance: 40, asciiCursorCooldown: 1, asciiCursorIdleTimeout: 2, asciiCursorEscapeNudge: 100 };
 let fail = false;
 const scope = {
   document: { querySelector: node }, window: {}, URL, Intl, Date,
@@ -35,6 +35,8 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(Number(node('#ascii-cursor-strength').value), 0);
   assert.equal(Number(node('#ascii-cursor-release-distance').value),40);
   node('#ascii-cursor-release-distance').value = '55';
+  assert.equal(Number(node('#ascii-cursor-idle-timeout').value),2);
+  node('#ascii-cursor-idle-timeout').value = '3.5';
   node('#ascii-cursor-cooldown').value = '1.5';
   node('#ascii-cursor-escape-nudge').value = '120';
   node('#ascii-cursor-strength').value = '400';
@@ -49,7 +51,7 @@ vm.runInContext(fs.readFileSync('admin/admin.js', 'utf8'), scope);
   assert.equal(node('#ascii-spawn-output').textContent, '20%');
   assert.equal(node('#ascii-spawn-preview').style['--spawn-width'], '20%');
   await node('#ascii-settings-form').events.submit({ preventDefault() {} });
-  assert.deepEqual(published, { asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180, asciiCursorStrength: 400, asciiCursorRadius: 350, asciiCursorFalloff: 1.5, asciiMaxVelocity: 250, asciiCursorReleaseDistance: 55, asciiCursorCooldown: 1.5, asciiCursorEscapeNudge: 120 });
+  assert.deepEqual(published, { asciiEnabled: false, asciiRotationMultiplier: 0.5, asciiScaleMultiplier: 1.5, asciiSpawnWidth: 20, asciiParticleLimit: 180, asciiCursorStrength: 400, asciiCursorRadius: 350, asciiCursorFalloff: 1.5, asciiMaxVelocity: 250, asciiCursorReleaseDistance: 55, asciiCursorCooldown: 1.5, asciiCursorIdleTimeout: 3.5, asciiCursorEscapeNudge: 120 });
   assert.equal(node('#ascii-tuning-status').dataset.state, 'success');
   node('#ascii-scale-multiplier').value = '2';
   node('#ascii-feature-toggle').checked = true;
