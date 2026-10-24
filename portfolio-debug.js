@@ -134,6 +134,7 @@
       `ASCII: ${state.ascii?.particles ?? 0}/${state.ascii?.limit ?? flags.particleLimit} · visible ${state.ascii?.visible ?? 0} · steps ${state.ascii?.steps ?? 0} · backlog ${state.ascii?.backlogMs ?? 0}ms`,
       `Saved tuning: rotation ${state.asciiConfig?.rotationMultiplier ?? 1}× · scale ${state.asciiConfig?.scaleMultiplier ?? 1}× · edge spawn ${state.asciiConfig?.spawnWidth ?? 100}%`,
       `Cursor: strength ${state.asciiConfig?.cursorStrength ?? 0}px/s² · radius ${state.asciiConfig?.cursorRadius ?? 300}px · falloff ${state.asciiConfig?.cursorFalloff ?? 2} · max ${state.asciiConfig?.maxVelocity ?? 600}px/s`,
+      `Pass-through: release ${state.asciiConfig?.releaseDistance ?? 40}px · cooldown ${state.asciiConfig?.cursorCooldown ?? 1}s · nudge ${state.asciiConfig?.escapeNudge ?? 100}px/s`,
       `Pair checks ${state.ascii?.pairChecks ?? 0} · overlaps ${state.ascii?.overlaps ?? 0} · bucket max ${state.ascii?.maxBucket ?? 0}`,
       `Obstacles ${state.ascii?.obstacles ?? 0} · geometry rebuilds ${state.ascii?.geometryRebuilds ?? 0}`,
       `Observers: long tasks ${capabilities.longtask ? 'yes' : 'unavailable'} · script attribution ${capabilities.longAnimationFrame ? 'yes' : 'unavailable'}`,

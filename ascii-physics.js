@@ -23,6 +23,11 @@ export function initAsciiPhysics() {
   const cursorRadius = bounded('asciiCursorRadius', 300, 0, 2000);
   const cursorFalloff = bounded('asciiCursorFalloff', 2, 0.25, 6);
   const maxVelocity = bounded('asciiMaxVelocity', 600, 0, 600);
+  const releaseDistance = Math.min(cursorRadius, bounded('asciiCursorReleaseDistance', 40, 0, 500));
+  const cursorCooldown = bounded('asciiCursorCooldown', 1, 0, 10);
+  const escapeNudge = bounded('asciiCursorEscapeNudge', 100, 0, 600);
+  const releaseSquared = releaseDistance * releaseDistance;
+  const resumeSquared = releaseSquared * 2.25;
   const radiusSquared = cursorRadius * cursorRadius;
   const maxSpeedSquared = maxVelocity * maxVelocity;
   const clampVelocity = (particle) => {
@@ -43,7 +48,7 @@ export function initAsciiPhysics() {
   const step = 1 / 120;
   const maxParticles = Number.isInteger(configuredLimit) ? configuredLimit : 240;
   if (diagnostics) diagnostics.flags.particleLimit = maxParticles;
-  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity });
+  diagnostics?.state('asciiConfig', { rotationMultiplier, scaleMultiplier, spawnWidth, particleLimit: maxParticles, cursorStrength, cursorRadius, cursorFalloff, maxVelocity, releaseDistance, cursorCooldown, escapeNudge });
   const particles = [];
   const cells = new Map();
   const cellPool = [];
@@ -198,11 +203,30 @@ export function initAsciiPhysics() {
     for (const particle of particles) {
       particle.angle = (particle.angle + particle.angularVelocity * step) % fullTurn;
       if (drag?.particle === particle) continue;
+      particle.cursorCooldownRemaining = Math.max(0, (particle.cursorCooldownRemaining || 0) - step);
+      if (forceSign < 0) particle.cursorReleased = false;
       if (forceActive) {
         const dx = cursorX - particle.x;
         const dy = cursorY - particle.y;
         const distanceSquared = dx * dx + dy * dy;
-        if (distanceSquared < radiusSquared && distanceSquared > 0) {
+        if (forceSign > 0 && releaseDistance > 0) {
+          // Per-character hysteresis: time alone cannot recapture a slow glyph at the center.
+          if (particle.cursorReleased && particle.cursorCooldownRemaining <= 0 && distanceSquared >= resumeSquared) {
+            particle.cursorReleased = false;
+          }
+          if (!particle.cursorReleased && distanceSquared <= releaseSquared) {
+            particle.cursorReleased = true;
+            particle.cursorCooldownRemaining = cursorCooldown;
+          }
+          if (particle.cursorReleased && distanceSquared <= releaseSquared && escapeNudge > 0 &&
+              particle.vx * particle.vx + particle.vy * particle.vy < escapeNudge * escapeNudge) {
+            const distance = Math.sqrt(distanceSquared);
+            // At the exact center, the glyph's randomized angle supplies a finite escape direction.
+            particle.vx = distance > 0.001 ? -dx / distance * escapeNudge : Math.cos(particle.angle) * escapeNudge;
+            particle.vy = distance > 0.001 ? -dy / distance * escapeNudge : Math.sin(particle.angle) * escapeNudge;
+          }
+        }
+        if (!(forceSign > 0 && particle.cursorReleased) && distanceSquared < radiusSquared && distanceSquared > 0) {
           const distance = Math.sqrt(distanceSquared);
           // Soft core avoids a singularity or an arbitrary kick at the exact center.
           const impulse = forceSign * cursorStrength * Math.pow(1 - distance / cursorRadius, cursorFalloff) *

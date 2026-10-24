@@ -78,6 +78,9 @@ const tuningForm = document.querySelector("#ascii-settings-form");
 const tuningFields = document.querySelector("#ascii-tuning-fields");
 const tuningStatus = document.querySelector("#ascii-tuning-status");
 const tuningInputs = {
+  asciiCursorReleaseDistance: document.querySelector("#ascii-cursor-release-distance"),
+  asciiCursorCooldown: document.querySelector("#ascii-cursor-cooldown"),
+  asciiCursorEscapeNudge: document.querySelector("#ascii-cursor-escape-nudge"),
   asciiCursorStrength: document.querySelector("#ascii-cursor-strength"),
   asciiCursorRadius: document.querySelector("#ascii-cursor-radius"),
   asciiCursorFalloff: document.querySelector("#ascii-cursor-falloff"),

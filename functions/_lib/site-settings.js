@@ -9,6 +9,9 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   asciiCursorRadius: 300,
   asciiCursorFalloff: 2,
   asciiMaxVelocity: 600,
+  asciiCursorReleaseDistance: 40,
+  asciiCursorCooldown: 1,
+  asciiCursorEscapeNudge: 100,
 });
 
 const rules = {
@@ -20,6 +23,9 @@ const rules = {
   asciiCursorRadius: { min: 0, max: 2000, label: 'Cursor radius' },
   asciiCursorFalloff: { min: 0.25, max: 6, label: 'Cursor falloff' },
   asciiMaxVelocity: { min: 0, max: 600, label: 'Maximum speed' },
+  asciiCursorReleaseDistance: { min: 0, max: 500, label: 'Release distance' },
+  asciiCursorCooldown: { min: 0, max: 10, label: 'Attraction cooldown' },
+  asciiCursorEscapeNudge: { min: 0, max: 600, label: 'Escape nudge' },
 };
 const valid = (key, value) => {
   if (key === 'asciiEnabled') return typeof value === 'boolean';

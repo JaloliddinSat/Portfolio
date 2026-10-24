@@ -34,6 +34,16 @@ speed 0 stops travel but allows manual dragging and rotation. Forces ignore the
 hero, a cursor outside the window, and the particle being dragged. The private
 debugger reports the saved force configuration alongside existing timing data.
 
+Dark-theme attraction also uses a per-character pass-through cooldown. Within the
+release distance (default 40 px, configurable 0–500 and capped at the influence
+radius), attraction pauses for at least the cooldown (default 1 second, 0–10).
+It resumes only after the character is 1.5× the release distance away. Slow
+characters inside the release zone receive an outward escape speed (default
+100 px/s, configurable 0–600), capped by maximum speed; faster characters retain
+their momentum. A slowdown after a collision can trigger another nudge while
+inside the zone. Release distance 0 disables pass-through; nudge 0 keeps only
+the cooldown. Light-theme repulsion is unchanged.
+
 ## Private performance debugging
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens

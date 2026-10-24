@@ -110,7 +110,7 @@ console.log('PASS: edge-only spawns, live hover cursor, stationary-pointer updat
 
 // Isolate force integration from rendering, spawning, and collision responses.
 function forceSetup(config = {}, theme = 'dark', x = 400, y = 2000) {
-  const result = setup({config:{asciiParticleLimit:0,asciiCursorStrength:400,asciiCursorRadius:300,asciiCursorFalloff:2,...config}});
+  const result = setup({config:{asciiParticleLimit:0,asciiCursorStrength:400,asciiCursorRadius:300,asciiCursorFalloff:2,asciiCursorReleaseDistance:0,...config}});
   result.api.measure();
   result.scope.document.documentElement.dataset.theme = theme;
   const particle = {scale:1,angle:0,angularVelocity:0,x,y,vx:0,vy:0,glyph:'#'};
@@ -146,3 +146,24 @@ const stress=forceSetup({asciiCursorStrength:3000,asciiCursorRadius:2000,asciiCu
 for(let i=0;i<2400;i++)stress.api.simulate();
 assert([stress.particle.x,stress.particle.y,stress.particle.vx,stress.particle.vy].every(Number.isFinite));assert(Math.hypot(stress.particle.vx,stress.particle.vy)<=600+1e-10);
 console.log('PASS: collision speed cap and sustained maximum-force stability');
+
+const passThrough=forceSetup({asciiCursorReleaseDistance:40,asciiCursorCooldown:1,asciiCursorEscapeNudge:100},'dark',470);
+passThrough.particle.vx=180;passThrough.api.simulate();
+assert.equal(passThrough.particle.cursorReleased,true);assert.equal(passThrough.particle.vx,180,'fast approaching glyph keeps its incoming momentum');
+assert.equal(passThrough.particle.cursorCooldownRemaining,1);
+passThrough.particle.x=580;passThrough.api.simulate();assert.equal(passThrough.particle.vx,180,'outside resume radius still coasts until cooldown completes');
+for(let i=0;i<125;i++)passThrough.api.simulate();assert.equal(passThrough.particle.cursorReleased,false);assert(passThrough.particle.vx<180,'attraction resumes after cooldown and escape');
+const linger=forceSetup({asciiCursorReleaseDistance:40,asciiCursorCooldown:1,asciiCursorEscapeNudge:0},'dark',480);
+for(let i=0;i<150;i++)linger.api.simulate();assert.equal(linger.particle.cursorReleased,true);assert.equal(linger.particle.vx,0,'time alone cannot recapture a glyph still near cursor');
+linger.particle.x=550;linger.api.simulate();assert.equal(linger.particle.cursorReleased,true,'hysteresis excludes gap between release and resume radius');
+linger.particle.x=565;linger.api.simulate();assert.equal(linger.particle.cursorReleased,false);assert(linger.particle.vx<0);
+const escape=forceSetup({asciiCursorReleaseDistance:40,asciiCursorEscapeNudge:100},'dark',480);escape.api.simulate();assert.equal(escape.particle.vx,-100,'slow character gets outward nudge');
+escape.particle.vx=0;escape.api.simulate();assert.equal(escape.particle.vx,-100,'slowdown after a collision can receive another escape nudge');
+const exact=forceSetup({asciiCursorReleaseDistance:40},'dark',500);exact.api.simulate();assert(Number.isFinite(exact.particle.vx));assert(Math.hypot(exact.particle.vx,exact.particle.vy)>0,'exact center has finite escape direction');
+const lightPass=forceSetup({asciiCursorReleaseDistance:40},'light',480);lightPass.api.simulate();assert(!lightPass.particle.cursorReleased);assert(lightPass.particle.vx<0&&Math.abs(lightPass.particle.vx)<100,'light theme repulsion is continuous without nudges');
+const themePass=forceSetup({asciiCursorReleaseDistance:40},'dark',480);themePass.api.simulate();themePass.scope.document.documentElement.dataset.theme='light';themePass.api.simulate();assert.equal(themePass.particle.cursorReleased,false);
+const boundedNudge=forceSetup({asciiCursorReleaseDistance:40,asciiCursorEscapeNudge:600,asciiMaxVelocity:50},'dark',480);boundedNudge.api.simulate();assert(Math.hypot(boundedNudge.particle.vx,boundedNudge.particle.vy)<=50+1e-10);
+const noPass=forceSetup({asciiCursorReleaseDistance:0},'dark',480);noPass.api.simulate();assert(noPass.particle.vx>0);assert(!noPass.particle.cursorReleased);
+const noGravityNudge=forceSetup({asciiCursorStrength:0,asciiCursorReleaseDistance:40},'dark',480);noGravityNudge.api.simulate();assert.equal(noGravityNudge.particle.vx,0);
+const limitedRadius=forceSetup({asciiCursorRadius:20,asciiCursorReleaseDistance:500},'dark',470);limitedRadius.api.simulate();assert(!limitedRadius.particle.cursorReleased,'release distance cannot exceed influence radius');
+console.log('PASS: per-glyph cooldown, escape-distance hysteresis, momentum preservation, repeated slow escape, exact-center nudge, light-theme isolation, speed limit, disable controls and bounded radius');

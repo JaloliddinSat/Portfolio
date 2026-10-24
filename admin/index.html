@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=9" />
+    <link rel="stylesheet" href="/admin/styles.css?v=10" />
   </head>
   <body>
     <main class="admin-shell">
@@ -124,6 +124,22 @@
                   <small>Caps total character speed, including throws and collisions. 0 stops travel; manual dragging still works.</small>
                 </label>
               </div>
+              <h3>Pass-through attraction</h3>
+              <p class="debug-portfolio-note">In dark theme, characters near the cursor temporarily stop feeling attraction so they can fly past. Attraction returns after the cooldown and once they are at least 1.5× the release distance away. Light-theme repulsion stays continuous.</p>
+              <div class="ascii-tuning-grid">
+                <label for="ascii-cursor-release-distance">Release distance (px)
+                  <input id="ascii-cursor-release-distance" name="asciiCursorReleaseDistance" type="number" min="0" max="500" step="any" value="40" required />
+                  <small>Distance that starts the cooldown. Limited to the influence radius. 0 disables pass-through.</small>
+                </label>
+                <label for="ascii-cursor-cooldown">Attraction cooldown (seconds)
+                  <input id="ascii-cursor-cooldown" name="asciiCursorCooldown" type="number" min="0" max="10" step="any" value="1" required />
+                  <small>How long attraction stays off for each released character.</small>
+                </label>
+                <label for="ascii-cursor-escape-nudge">Escape nudge (px/s)
+                  <input id="ascii-cursor-escape-nudge" name="asciiCursorEscapeNudge" type="number" min="0" max="600" step="any" value="100" required />
+                  <small>Gives slow characters an outward speed inside the release zone. Faster characters keep their momentum. Respects maximum speed; 0 disables the nudge.</small>
+                </label>
+              </div>
               <button class="primary-button" type="submit">Save animation settings</button>
             </fieldset>
             <p class="form-status" id="ascii-tuning-status" role="status" aria-live="polite"></p>
@@ -185,6 +201,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=9" defer></script>
+    <script src="/admin/admin.js?v=10" defer></script>
   </body>
 </html>
