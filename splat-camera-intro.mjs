@@ -1,8 +1,9 @@
-// A short overhead hold lets the cylinder begin on the body before the camera
-// descends along an arc to the existing portfolio camera, without changing it.
-export const HERO_CAMERA_INTRO = { delayMs: 350, durationMs: 2200, height: 1.8, setback: 0.16 };
+// Start moving through the point cloud immediately after readiness. Give the
+// camera a short lead before colored geometry grows in, preserving both poses.
+export const HERO_CAMERA_INTRO = { delayMs: 0, durationMs: 3200, revealLeadMs: 250, height: 1.8, setback: 0.16 };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-const smooth = t => t * t * (3 - 2 * t);
+// Zero velocity and acceleration at both ends soften the takeoff and landing.
+const smooth = t => t * t * t * (t * (6 * t - 15) + 10);
 export function createHeroCameraIntro({ bodyOrigin, position, scale, finalPose, enabled = true }) {
   const body = bodyOrigin.map((v, i) => v * scale + position[i]);
   const horizontal = [finalPose.position[0] - body[0], 0, finalPose.position[2] - body[2]];

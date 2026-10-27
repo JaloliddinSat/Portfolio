@@ -125,9 +125,10 @@ The full-scene poster stays hidden until completion and returns on failure.
 Immediate scrolling completes the reveal before the depth transition takes over.
 Reduced motion and camera debug mode skip the reveal. Refresh to replay it.
 
-The camera starts almost directly above the body. After the loaded scene begins
-its cylinder reveal, it holds overhead for 350 ms, then follows a 2.2-second arc
-to the original hero camera position and aim. Mobile transforms the overhead
+The camera starts almost directly above the body. After loading, it immediately
+begins a 3.2-second arc with zero starting/ending velocity and acceleration. The
+colored cylinder reveal starts 250 ms later, so the camera is moving as the head
+appears. It lands at the original hero camera position and aim. Mobile transforms the overhead
 origin with the scene scale. The same readiness and hidden GPU warm-up gate both
 animations; reduced motion skips the camera move as well. Scrolling takes over
 immediately, and the normal scroll path and pointer parallax resume after landing.

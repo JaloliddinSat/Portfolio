@@ -9,7 +9,18 @@ for(const scale of [.75,.75*.73]) {
   assert.equal(intro.initialPose.position[1],body[1]-HERO_CAMERA_INTRO.height*scale);
   assert.deepEqual(intro.update(100),finalPose,'no animated camera before readiness');
   intro.start(1000);
-  assert.deepEqual(intro.update(1000+HERO_CAMERA_INTRO.delayMs),intro.initialPose,'hold overhead while the outward reveal begins');
+  assert.deepEqual(intro.update(1000+HERO_CAMERA_INTRO.delayMs),intro.initialPose,'keep the exact initial overhead placement');
+  const lead=intro.update(1000+HERO_CAMERA_INTRO.revealLeadMs);
+  assert.notDeepEqual(lead.position,intro.initialPose.position,'camera is already moving before colored geometry appears');
+  const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+  const early=intro.update(1000+100);
+  const earlyNext=intro.update(1000+200);
+  const midBefore=intro.update(1000+HERO_CAMERA_INTRO.durationMs/2-50);
+  const midAfter=intro.update(1000+HERO_CAMERA_INTRO.durationMs/2+50);
+  const late=intro.update(1000+HERO_CAMERA_INTRO.durationMs-100);
+  const midSpeed=distance(midBefore.position,midAfter.position);
+  assert(distance(early.position,earlyNext.position)<midSpeed,'accelerate gently out of the initial pose');
+  assert(distance(late.position,finalPose.position)<midSpeed,'slow down into the exact landing');
   const middle=intro.update(1000+HERO_CAMERA_INTRO.delayMs+HERO_CAMERA_INTRO.durationMs/2);
   assert(middle.position.every(Number.isFinite));
   assert(middle.position[1]<body[1], 'arc remains above the torso');
@@ -22,4 +33,4 @@ for(const scale of [.75,.75*.73]) {
 const skip=createHeroCameraIntro({...options,enabled:false});skip.start(0);
 assert.deepEqual(skip.initialPose,finalPose);assert.deepEqual(skip.update(100),finalPose);assert.equal(skip.active,false);
 const scroll=createHeroCameraIntro(options);scroll.start(0);assert.deepEqual(scroll.update(100,finalPose,.02),finalPose);assert.equal(scroll.active,false);
-console.log('PASS: overhead body framing on both scales, delayed descent, finite arc, exact original camera handoff, scrolling and reduced motion');
+console.log('PASS: overhead body framing on both scales, immediate eased descent and reveal lead, finite arc, exact original camera handoff, scrolling and reduced motion');
