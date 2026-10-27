@@ -19,7 +19,7 @@ const vertex=patchCutoffShader(patchRevealShader('vec3 splatCenter;'+projection)
 const fragment=patchGradeShader(patchRevealFragment(projection));
 const patched=patchFogShaders(vertex,fragment);
 assert(patched.vertex.includes('splatDistanceCutoff(splatCenter)'));
-assert(patched.vertex.includes('studioFogEnabled * studioFogScrollStrength * smoothstep'),'scroll strength removes blur and color fog together');
+assert(patched.vertex.includes('vStudioFog = studioFogEnabled * smoothstep'),'fog stays independent of scroll');
 assert(patched.vertex.includes('heroRevealMask(splatCenter)'));
 assert(patched.fragment.includes('gradeSplatColor(vColor.rgb)'));
 assert(patched.fragment.includes('color = mix(color, studioFogColor'));
@@ -33,8 +33,6 @@ for(const scale of [.75,.75*.73]) {
  assert.deepEqual(material.uniforms.studioFogOrigin.value,config.origin.map((v,i)=>v*scale+[-1.65,.87,-.71][i]));
  assert.equal(material.uniforms.studioFogStart.value,1.1);assert.equal(material.uniforms.studioFogFalloff.value,2.2);
  assert.equal(material.uniforms.studioFogBlur.value,4.2);assert.equal(material.uniforms.studioFogDarkening.value,.47);assert.equal(material.uniforms.studioFogDensity.value,.52);assert.deepEqual(material.uniforms.studioFogColor.value,[0,0,0]);
- assert.equal(material.uniforms.studioFogScrollStrength.value,1,'fog starts fully enabled');
- material.uniforms.studioFogScrollStrength.value=0;
  const originalVertex=material.vertexShader, originalFragment=material.fragmentShader;
  apply({...config,start:3,falloff:2,blur:8,darkening:.8,fogginess:.6,color:'#ff0000'});
  assert.equal(material.uniforms.studioFogStart.value,3);assert.equal(material.uniforms.studioFogFalloff.value,2);
@@ -42,7 +40,6 @@ for(const scale of [.75,.75*.73]) {
  assert.deepEqual(material.uniforms.studioFogColor.value,[1,0,0]);
  apply(config,true);assert.equal(material.uniforms.studioFogEnabled.value,0);
  apply(config);assert.equal(material.uniforms.studioFogEnabled.value,1);
- assert.equal(material.uniforms.studioFogScrollStrength.value,0,'studio edits cannot override the unfogged scroll transition');
  assert.equal(material.vertexShader,originalVertex);assert.equal(material.fragmentShader,originalFragment);
  assert.equal(renders,3,'live edits render even on an idle mobile viewer');
 }
@@ -52,21 +49,21 @@ assert(script.includes('else installDistanceFog(viewer, defaultFog(), distanceCo
 assert(script.indexOf('else installDistanceFog') < script.indexOf('await prepareHeroReveal'),'fog is included in hidden shader warmup');
 console.log('PASS: fog export/validation, distance falloff, shader composition, compensated blur, both scene scales, idle rendering, bypass and approved public cutoff');
 
-assert(script.includes('1 - smoothstepRange(rawProgress, 0, HERO_DEPTH_CONFIG.revealStart)'),'fog reaches zero before depth fade begins, and reverses using smoothed scroll');
-// Exercise the actual scroll updater through forward/back scroll in both themes.
+// Exercise actual forward/back scrolling: the transition must never disable fog.
 const {runInNewContext}=await import('node:vm');
 const helpers=script.slice(script.indexOf('const smoothstepRange ='),script.indexOf('const getAnimationProgress ='));
 for(const light of [false,true]) {
- const material={isShaderMaterial:true,vertexShader:'varying vec4 vColor; gl_Position = quadPos;',fragmentShader:'varying vec4 vColor; vec3 color = vColor.rgb;',uniforms:{studioFogScrollStrength:{value:1}}};
+ const fogUniforms={studioFogEnabled:{value:1},studioFogDarkening:{value:config.darkening},studioFogDensity:{value:config.fogginess},studioFogBlur:{value:config.blur}};
+ const material={isShaderMaterial:true,vertexShader:'varying vec4 vColor; gl_Position = quadPos;',fragmentShader:'varying vec4 vColor; vec3 color = vColor.rgb;',uniforms:structuredClone(fogUniforms)};
  const update=runInNewContext(helpers+'\ninstallHeroDepthShader(mesh)',{
   mesh:{material},HERO_DEPTH_CONFIG:{revealStart:.08,revealEnd:.3,collapseStart:.3,collapseEnd:.96,near:.28,far:1.4,recedeDistance:1.3},
   isLightTheme:()=>light,splatContainer:{setAttribute(){},style:{setProperty(){}}},console,
  });
- update(0);assert.equal(material.uniforms.studioFogScrollStrength.value,1);
- update(.04);assert.equal(material.uniforms.studioFogScrollStrength.value,.5);
- assert.equal(material.uniforms.heroDepthMix.value,0,'fog fades before the depth transition');
- for(const progress of [.08,.2,.5,.98]) {update(progress);assert.equal(material.uniforms.studioFogScrollStrength.value,0,'scroll/edge fade uses original splat');}
- update(.04);assert.equal(material.uniforms.studioFogScrollStrength.value,.5);
- update(0);assert.equal(material.uniforms.studioFogScrollStrength.value,1,'scrolling back restores chosen fog');
+ for(const progress of [0,.04,.08,.2,.5,.98,.5,.04,0]) {
+  update(progress);
+  for(const key of Object.keys(fogUniforms)) assert.deepEqual(material.uniforms[key],fogUniforms[key],'scroll leaves selected fog active');
+  if(progress>=.3) assert.equal(material.uniforms.heroDepthMix.value,1,'existing scroll transition still works');
+ }
 }
-console.log('PASS: actual scroll updater restores unfogged geometry before depth/edge fade and reverses smoothly in both themes');
+assert(!script.includes('studioFogScrollStrength'),'scroll-driven fog bypass removed');
+console.log('PASS: actual scroll updater preserves fog and blur throughout forward/back scrolling in both themes');
