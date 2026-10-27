@@ -75,7 +75,7 @@ setRevealProgress(synced,.4);assert.equal(synced.heroRevealRadius.value,revealRa
 assert(Math.abs(ghostOpacityAt(0)-HERO_REVEAL_GHOST.minOpacity)<1e-9,'overlapping fronts start at 5%');
 assert(ghostOpacityAt(.05)<.06 && ghostOpacityAt(.05)>=HERO_REVEAL_GHOST.minOpacity,'ghost is nearly invisible while the fronts overlap');
 assert(ghostOpacityAt(.1)<ghostOpacityAt(.2) && ghostOpacityAt(.2)<ghostOpacityAt(.3),'opacity rises with the gap');
-assert.equal(ghostOpacityAt(.35),HERO_REVEAL_GHOST.maxOpacity,'reaches 25% once the hex is a model unit ahead');
+assert.equal(ghostOpacityAt(.35),HERO_REVEAL_GHOST.maxOpacity,'reaches 80% once the hex is a model unit ahead');assert.equal(HERO_REVEAL_GHOST.maxOpacity,.8);
 assert.equal(ghostOpacityAt(1),HERO_REVEAL_GHOST.minOpacity,'both fronts clamp together at the far shell');
 const warm=[];
 const warmMaterial={uniforms:{heroRevealProgress:{value:0}}};

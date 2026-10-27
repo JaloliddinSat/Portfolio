@@ -14,7 +14,7 @@ export const HERO_REVEAL = {
 // The ghost's opacity follows the gap between the two fronts: nearly invisible
 // while they overlap near the body, reaching its ceiling once the hex is a full
 // model unit ahead. Fractions of the ghost's base alpha, evaluated per frame.
-export const HERO_REVEAL_GHOST = { minOpacity: 0.05, maxOpacity: 0.25, gapRange: 1 };
+export const HERO_REVEAL_GHOST = { minOpacity: 0.05, maxOpacity: 0.8, gapRange: 1 };
 // Light growth edge and ghost tone. Light theme points are dark, so its rim is too.
 export const HERO_REVEAL_RIM = { dark: [0.96, 0.93, 0.86], light: [0.3, 0.36, 0.5] };
 export const revealRadiusAt = progress => 0.1 * (Math.expm1(Math.log1p(HERO_REVEAL.maxRadius / 0.1) * Math.max(0, Math.min(1, progress))));
