@@ -913,7 +913,7 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #c7c7c7;
+  color: var(--muted);
   opacity: 1;
   pointer-events: none;
   transition:
@@ -930,17 +930,17 @@ html:not([data-splat-load-state="loading"]) .splat-loader {
 }
 
 /* Loading screen. While the intro is armed the loader covers the viewport as a
-   blank page-coloured screen with the label centred; the hero copy and the
-   point cloud only appear once it fades. The corner indicator above remains
-   the fallback for reduced motion, a load that runs long (.splat-load-slow),
-   and JS being unavailable, since the arming class is only set by script. */
+   blank page-coloured screen with the point cloud centred; the hero copy and
+   the splat only appear once it fades. The corner indicator above remains the
+   fallback for reduced motion, a load that runs long (.splat-load-slow), and
+   JS being unavailable, since the arming class is only set by script. */
 html.splat-reveal-pending:not(.splat-load-slow) .splat-loader {
   position: fixed;
   inset: 0;
   z-index: 10010;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 10px;
   color: var(--muted);
   opacity: 1;
   background: var(--bg);
@@ -956,18 +956,9 @@ html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="load
     visibility 0s linear 520ms;
 }
 
-html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-spinner {
-  width: 14px;
-  height: 14px;
-  flex-basis: 14px;
-  border-color: color-mix(in srgb, currentColor 36%, transparent);
-  border-top-color: currentColor;
-}
-
-html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-label {
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-field {
+  width: 128px;
+  height: 128px;
 }
 
 /* Document scroll lock from the loader through the colour reveal and the
@@ -987,25 +978,66 @@ html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]
   overscroll-behavior: none;
 }
 
-.splat-loader-spinner {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
-  border: 1px solid rgba(199, 199, 199, 0.36);
-  border-top-color: #c7c7c7;
+/* Two depths. Near dots are larger and breathe slowly outward, as if coming
+   toward the camera. Far dots stay small and cycle faster, so the cluster
+   reads as a point cloud pulling in and receding. Positions are container
+   units, so the same field scales from the corner fallback to the full screen. */
+.splat-loader-field {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  container-type: size;
+}
+
+.splat-loader-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   border-radius: 50%;
-  animation: splat-loader-spin 900ms linear infinite;
+  background: currentColor;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
 
-.splat-loader-label {
-  font: 700 0.64rem/1 "JetBrains Mono", monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.splat-loader-dot.is-near {
+  width: max(3px, 6.2cqi);
+  height: max(3px, 6.2cqi);
+  animation-name: splat-loader-near;
+  animation-duration: 3.4s;
+  animation-delay: calc(var(--x) * -18ms);
 }
 
-@keyframes splat-loader-spin {
-  to {
-    transform: rotate(1turn);
+.splat-loader-dot.is-far {
+  width: max(1.5px, 2.4cqi);
+  height: max(1.5px, 2.4cqi);
+  animation-name: splat-loader-far;
+  animation-duration: 1.7s;
+  animation-delay: calc(var(--y) * -22ms);
+}
+
+@keyframes splat-loader-near {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.58cqi), calc(var(--y) * 0.58cqi)) scale(0.72);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 1cqi), calc(var(--y) * 1cqi)) scale(1.18);
+  }
+}
+
+@keyframes splat-loader-far {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.82cqi), calc(var(--y) * 0.82cqi)) scale(0.55);
+  }
+
+  50% {
+    opacity: 0.62;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 1.08cqi), calc(var(--y) * 1.08cqi)) scale(1);
   }
 }
 
@@ -2540,23 +2572,8 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
     bottom: auto;
     left: 50%;
     gap: 5px;
-    color: rgba(199, 199, 199, 0.7);
-    opacity: 0.58;
+    opacity: 0.72;
     transform: translateX(-50%);
-  }
-
-  .splat-loader-spinner {
-    width: 10px;
-    height: 10px;
-    flex-basis: 10px;
-    border-color: rgba(199, 199, 199, 0.26);
-    border-top-color: rgba(199, 199, 199, 0.72);
-  }
-
-  .splat-loader-label {
-    font-size: 0.52rem;
-    font-weight: 600;
-    letter-spacing: 0.07em;
   }
 
   .hero-text {
@@ -2645,8 +2662,10 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splat-loader-spinner {
+  .splat-loader-dot {
     animation: none;
+    opacity: 0.72;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.86cqi), calc(var(--y) * 0.86cqi));
   }
 
   /* The inline script in index.html already declines to arm the intro, but this
