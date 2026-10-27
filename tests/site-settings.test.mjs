@@ -59,6 +59,19 @@ response=await page();const injected=await response.text();assert(!injected.incl
 assert.equal((await page('/ascii-physics.js')).status,200);
 await call('settings','POST',{asciiEnabled:false},cookie);assert.equal((await page('/ascii-physics.js')).status,404);assert(!/ascii/i.test(await (await page()).text()));
 const authenticatedPage=(path)=>middleware({env,request:new Request('https://portfolio.test'+path,{headers:{Cookie:cookie}}),next:async()=>new Response(html,{headers:{'Content-Type':'text/html'}})});
+assert.equal((await page('/?debugSplatColor')).status,302);
+for (const path of ['/splat-color-debug.js', '/splat-color-debug.css', '/splat-color-core.mjs']) {
+  assert.equal((await page(path)).status,404,'grading assets require authentication');
+  const asset = await authenticatedPage(path);
+  assert.equal(asset.status,200);
+  assert.equal(asset.headers.get('Cache-Control'),'no-store');
+}
+const colorResponse = await authenticatedPage('/?debugSplatColor');
+assert.equal(colorResponse.headers.get('X-Robots-Tag'),'noindex, nofollow');
+const colorMarkup = await colorResponse.text();
+assert(colorMarkup.includes('splat-color-debug.js'));
+assert(!colorMarkup.includes('ascii-physics.js'),'grading does not enable the particle effect');
+assert(!(await (await authenticatedPage('/')).text()).includes('splat-color-debug'),'normal visitors and admins do not load grading UI');
 assert.equal((await page('/?debugPortfolio')).status,302);
 assert.equal((await page('/portfolio-debug.js')).status,404);
 assert.equal((await page('/portfolio-debug.css')).status,404);

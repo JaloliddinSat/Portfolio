@@ -2076,6 +2076,7 @@ const initSplat = async () => {
     warmSplatCache(splatUrl);
 
     const updateHeroDepthShader = installHeroDepthShader(splatMesh);
+    window.__splatColorDebug?.attach(viewer);
 
     if (manualRendering) {
       const existingTree = splatMesh.getSplatTree?.();

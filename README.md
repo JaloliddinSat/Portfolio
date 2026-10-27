@@ -100,6 +100,22 @@ The private debugger shows the last release velocity and sample count.
 
 ## Private performance debugging
 
+### Hero splat color grading
+
+Choose **Color grade the hero splat** in admin to open `/?debugSplatColor`.
+This authenticated preview grades the real Fairview renderer with master RGB,
+red, green, and blue curves, plus eight selectable choices including no LUT.
+The seven creative looks are generated 16³ LUTs, not film-stock emulations or
+camera conversion LUTs. LUT strength blends the look before the curves, and
+the existing depth transition is preserved. **Show original** bypasses grading.
+
+Drag one of nine fixed input anchors or edit its 0–255 output with the keyboard.
+The draft saves only in this browser. **Copy settings** copies versioned JSON
+with the target asset, LUT, strength, and all four curves; paste it into chat to
+request a permanent grade. The expandable settings field provides a manual-copy
+fallback. The public renderer keeps its existing colors until that code change.
+Grading assets and the preview require an admin session and are served uncached.
+
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens
 `/?debugPortfolio` with an authenticated, private ASCII preview, regardless of
 the public feature switch. It does not enable ASCII for visitors or change their
@@ -121,4 +137,5 @@ node tests/ascii-physics.test.cjs
 node tests/site-settings.test.mjs
 node tests/portfolio-debug.test.cjs
 node tests/admin-settings.test.cjs
+node tests/splat-color.test.mjs
 ```
