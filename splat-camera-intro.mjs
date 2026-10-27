@@ -11,8 +11,9 @@ export function createHeroCameraIntro({ bodyOrigin, position, scale, finalPose, 
   const top = [body[0] + horizontal[0]/length * HERO_CAMERA_INTRO.setback * scale,
     body[1] - HERO_CAMERA_INTRO.height * scale,
     body[2] + horizontal[2]/length * HERO_CAMERA_INTRO.setback * scale];
-  // Keep the arc above/in front of the subject instead of passing through them.
-  const control = [finalPose.position[0], body[1] - 1.1*scale, finalPose.position[2] - .2*scale];
+  // Approach the endpoint without crossing it: the arc retains its height, but
+  // no position axis overshoots and reverses direction before landing.
+  const control = [finalPose.position[0], body[1] - 1.1*scale, finalPose.position[2]];
   const initialPose = enabled ? { position: top, lookAt: body } : finalPose;
   let startTime = null;
   let finished = !enabled;

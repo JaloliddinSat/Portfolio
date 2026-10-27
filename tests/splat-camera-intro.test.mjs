@@ -29,6 +29,19 @@ for(const scale of [.75,.75*.73]) {
   assert.equal(intro.active,false);
   const scrolledPose={position:[1,2,3],lookAt:[4,5,6]};
   assert.deepEqual(intro.update(9000,scrolledPose),scrolledPose,'scroll/parallax remain in control afterwards');
+  const path=createHeroCameraIntro({...options,scale});path.start(0);
+  let previous=path.initialPose.position;
+  let remaining=distance(previous,finalPose.position);
+  for(let step=1;step<=400;step++) {
+    const next=path.update(HERO_CAMERA_INTRO.durationMs*step/400).position;
+    for(let axis=0;axis<3;axis++) {
+      const direction=Math.sign(finalPose.position[axis]-path.initialPose.position[axis]);
+      assert((next[axis]-previous[axis])*direction>=-1e-12,'camera never reverses position on any axis');
+    }
+    const nextRemaining=distance(next,finalPose.position);
+    assert(nextRemaining<=remaining+1e-12,'distance to the endpoint always decreases');
+    previous=next;remaining=nextRemaining;
+  }
 }
 const skip=createHeroCameraIntro({...options,enabled:false});skip.start(0);
 assert.deepEqual(skip.initialPose,finalPose);assert.deepEqual(skip.update(100),finalPose);assert.equal(skip.active,false);

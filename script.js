@@ -1969,7 +1969,7 @@ const initSplat = async () => {
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=4'),
-      import('./splat-camera-intro.mjs?v=2'),
+      import('./splat-camera-intro.mjs?v=3'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
