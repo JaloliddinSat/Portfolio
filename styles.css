@@ -475,8 +475,6 @@ h3 {
 }
 
 .hero-copy {
-  --float-y: 0px;
-  --float-rotate: 0deg;
   --tilt-x: 0deg;
   --tilt-y: 0deg;
   max-width: 620px;
@@ -484,13 +482,48 @@ h3 {
   opacity: var(--hero-copy-opacity);
   transform:
     perspective(1000px)
-    translateY(calc((1 - var(--hero-copy-opacity)) * -12px + var(--float-y)))
+    translateY(calc((1 - var(--hero-copy-opacity)) * -12px))
     rotateX(var(--tilt-x))
-    rotateY(var(--tilt-y))
-    rotateZ(var(--float-rotate));
+    rotateY(var(--tilt-y));
   transform-style: preserve-3d;
   transition: transform 180ms ease-out;
   will-change: opacity, transform;
+}
+
+/* The idle float runs on the individual `translate` and `rotate` properties so
+   it composes with the pointer tilt above without touching `transform` or its
+   transition, and needs no script per frame. Alternating ease-in-out legs
+   approximate the previous sin(0.75t) × 3px and cos(0.55t) × 0.18° motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-copy {
+    animation:
+      hero-float-y 4.19s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate,
+      hero-float-rotate 5.71s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+  }
+
+  .hero-copy.is-float-paused {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes hero-float-y {
+  from {
+    translate: 0 -3px;
+  }
+
+  to {
+    translate: 0 3px;
+  }
+}
+
+@keyframes hero-float-rotate {
+  from {
+    rotate: -0.18deg;
+  }
+
+  to {
+    rotate: 0.18deg;
+  }
 }
 
 .hero-copy h1 {

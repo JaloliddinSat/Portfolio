@@ -7,7 +7,7 @@ export const HERO_COLOR_GRADE = { ...defaultGrade(), lut: 'warm-film', strength:
 export function installSplatColorGrade(viewer, initialGrade = HERO_COLOR_GRADE) {
   if (!validGrade(initialGrade)) throw new Error('Invalid hero color grade.');
   const material = viewer.getSplatMesh().material;
-  const shader = patchGradeShader(material.fragmentShader);
+  const shader = patchGradeShader(material.vertexShader);
   const texture = (data, width, height) => {
     const result = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
     result.minFilter = result.magFilter = THREE.LinearFilter;
@@ -23,7 +23,7 @@ export function installSplatColorGrade(viewer, initialGrade = HERO_COLOR_GRADE) 
     gradeLut: { value: lut }, gradeCurves: { value: curves },
     gradeStrength: { value: initialGrade.strength }, gradeEnabled: { value: 1 },
   });
-  material.fragmentShader = shader;
+  material.vertexShader = shader;
   material.needsUpdate = true;
   viewer.forceRenderNextFrame();
   return (grade, original = false) => {

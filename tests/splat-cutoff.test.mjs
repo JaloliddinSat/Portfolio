@@ -4,9 +4,14 @@ const config=defaultCutoff();
 assert(validCutoff(JSON.parse(JSON.stringify(config))), 'copied settings round trip');
 for(const bad of [{radius:0},{radius:301},{feather:-1},{feather:6},{radius:NaN},{origin:[0,0,0]},{metric:'screen-distance'},{asset:'/other.ksplat'}]) assert(!validCutoff({...config,...bad}));
 for(const radius of [1,5,15,20,50,240,300]) assert(Math.abs(sliderToRadius(radiusToSlider(radius))-radius)<=.051,'precise logarithmic slider conversion');
-const shader='void main(){ vec3 splatCenter; vColor.a *= existingReveal; gl_Position = quadPos; }';
-assert(patchCutoffShader(shader).includes('vColor.a *= existingReveal; vColor.a *= splatDistanceCutoff(splatCenter);'),'cutoff multiplies existing reveal rather than replacing it');
-assert(patchCutoffShader(shader).includes('length((center - cutoffOrigin) / cutoffScale)'),'cutoff measures 3D model distance');
+const shader='void main(){ vec3 splatCenter = decode(c); mat3 Vrk = project(); vColor.a *= existingReveal; gl_Position = quadPos; }';
+const patchedShader=patchCutoffShader(shader);
+assert(patchedShader.includes('vColor.a *= existingReveal; vColor.a *= cutoffAlpha;'),'cutoff multiplies existing reveal rather than replacing it');
+assert(patchedShader.includes('length((center - cutoffOrigin) / cutoffScale)'),'cutoff measures 3D model distance');
+const reject=patchedShader.indexOf('if (cutoffAlpha <= 0.0)');
+assert(reject>patchedShader.indexOf('vec3 splatCenter = decode(c);') && reject<patchedShader.indexOf('mat3 Vrk'),'fully cut splats exit right after their centre is decoded, before projection work');
+assert(patchedShader.slice(reject).includes('gl_Position = vec4(0.0, 0.0, 2.0, 1.0);\n                return;'),'rejected splats use the renderer\'s own off-screen early exit');
+assert.equal(patchedShader.match(/splatDistanceCutoff\(splatCenter\)/g).length,1,'distance is evaluated once per vertex');
 assert.throws(()=>patchCutoffShader('incompatible'),/does not support/);
 for(const scale of [.75,.75*.73]) {
  const material={vertexShader:shader,uniforms:{}};let forced=0,renders=0;

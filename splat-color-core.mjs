@@ -86,9 +86,12 @@ vec3 gradeSplatColor(vec3 source) {
               texture2D(gradeCurves, vec2((c.g * 255.0 + 0.5) / 256.0, 0.5)).g,
               texture2D(gradeCurves, vec2((c.b * 255.0 + 0.5) / 256.0, 0.5)).b);
 }`;
-export function patchGradeShader(shader) {
-  const depth = 'mix(vColor.rgb, depthColor, heroDepthMix)';
-  const plain = 'vec3 color = vColor.rgb;';
-  if (!shader.includes(depth) && !shader.includes(plain)) throw new Error('This splat shader does not support color grading.');
-  return GRADE_GLSL + shader.replace(depth, 'mix(gradeSplatColor(vColor.rgb), depthColor, heroDepthMix)').replace(plain, 'vec3 color = gradeSplatColor(vColor.rgb);');
+// The grade input is flat across a splat, so evaluate it once per vertex. The
+// fragment shader then reads the graded vColor and keeps the depth transition
+// and fog ordering untouched. Anchoring after the base colour and spherical
+// harmonics, but before covariance work, keeps the lookups off culled splats.
+export function patchGradeShader(vertexShader) {
+  const anchor = 'vec4 sampledCovarianceA;';
+  if (!vertexShader.includes(anchor) || !vertexShader.includes('vColor')) throw new Error('This splat shader does not support color grading.');
+  return GRADE_GLSL + vertexShader.replace(anchor, 'vColor.rgb = gradeSplatColor(vColor.rgb);\n            ' + anchor);
 }

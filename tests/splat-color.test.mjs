@@ -30,12 +30,16 @@ for (const [id] of PRESETS.slice(1)) {
   assert.equal(data.length, 16**3*4);
   assert.notDeepEqual(data, neutral, `${id} changes the LUT`);
 }
-const source = 'varying vec4 vColor; void main() { vec3 color = vColor.rgb; gl_FragColor = vec4(color.rgb, vColor.a); }';
-assert(patchGradeShader(source).includes('vec3 color = gradeSplatColor(vColor.rgb);'));
-const depth = patchGradeShader('vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);');
-assert(depth.includes('mix(gradeSplatColor(vColor.rgb), depthColor, heroDepthMix)'), 'grade precedes depth transition');
+// Grading runs once per vertex: the input is flat across the splat, so this is
+// identical to the old per-fragment lookups without 5 texture reads per pixel.
+const source = 'varying vec4 vColor; void main() { vColor = uintToRGBAVec(c); if (clipped) return; vec4 sampledCovarianceA; gl_Position = quadPos; }';
+const graded = patchGradeShader(source);
+assert(graded.includes('vColor.rgb = gradeSplatColor(vColor.rgb);\n            vec4 sampledCovarianceA;'), 'grade is applied in the vertex stage before covariance work');
+assert(graded.indexOf('if (clipped) return;') < graded.indexOf('gradeSplatColor(vColor.rgb)'), 'culled splats skip the grade lookups');
+assert(graded.startsWith('\nuniform sampler2D gradeLut;'), 'LUT and curve samplers are declared for the vertex stage');
 assert.throws(() => patchGradeShader('incompatible'), /does not support/);
-console.log('PASS: neutral grading, independent channels, curve interpolation, LUT layout and looks, export validation, shader/depth compatibility');
+assert.throws(() => patchGradeShader('vec3 color = vColor.rgb;'), /does not support/, 'fragment shaders are no longer patched');
+console.log('PASS: neutral grading, independent channels, curve interpolation, LUT layout and looks, export validation, vertex-stage shader placement');
 
 // Exercise the shared renderer with lightweight Three texture objects, so the
 // public default and studio edits are checked against the same exported math.
@@ -46,7 +50,8 @@ const rendererSource = (await readFile(new URL('../splat-color-renderer.mjs', im
   .replace("'./splat-color-core.mjs'", JSON.stringify(new URL('../splat-color-core.mjs', import.meta.url).href));
 const { HERO_COLOR_GRADE, installSplatColorGrade } = await import('data:text/javascript,' + encodeURIComponent(rendererSource));
 assert.deepEqual(HERO_COLOR_GRADE, { ...defaultGrade(), lut: 'warm-film', strength: 1 }, 'public grade matches the supplied JSON');
-const material = { fragmentShader: 'vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);', uniforms: {} };
+const fragmentShader = 'vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);';
+const material = { vertexShader: source, fragmentShader, uniforms: {} };
 let renders=0, forced=0;
 const viewer = { getSplatMesh:()=>({material}), forceRenderNextFrame:()=>forced++, render:()=>renders++ };
 const edit = installSplatColorGrade(viewer);
@@ -54,13 +59,15 @@ assert.deepEqual(material.uniforms.gradeLut.value.image.data, makeLut('warm-film
 assert.deepEqual(material.uniforms.gradeCurves.value.image.data, makeCurves(defaultGrade()));
 assert.equal(material.uniforms.gradeStrength.value,1);
 assert.equal(material.uniforms.gradeEnabled.value,1);
-const shader = material.fragmentShader;
+assert.equal(material.vertexShader, graded, 'renderer patches the vertex stage');
+assert.equal(material.fragmentShader, fragmentShader, 'fragment shader is left for the depth transition and fog');
+const shader = material.vertexShader;
 edit(defaultGrade(),true);
 assert.equal(material.uniforms.gradeEnabled.value,0,'studio original bypasses the public grade');
 edit({...defaultGrade(),lut:'mono',strength:.5});
 assert.equal(material.uniforms.gradeEnabled.value,1);
 assert.equal(material.uniforms.gradeStrength.value,.5);
-assert.equal(material.fragmentShader,shader,'studio edits do not stack shader transforms');
+assert.equal(material.vertexShader,shader,'studio edits do not stack shader transforms');
 assert.deepEqual(material.uniforms.gradeLut.value.image.data,makeLut('mono'));
 assert.equal(renders,2,'edits wake the parked mobile renderer');
 assert.equal(forced,3);

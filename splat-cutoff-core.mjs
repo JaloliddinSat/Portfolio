@@ -22,10 +22,22 @@ float splatDistanceCutoff(vec3 center) {
   return 1.0 - smoothstep(cutoffRadius - feather, cutoffRadius, d);
 }
 `;
+// Fully cut splats leave the vertex shader as soon as their centre is decoded,
+// the same way the renderer drops splats outside the frustum. That skips their
+// projection, covariance, blur and grading work and emits no fragments. Only a
+// feathered edge still reaches the alpha multiply.
 export function patchCutoffShader(shader) {
+  const centerDeclaration = /vec3 splatCenter[^;]*;/;
   const anchor = 'gl_Position = quadPos;';
-  if (!shader.includes(anchor) || !shader.includes('vec3 splatCenter')) throw new Error('This splat shader does not support distance cutoff.');
-  return CUTOFF_GLSL + shader.replace(anchor, 'vColor.a *= splatDistanceCutoff(splatCenter);\n' + anchor);
+  if (!shader.includes(anchor) || !centerDeclaration.test(shader)) throw new Error('This splat shader does not support distance cutoff.');
+  return CUTOFF_GLSL + shader
+    .replace(centerDeclaration, match => `${match}
+            float cutoffAlpha = splatDistanceCutoff(splatCenter);
+            if (cutoffAlpha <= 0.0) {
+                gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+                return;
+            }`)
+    .replace(anchor, 'vColor.a *= cutoffAlpha;\n' + anchor);
 }
 export function installDistanceCutoff(viewer, config, { position, scale }) {
   if (!validCutoff(config)) throw new Error('Invalid distance cutoff settings.');

@@ -1623,6 +1623,24 @@ const easeOutPowerRange = (value, start, end, exponent = 0.65) => {
   return t ** exponent;
 };
 
+// Both splat viewers resolve through this so a later adaptive-resolution pass
+// can change the ratio at runtime from one place. The renderer, the viewer's
+// focal-length math, the splat mesh viewport uniform and the screen-space effect
+// footprints must all agree or splats render at the wrong size.
+const applySplatPixelRatio = (viewer, pixelRatio) => {
+  const ratio = Math.max(0.5, Number(pixelRatio) || 1);
+  const mesh = viewer.getSplatMesh?.();
+  const uniforms = mesh?.material?.uniforms;
+
+  viewer.devicePixelRatio = ratio;
+  if (mesh) mesh.devicePixelRatio = ratio;
+  viewer.renderer?.setPixelRatio(ratio);
+  if (uniforms?.studioFogPixelRatio) uniforms.studioFogPixelRatio.value = ratio;
+  if (uniforms?.heroRevealPixelRatio) uniforms.heroRevealPixelRatio.value = ratio;
+
+  return ratio;
+};
+
 const installHeroDepthShader = (splatMesh) => {
   const material = splatMesh?.material;
 
@@ -2047,9 +2065,7 @@ const initSplat = async () => {
       pixelRatioCeiling,
     );
 
-    viewer.devicePixelRatio = splatPixelRatio;
-    viewer.getSplatMesh().devicePixelRatio = splatPixelRatio;
-    viewer.renderer.setPixelRatio(splatPixelRatio);
+    applySplatPixelRatio(viewer, splatPixelRatio);
     splatLoadDebug.effectivePixelRatio = splatPixelRatio;
     recordSplatLoadDebug("pixel-ratio", String(splatPixelRatio));
 
@@ -3840,6 +3856,11 @@ const initStepNoteSplat = async () => {
     }
 
     const initialRotation = quaternionFromEulerDegrees(config.loopKeyframe);
+    // Public playback only orbits the camera; the mesh itself never moves. A
+    // dynamic scene makes the renderer re-sort every splat on every frame, so
+    // keep that mode for the private calibration page, where position, scale
+    // and keyframe edits must apply live without a rebuild.
+    const liveSceneTransform = DEBUG_STEPNOTE_SPLAT;
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: container,
       cameraUp: [0, -1, 0],
@@ -3848,7 +3869,10 @@ const initStepNoteSplat = async () => {
       useBuiltInControls: false,
       sharedMemoryForWorkers: false,
       gpuAcceleratedSort: false,
-      dynamicScene: true,
+      dynamicScene: liveSceneTransform,
+      // Nothing raycasts this scene, so the CPU copies of its splat data can
+      // be released once the GPU textures are built.
+      freeIntermediateSplatData: true,
       ignoreDevicePixelRatio: isMobile,
       sphericalHarmonicsDegree: 2,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
@@ -3856,6 +3880,13 @@ const initStepNoteSplat = async () => {
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
     portfolioDiagnostics?.registerViewer('stepnote', viewer);
+    // Match the hero's resolution ceiling. The previous `threeRenderer` call
+    // never ran (the viewer exposes `renderer`), so a 2x display drew this
+    // scene with 1.8x the pixels that 1.5x needs.
+    applySplatPixelRatio(
+      viewer,
+      isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5),
+    );
     const sceneOptions = {
       progressiveLoad: true,
       showLoadingUI: false,
@@ -3877,10 +3908,6 @@ const initStepNoteSplat = async () => {
     const scene = viewer.getSplatScene(0);
     stage.classList.remove("is-loading");
     status.hidden = true;
-
-    if (viewer.threeRenderer) {
-      viewer.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    }
 
     let paused = DEBUG_STEPNOTE_SPLAT || stage.dataset.playbackPaused === "true";
     let playbackPhase = 0;
@@ -3922,10 +3949,14 @@ const initStepNoteSplat = async () => {
       );
       currentQuaternion = baseRotation;
 
-      scene.position.set(...config.splatPosition);
-      scene.quaternion.set(...currentQuaternion);
-      scene.updateMatrixWorld(true);
-      viewer.getSplatMesh?.()?.updateTransforms();
+      // The static public scene bakes its transform at build time, so only the
+      // live calibration viewer needs the per-frame scene matrix refresh.
+      if (liveSceneTransform) {
+        scene.position.set(...config.splatPosition);
+        scene.quaternion.set(...currentQuaternion);
+        scene.updateMatrixWorld(true);
+        viewer.getSplatMesh?.()?.updateTransforms();
+      }
 
       const cameraPosition = rotatePointAroundOrigin(
         config.cameraPosition,
@@ -4766,7 +4797,7 @@ const initThemeToggle = () => {
 
 const initHeroMotion = () => {
   const motionTargets = [
-    { element: document.querySelector(".hero-copy"), phase: 0, float: 3, tilt: 8 },
+    { element: document.querySelector(".hero-copy"), tilt: 8 },
   ].filter(({ element }) => element);
 
   if (
@@ -4796,49 +4827,22 @@ const initHeroMotion = () => {
     });
   }
 
-  let floatFrame = null;
   let heroOnScreen = true;
 
-  // The copy sits inside a 3D-transformed subtree, so writing these vars costs a
-  // style pass plus a transform update. Once the copy has faded out during the
-  // scroll there is nothing to animate, which is exactly when the splat needs the
-  // frame budget most.
+  // The float itself is a CSS animation on the individual `translate`/`rotate`
+  // properties (see `.hero-copy` in styles.css), so no script runs per frame
+  // and the browser can keep it on the compositor. This only decides whether
+  // the animation should be running: once the copy has faded out during the
+  // scroll there is nothing to animate, which is exactly when the splat needs
+  // the frame budget most.
   const shouldFloat = () => heroOnScreen && heroCopyVisible && !document.hidden && !portfolioDiagnostics?.flags.floatPaused;
 
-  const floatLoop = (time) => {
-    if (!shouldFloat()) {
-      floatFrame = null;
-      return;
-    }
-
-    const floatStarted = portfolioDiagnostics ? performance.now() : 0;
-    const seconds = time / 1000;
-
-    motionTargets.forEach(({ element, phase, float }) => {
-      const y = Math.sin(seconds * 0.75 + phase) * float;
-      const rotate = Math.cos(seconds * 0.55 + phase) * 0.18;
-
-      element.style.setProperty("--float-y", `${y.toFixed(2)}px`);
-      element.style.setProperty("--float-rotate", `${rotate.toFixed(3)}deg`);
-    });
-
-    portfolioDiagnostics?.sample("hero.float", floatStarted);
-    floatFrame = requestAnimationFrame(floatLoop);
-  };
-
   const syncFloatLoop = () => {
-    if (!shouldFloat()) {
-      if (floatFrame !== null) {
-        cancelAnimationFrame(floatFrame);
-        floatFrame = null;
-      }
+    const paused = !shouldFloat();
 
-      return;
-    }
-
-    if (floatFrame === null) {
-      floatFrame = requestAnimationFrame(floatLoop);
-    }
+    motionTargets.forEach(({ element }) => {
+      element.classList.toggle("is-float-paused", paused);
+    });
   };
 
   if (portfolioDiagnostics) document.addEventListener("portfolio:diagnostics-change", syncFloatLoop);

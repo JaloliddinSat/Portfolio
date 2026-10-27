@@ -15,13 +15,15 @@ assert.equal(fogAmountAtDistance(6,2,4),1);
 assert.equal(fogAmountAtDistance(10,2,4),1);
 // Compose with the real renderer shader, grading, reveal, and approved cutoff.
 const projection=await readFile('GaussianSplats3D/src/splatmesh/SplatMaterial3D.js','utf8');
-const vertex=patchCutoffShader(patchRevealShader('vec3 splatCenter;'+projection));
-const fragment=patchGradeShader(patchRevealFragment(projection));
+const vertex=patchCutoffShader(patchGradeShader(patchRevealShader('vec3 splatCenter;'+projection)));
+const fragment=patchRevealFragment(projection);
 const patched=patchFogShaders(vertex,fragment);
 assert(patched.vertex.includes('splatDistanceCutoff(splatCenter)'));
+assert(patched.vertex.indexOf('if (cutoffAlpha <= 0.0)') < patched.vertex.indexOf('heroRevealMask(splatCenter)'),'cut splats exit before reveal, grade, blur and projection work');
 assert(patched.vertex.includes('vStudioFog = studioFogEnabled * smoothstep'),'fog stays independent of scroll');
 assert(patched.vertex.includes('heroRevealMask(splatCenter)'));
-assert(patched.fragment.includes('gradeSplatColor(vColor.rgb)'));
+assert(patched.vertex.includes('vColor.rgb = gradeSplatColor(vColor.rgb)'),'grade runs once per splat in the vertex stage');
+assert(!patched.fragment.includes('gradeSplatColor'),'no per-fragment LUT or curve reads remain');
 assert(patched.fragment.includes('color = mix(color, studioFogColor'));
 assert(patched.vertex.includes('sqrt(fogDetBefore / fogDetAfter)'),'blur conserves integrated Gaussian opacity');
 assert(patched.vertex.indexOf('float fogVariance') < patched.vertex.indexOf('vec3 cov2Dv ='),'blur modifies covariance before projection basis');
