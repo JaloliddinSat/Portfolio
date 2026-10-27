@@ -849,6 +849,17 @@ html[data-theme="light"] .splat-stage::after {
   background: url("/splats/Color.png?v=3") center / cover no-repeat;
 }
 
+/* Keep the full-scene poster from showing through the expanding splat reveal.
+   Restore it after completion, or on failure as the normal image fallback. */
+html.splat-reveal-pending .splat-stage,
+html.splat-reveal-pending .splat-viewer {
+  background-image: none;
+}
+
+.splat-stage[data-reveal-state="pending"] canvas {
+  visibility: hidden;
+}
+
 /* The tint lives on its own layer so scrolling only animates opacity. Folding it
    into the background shorthand re-rasterized the full-viewport poster image on
    every frame. z-index -1 keeps it between that poster and the splat canvas, so

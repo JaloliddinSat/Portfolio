@@ -618,6 +618,10 @@ const setStatus = (state, message = "") => {
   if (state === "ready" || state === "error") {
     document.documentElement.classList.add("hero-intro-play");
   }
+  if (state === "error") {
+    document.documentElement.classList.remove("splat-reveal-pending");
+    if (splatStage) delete splatStage.dataset.revealState;
+  }
 };
 
 const appendSplatVersion = (url) => {
@@ -1949,14 +1953,22 @@ const initSplat = async () => {
   }
 
   setStatus("loading");
+  const reducedRevealMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || DEBUG_SPLAT;
+  if (!reducedRevealMotion) {
+    document.documentElement.classList.add("splat-reveal-pending");
+    splatStage.dataset.revealState = "pending";
+  } else {
+    document.documentElement.classList.remove("splat-reveal-pending");
+  }
 
   try {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
+      import('./splat-reveal.mjs?v=1'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -1989,9 +2001,7 @@ const initSplat = async () => {
       ignoreDevicePixelRatio: false,
       sphericalHarmonicsDegree: 0,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
-      sceneRevealMode: isMobile
-        ? GaussianSplats3D.SceneRevealMode.Instant
-        : GaussianSplats3D.SceneRevealMode.Gradual,
+      sceneRevealMode: GaussianSplats3D.SceneRevealMode.Instant,
       webXRMode: GaussianSplats3D.WebXRMode.None,
     });
 
@@ -2079,6 +2089,14 @@ const initSplat = async () => {
     warmSplatCache(splatUrl);
 
     const updateHeroDepthShader = installHeroDepthShader(splatMesh);
+    const heroReveal = installHeroReveal(viewer, {
+      mobile: isMobile,
+      reducedMotion: reducedRevealMotion,
+      onState(state) {
+        splatStage.dataset.revealState = state;
+        if (state === "complete") document.documentElement.classList.remove("splat-reveal-pending");
+      },
+    });
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
     else installSplatColorGrade(viewer);
 
@@ -2129,6 +2147,7 @@ const initSplat = async () => {
     }
     let viewerRunning = true;
 
+    heroReveal.start(performance.now());
     setStatus("ready");
     recordSplatLoadDebug("status-ready");
 
@@ -2412,8 +2431,10 @@ const initSplat = async () => {
       }
 
       const pointerMoved = updatePointerParallax(delta, requestNextFrame);
+      const revealChanged = heroReveal.update(performance.now(), smoothed);
+      if (heroReveal.active) requestNextFrame();
 
-      if (!force && smoothed === lastRenderedProgress && !pointerMoved) {
+      if (!force && smoothed === lastRenderedProgress && !pointerMoved && !revealChanged) {
         return;
       }
 

@@ -100,6 +100,20 @@ The private debugger shows the last release velocity and sample count.
 
 ## Private performance debugging
 
+### Hero scene reveal
+
+On desktop and mobile, the Fairview hero starts around the subject and reveals
+outward over 2.4 seconds with a soft, noise-shaped boundary. The shader evaluates
+the mask per splat vertex using its projected position and the viewport aspect,
+with separate subject origins for the desktop and mobile compositions. The
+existing frame driver keeps the mobile renderer awake through the final frame,
+then returns to its usual idle behavior. No extra rendering pass is added.
+
+The reveal starts after scene readiness (including mobile's post-tree sort).
+The full-scene poster stays hidden until completion and returns on failure.
+Immediate scrolling completes the reveal before the depth transition takes over.
+Reduced motion and camera debug mode skip the reveal. Refresh to replay it.
+
 ### Hero splat color grading
 
 Choose **Color grade the hero splat** in admin to open `/?debugSplatColor`.
@@ -141,4 +155,5 @@ node tests/site-settings.test.mjs
 node tests/portfolio-debug.test.cjs
 node tests/admin-settings.test.cjs
 node tests/splat-color.test.mjs
+node tests/splat-reveal.test.mjs
 ```
