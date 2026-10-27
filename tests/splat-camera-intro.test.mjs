@@ -74,7 +74,7 @@ const context={performance:{now:()=>0},document:{hidden:false,documentElement:{c
  applyPointerParallax:(position,lookAt)=>{calls++;return {position:position.map(v=>v+.05),lookAt};},
  viewer:{camera:{position:{set(...values){rendered.push(values);}},lookAt(){}},forceRenderNextFrame(){},update(){},shouldRender:()=>true,render(){rendered.push('draw');}},
  updateHeroDepthShader(){},ensureViewerRunning(){},renderManualViewerFrame(){}};
-vm.createContext(context);vm.runInContext(source.slice(start,end).replace('const renderSplatFrame =','globalThis.frame ='),context);
+vm.createContext(context);vm.runInContext('function releaseHeroIntroLock(){ document.documentElement.classList.remove("splat-reveal-pending"); }\n'+source.slice(start,end).replace('const renderSplatFrame =','globalThis.frame ='),context);
 context.frame({smoothed:0,delta:16,force:true,requestNextFrame(){}});
 context.heroCameraIntro.active=false;
 context.frame({smoothed:0,delta:16,force:true,requestNextFrame(){}});

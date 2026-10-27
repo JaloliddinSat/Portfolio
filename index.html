@@ -58,7 +58,7 @@
         // Critical overflow lock before styles.css arrives, otherwise the first
         // paint can still scroll. The same selector lives in styles.css.
         var lockStyle = document.createElement("style");
-        lockStyle.textContent = 'html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]{overflow:hidden;touch-action:none;overscroll-behavior:none}';
+        lockStyle.textContent = 'html.splat-reveal-pending:not(.splat-load-slow){overflow:hidden;touch-action:none;overscroll-behavior:none}';
         document.head.appendChild(lockStyle);
         if (!location.hash && "scrollRestoration" in history) {
           history.scrollRestoration = "manual";
@@ -66,8 +66,7 @@
 
         var shouldLockScroll = function () {
           return root.classList.contains("splat-reveal-pending")
-            && !root.classList.contains("splat-load-slow")
-            && root.getAttribute("data-splat-load-state") === "loading";
+            && !root.classList.contains("splat-load-slow");
         };
         var preventScroll = function (event) {
           if (shouldLockScroll()) event.preventDefault();
@@ -88,7 +87,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-scroll-lock" />
+    <link rel="stylesheet" href="styles.css?v=20261027-scroll-lock-2" />
     <script type="importmap">
       {
         "imports": {
@@ -934,6 +933,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20261027-scroll-lock"></script>
+    <script type="module" src="script.js?v=20261027-scroll-lock-2"></script>
   </body>
 </html>

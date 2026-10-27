@@ -111,10 +111,11 @@ assert(indexHtml.includes('root.classList.add("hero-intro-play");\n          }\n
 assert(indexHtml.includes('window.addEventListener("wheel", preventScroll, { passive: false })'),'wheel is intercepted before the module loads');
 assert(indexHtml.includes('window.addEventListener("touchmove", preventScroll, { passive: false })'),'touch scrolling is intercepted on iOS');
 assert(indexHtml.includes('history.scrollRestoration = "manual"'),'reloads of the home URL do not restore a mid-page scroll behind the loader');
-assert(script.includes('if (state !== "loading" && isHeroScrollLocked())'),'unlocking the loader restores the hero origin');
+assert(script.includes('if (state === "ready" && isHeroScrollLocked())'),'the intro is pinned to the top when the scene becomes ready');
 assert(script.includes('window.scrollTo(0, 0)'),'the intro starts at the top when there is no hash');
+assert(script.includes('else if (!heroReveal.active) releaseHeroIntroLock()'),'scroll stays locked until the camera has rested and the reveal has finished');
 const styles = await (await import('node:fs/promises')).readFile('styles.css','utf8');
-assert(styles.includes('html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]'),'document overflow is locked while the overlay is up');
+assert(/html\.splat-reveal-pending:not\(\.splat-load-slow\) \{\s*overflow: hidden;/.test(styles),'document overflow stays locked through the reveal and camera descent');
 assert(styles.includes('overflow: hidden;'),'the lock uses the standard document overflow rule');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
 

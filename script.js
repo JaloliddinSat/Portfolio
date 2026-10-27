@@ -609,8 +609,7 @@ const isHeroScrollLocked = () => {
   const root = document.documentElement;
   return (
     root.classList.contains("splat-reveal-pending") &&
-    !root.classList.contains("splat-load-slow") &&
-    root.dataset.splatLoadState === "loading"
+    !root.classList.contains("splat-load-slow")
   );
 };
 
@@ -622,8 +621,21 @@ const restoreHeroScroll = () => {
   window.scrollTo(0, 0);
 };
 
+// splat-reveal-pending is cleared only once the colour reveal and the camera
+// descent have both finished, so dropping it is what releases the scroll lock.
+const releaseHeroIntroLock = () => {
+  const root = document.documentElement;
+  if (!root.classList.contains("splat-reveal-pending")) return;
+  root.classList.remove("splat-reveal-pending");
+  if (location.hash) {
+    document.querySelector(location.hash)?.scrollIntoView({ block: "start" });
+  }
+};
+
 const setStatus = (state, message = "") => {
-  if (state !== "loading" && isHeroScrollLocked()) {
+  if (state === "ready" && isHeroScrollLocked()) {
+    window.scrollTo(0, 0);
+  } else if (state !== "loading" && isHeroScrollLocked()) {
     restoreHeroScroll();
   }
   if (splatStage) {
@@ -2234,7 +2246,7 @@ const initSplat = async () => {
         splatStage.dataset.revealState = state;
         // Covers reduced motion (complete at start) and a scroll that cuts the reveal short.
         if (state === "complete") playHeroIntro();
-        if (state === "complete" && !heroCameraIntro.active) document.documentElement.classList.remove("splat-reveal-pending");
+        if (state === "complete" && !heroCameraIntro.active) releaseHeroIntroLock();
       },
       onProgress(progress) {
         if (progress >= HERO_REVEAL.copyRevealAt) playHeroIntro();
@@ -2665,7 +2677,7 @@ const initSplat = async () => {
       );
       const introPose = heroCameraIntro.update(performance.now(), scrollPose, smoothed);
       if (heroCameraIntro.active) requestNextFrame();
-      else if (!heroReveal.active) document.documentElement.classList.remove("splat-reveal-pending");
+      else if (!heroReveal.active) releaseHeroIntroLock();
       const { position, lookAt } = applyPointerParallax(
         introPose.position,
         introPose.lookAt,

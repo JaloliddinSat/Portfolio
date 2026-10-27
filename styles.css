@@ -970,11 +970,12 @@ html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-labe
   letter-spacing: 0.08em;
 }
 
-/* Document scroll lock while the full-screen loader is up. overflow:hidden
-   covers desktop; touch-action/overscroll-behavior plus the inline script's
-   non-passive wheel/touchmove listeners cover iOS, where root overflow is
-   ignored. Released by the same state change that dismisses the overlay. */
-html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"] {
+/* Document scroll lock from the loader through the colour reveal and the
+   camera descent. splat-reveal-pending stays until both have finished.
+   overflow:hidden covers desktop; touch-action/overscroll-behavior plus the
+   inline script's non-passive listeners cover iOS. The slow-load fallback
+   opts out so a long download does not trap the page. */
+html.splat-reveal-pending:not(.splat-load-slow) {
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
