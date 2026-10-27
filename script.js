@@ -2068,13 +2068,14 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }, { createAdaptiveResolution }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }, { defaultCameraClip, installCameraClip }, { createAdaptiveResolution }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=12'),
       import('./splat-camera-intro.mjs?v=4'),
       import('./splat-cutoff-core.mjs?v=2'),
       import('./splat-fog-core.mjs?v=4'),
+      import('./splat-camera-clip-core.mjs?v=2'),
       import('./splat-render-pacing.mjs?v=1'),
     ]);
     recordSplatLoadDebug("module-import-done");
@@ -2259,8 +2260,8 @@ const initSplat = async () => {
     else installDistanceCutoff(viewer, defaultCutoff(), distanceContext);
     if (window.__splatFogDebug) window.__splatFogDebug.attach(viewer, distanceContext);
     else installDistanceFog(viewer, defaultFog(), distanceContext);
-    // Admin-only preview for now; no camera clip is installed publicly.
-    window.__splatCameraClipDebug?.attach(viewer);
+    if (window.__splatCameraClipDebug) window.__splatCameraClipDebug.attach(viewer);
+    else installCameraClip(viewer, defaultCameraClip());
 
     {
       const existingTree = splatMesh.getSplatTree?.();

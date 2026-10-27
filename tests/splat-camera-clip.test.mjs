@@ -17,7 +17,8 @@ const material = { vertexShader: shader, uniforms: {} }; let forced = 0, renders
 const viewer = { getSplatMesh: () => ({ material }), forceRenderNextFrame: () => forced++, render: () => renders++ };
 const apply = installCameraClip(viewer, config);
 assert.equal(material.uniforms.cameraClipMode.value, 1);
-assert.deepEqual(material.uniforms.cameraClipOffset.value, [0, 0, 0]);
+assert.deepEqual(material.uniforms.cameraClipOffset.value, config.offset);
+assert.deepEqual(config, { ...config, radius: 0.7, feather: 0.15, offset: [-0.42, 0, 0], enabled: true }, 'public settings exactly match supplied values');
 const compiled = material.vertexShader;
 apply({ ...config, radius: 1.2, feather: 0.3, offset: [0, 0.1, 0.5] });
 assert.equal(material.uniforms.cameraClipRadius.value, 1.2); assert.equal(material.uniforms.cameraClipFeather.value, 0.3); assert.deepEqual(material.uniforms.cameraClipOffset.value, [0, 0.1, 0.5]);

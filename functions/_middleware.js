@@ -63,7 +63,7 @@ export async function onRequest(context) {
   const rewriter = new HTMLRewriter()
     .on('head', { element(element) {
       if (overlayDebug) element.append('<link rel="stylesheet" href="/splat-overlay-debug.css?v=2"><script type="module" src="/splat-overlay-debug.js?v=5"></script>', { html: true });
-      if (cameraClipDebug) element.append('<link rel="stylesheet" href="/splat-camera-clip-debug.css?v=1"><script type="module" src="/splat-camera-clip-debug.js?v=1"></script>', { html: true });
+      if (cameraClipDebug) element.append('<link rel="stylesheet" href="/splat-camera-clip-debug.css?v=1"><script type="module" src="/splat-camera-clip-debug.js?v=2"></script>', { html: true });
       if (washDebug) element.append('<link rel="stylesheet" href="/splat-wash-debug.css?v=1"><script type="module" src="/splat-wash-debug.js?v=1"></script>', { html: true });
       if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=2"></script>', { html: true });
       if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=4"></script>', { html: true });
@@ -77,7 +77,7 @@ export async function onRequest(context) {
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-camera-clip');
+      element.setAttribute('src', '/script.js?v=20261027-camera-clip-2');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
       element.setAttribute('href', '/styles.css?v=20261027-light-wash');

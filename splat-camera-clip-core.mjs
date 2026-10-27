@@ -4,7 +4,7 @@
 // per-frame uniform updates.
 export const defaultCameraClip = () => ({
   version: 1, target: 'hero', asset: '/splats/Fairview.ksplat', space: 'camera',
-  radius: 0.6, feather: 0.15, offset: [0, 0, 0], enabled: true,
+  radius: 0.7, feather: 0.15, offset: [-0.42, 0, 0], enabled: true,
 });
 export function validCameraClip(value) {
   return value?.version === 1 && value.target === 'hero' && value.asset === '/splats/Fairview.ksplat' && value.space === 'camera' &&

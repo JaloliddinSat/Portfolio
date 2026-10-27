@@ -1,4 +1,4 @@
-import { defaultCameraClip, validCameraClip, installCameraClip } from './splat-camera-clip-core.mjs?v=1';
+import { defaultCameraClip, validCameraClip, installCameraClip } from './splat-camera-clip-core.mjs?v=2';
 const KEY = 'portfolio-hero-camera-clip-v1';
 let config = defaultCameraClip();
 try { const saved = JSON.parse(localStorage.getItem(KEY)); if (validCameraClip(saved)) config = saved; } catch {}
