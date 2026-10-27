@@ -1,4 +1,5 @@
-export const defaultOverlays = () => ({version:2,target:'hero-edge-scroll-overlay',themes:{dark:{strength:1,start:.5},light:{strength:1,start:.5,backdrop:{start:.08,end:.5,color:"#ffffff"}}}});
+export const HERO_OVERLAYS = {version:2,target:"hero-edge-scroll-overlay",themes:{dark:{strength:2.4,start:0},light:{strength:21,start:0,backdrop:{start:0,end:1,color:"#ffffff"}}}};
+export const defaultOverlays = () => structuredClone(HERO_OVERLAYS);
 export function validOverlays(value) {
  return value?.version===2 && value.target==='hero-edge-scroll-overlay' && ['dark','light'].every(theme=>{
   const v=value.themes?.[theme];return Number.isFinite(v?.strength)&&v.strength>=0&&v.strength<=100&&Number.isFinite(v?.start)&&v.start>=0&&v.start<=.97 && (theme==='dark' || (Number.isFinite(v.backdrop?.start)&&v.backdrop.start>=0&&v.backdrop.start<=.99&&Number.isFinite(v.backdrop?.end)&&v.backdrop.end>v.backdrop.start&&v.backdrop.end<=1&&/^#[0-9a-f]{6}$/i.test(v.backdrop.color)));

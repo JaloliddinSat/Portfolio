@@ -1,4 +1,4 @@
-import {defaultOverlays,overlayOpacity,overlayBackground,hydrateOverlays,backdropColor} from './splat-overlay-core.mjs?v=2';
+import {defaultOverlays,overlayOpacity,overlayBackground,hydrateOverlays,backdropColor} from './splat-overlay-core.mjs?v=3';
 const KEY='portfolio-hero-overlay-v1';
 let config=defaultOverlays(),panel,refresh,bypass=false,progress=0;
 try {const saved=JSON.parse(localStorage.getItem(KEY));config=hydrateOverlays(saved);}catch{}
@@ -10,7 +10,7 @@ window.__splatOverlayDebug={
   progress=context.smoothed;
   const hero=document.querySelector(".hero");
   const color=backdropColor(progress,config.themes.light.backdrop);
-  if(hero && hero.style.getPropertyValue("--overlay-backdrop")!==color)hero.style.setProperty("--overlay-backdrop",color);
+  if(!bypass && hero && hero.style.getPropertyValue("--overlay-backdrop")!==color)hero.style.setProperty("--overlay-backdrop",color);
   if(panel){const scrub=panel.querySelector('[data-scrub]');if(document.activeElement!==scrub)scrub.value=Math.round(progress*100);const out=panel.querySelector('[data-progress]');const label=`${Math.round(progress*100)}% · ${theme()} theme`;if(out.textContent!==label)out.textContent=label;}
   return bypass?context.collapseOverlay:overlayOpacity(progress,config.themes[theme()].start);
  },
@@ -41,14 +41,14 @@ function mount(){
  panel.innerHTML=`<div class="overlay-top"><a href="/admin/">← Admin</a><button type="button" data-collapse aria-expanded="true" aria-controls="overlay-body">Hide controls</button></div>
  <div id="overlay-body"><p class="overlay-eyebrow">Private preview · Both themes</p><h2>Edge / scroll gradient</h2>
  <label class="overlay-label">Preview theme <select data-theme aria-label="Preview theme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
- <p class="overlay-note">Each theme has independent settings. Scroll the page to inspect the gradient over your fogged splat. Strength 1× matches the current gradient; up to 100× makes it much denser.</p>
+ <p class="overlay-note">Each theme has independent settings. Scroll the page to inspect the gradient over your fogged splat. Strength 1× is the base gradient; up to 100× makes it much denser. Reset loads the current public settings.</p>
  ${['dark','light'].map(name=>`<section class="overlay-theme"><h3>${name==='dark'?'Dark':'Light'} theme</h3>
  <label class="overlay-label" for="${name}-strength">${name==='dark'?'Dark':'Light'} strength <output data-strength-label="${name}"></output></label>
  <input id="${name}-strength" data-strength="${name}" type="range" min="0" max="100" step="0.1">
  <label class="overlay-exact">Exact strength <input data-exact="${name}" type="number" min="0" max="100" step="0.1" aria-label="${name} exact strength"></label>
  <label class="overlay-label" for="${name}-start">${name==='dark'?'Dark':'Light'} scroll start <output data-start-label="${name}"></output></label>
  <input id="${name}-start" data-start="${name}" type="range" min="0" max="97" step="1"></section>`).join('')}
- <p class="overlay-note">Scroll start is a percentage of the hero scroll cycle. 0% starts immediately; 50% is the current setting. The fade finishes at 98%.</p>
+ <p class="overlay-note">Scroll start is a percentage of the hero scroll cycle. 0% starts immediately; 0% is the current public setting. The fade finishes at 98%.</p>
  <section class="overlay-theme"><h3>Light theme backdrop</h3>
  <p class="overlay-note">Starts dark (#111111), then changes to the chosen color behind the splat as you scroll. Only affects light theme.</p>
  <label class="overlay-label" for="backdrop-start">Background transition start <output data-backdrop-label="start"></output></label><input id="backdrop-start" data-backdrop="start" type="range" min="0" max="99" step="1">

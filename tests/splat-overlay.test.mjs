@@ -26,3 +26,12 @@ assert(!validOverlays({...defaultOverlays(),themes:{...defaultOverlays().themes,
 const migrated=hydrateOverlays({version:1,target:'hero-edge-scroll-overlay',themes:{dark:{strength:8,start:.1},light:{strength:4,start:.2}}});
 assert.equal(migrated.themes.dark.strength,8);assert.equal(migrated.themes.light.strength,4);assert.deepEqual(migrated.themes.light.backdrop,b);assert(validOverlays(migrated));
 console.log('PASS: backdrop starts dark, interpolates to selected color, validates timing, and preserves existing drafts');
+const {HERO_OVERLAYS}=await import('../splat-overlay-core.mjs');
+assert.deepEqual(HERO_OVERLAYS,{version:2,target:'hero-edge-scroll-overlay',themes:{dark:{strength:2.4,start:0},light:{strength:21,start:0,backdrop:{start:0,end:1,color:'#ffffff'}}}},'public settings exactly match supplied values');
+const {readFile}=await import('node:fs/promises');
+const script=await readFile('script.js','utf8'),css=await readFile('styles.css','utf8');
+assert(script.includes('overlayOpacity(smoothed, HERO_OVERLAYS.themes[activeTheme].start)'));
+assert(css.includes('background: var(--hero-dark-scroll-gradient)'));
+assert(css.includes('background: var(--hero-light-scroll-gradient)'));
+assert(css.includes('background-color: var(--overlay-backdrop, #111111)'));
+console.log('PASS: exact selected public values and shared theme gradient/backdrop integration');

@@ -1,3 +1,4 @@
+import { HERO_OVERLAYS, overlayOpacity, overlayBackground, backdropColor } from './splat-overlay-core.mjs?v=3';
 import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-history-1';
 
 const portfolioDiagnostics = window.__portfolioDiagnostics;
@@ -4142,6 +4143,9 @@ const initHeroScrollTransition = () => {
     return;
   }
 
+  hero.style.setProperty("--hero-dark-scroll-gradient", overlayBackground("dark", HERO_OVERLAYS.themes.dark.strength));
+  hero.style.setProperty("--hero-light-scroll-gradient", overlayBackground("light", HERO_OVERLAYS.themes.light.strength));
+
   const COPY_FADE_START = 0.05;
   const COPY_FADE_END = 0.16;
 
@@ -4166,7 +4170,10 @@ const initHeroScrollTransition = () => {
     const copyOpacity = 1 - fadeBetween(smoothed, COPY_FADE_START, COPY_FADE_END);
     const introOverlay = 1 - fadeBetween(smoothed, 0.08, heroVignetteFadeEnd);
     lastOverlayProgress = smoothed;
-    const defaultCollapseOverlay = fadeBetween(smoothed, 0.5, 0.98);
+    const activeTheme = isLightTheme() ? "light" : "dark";
+    const backdrop = backdropColor(smoothed, HERO_OVERLAYS.themes.light.backdrop);
+    if (hero.style.getPropertyValue("--overlay-backdrop") !== backdrop) hero.style.setProperty("--overlay-backdrop", backdrop);
+    const defaultCollapseOverlay = overlayOpacity(smoothed, HERO_OVERLAYS.themes[activeTheme].start);
     const collapseOverlay = window.__splatOverlayDebug?.evaluate({ smoothed, collapseOverlay: defaultCollapseOverlay }) ?? defaultCollapseOverlay;
     const pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 

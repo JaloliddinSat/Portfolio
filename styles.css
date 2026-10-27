@@ -790,54 +790,17 @@ html.hero-intro.hero-intro-play .hero-copy .button + .button {
 
 .splat-stage::before,
 .splat-stage::after {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-}
-
-.splat-stage::before {
-  z-index: 1;
-  opacity: var(--hero-intro-overlay);
-  background:
-    linear-gradient(
-      to right,
-      rgba(7, 10, 19, 0.85) 0%,
-      rgba(7, 10, 19, 0.55) 38%,
-      rgba(7, 10, 19, 0.12) 65%,
-      transparent 100%
-    ),
-    linear-gradient(
-      to top,
-      rgba(7, 10, 19, 0.6) 0%,
-      transparent 32%
-    );
-}
-
-.splat-stage::after {
   z-index: 2;
   opacity: var(--hero-collapse-overlay);
-  background:
-    radial-gradient(
-      ellipse 108% 96% at 50% 48%,
-      transparent 6%,
-      rgba(4, 6, 14, 0.42) 42%,
-      rgba(2, 4, 10, 0.78) 72%,
-      rgba(0, 0, 0, 0.92) 100%
-    ),
-    rgba(3, 5, 12, 0.48);
+  background: var(--hero-dark-scroll-gradient);
 }
 
 html[data-theme="light"] .splat-stage::after {
-  background:
-    radial-gradient(
-      ellipse 108% 96% at 50% 48%,
-      transparent 6%,
-      rgba(247, 247, 248, 0.42) 42%,
-      rgba(243, 243, 244, 0.78) 72%,
-      rgba(243, 243, 244, 0.94) 100%
-    ),
-    rgba(247, 247, 248, 0.48);
+  background: var(--hero-light-scroll-gradient);
+}
+
+html[data-theme="light"] .splat-stage {
+  background-color: var(--overlay-backdrop, #111111);
 }
 
 .splat-viewer {
@@ -874,6 +837,10 @@ html.splat-reveal-pending .splat-viewer,
   background: rgb(7 10 19);
   will-change: opacity;
   content: "";
+}
+
+html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
+  background: var(--overlay-backdrop, #111111);
 }
 
 .splat-viewer canvas {
