@@ -956,9 +956,9 @@ html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="load
     visibility 0s linear 520ms;
 }
 
-html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-field {
-  width: 168px;
-  height: 168px;
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-seq {
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
 }
 
 /* Document scroll lock from the loader through the colour reveal and the
@@ -978,48 +978,47 @@ html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]
   overscroll-behavior: none;
 }
 
-/* Constellation. The stars stay fixed. Each link draws on, holds, then undraws,
-   staggered so the figure keeps changing without the dots moving. */
-.splat-loader-field {
-  display: block;
-  width: 44px;
-  height: 44px;
-  overflow: visible;
+/* ◈───◇───◇, then the lit diamond steps to the middle, then to the right. */
+.splat-loader-seq {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text);
+  font: 600 0.72rem/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.02em;
 }
 
-.splat-loader-links line {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1px;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: splat-loader-link 3.6s ease-in-out infinite;
-  animation-delay: calc(var(--i) * 0.22s);
+.splat-loader-bar {
+  opacity: 0.38;
 }
 
-.splat-loader-stars circle {
-  fill: currentColor;
+.splat-loader-gem {
+  display: inline-grid;
 }
 
-@keyframes splat-loader-link {
+.splat-loader-gem b {
+  grid-area: 1 / 1;
+  font-weight: 500;
+}
+
+.splat-loader-gem b:last-child {
+  opacity: 0.38;
+}
+
+.splat-loader-gem b:first-child {
+  opacity: 0;
+  animation: splat-loader-gem 1.8s linear infinite;
+  animation-delay: calc(var(--i) * 0.6s);
+}
+
+@keyframes splat-loader-gem {
   0%,
-  10% {
-    opacity: 0;
-    stroke-dashoffset: 1;
+  32% {
+    opacity: 1;
   }
 
-  36%,
-  58% {
-    opacity: 0.72;
-    stroke-dashoffset: 0;
-  }
-
-  88%,
+  33%,
   100% {
     opacity: 0;
-    stroke-dashoffset: 1;
   }
 }
 
@@ -2644,10 +2643,13 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splat-loader-links line {
+  .splat-loader-gem b:first-child {
     animation: none;
-    opacity: 0.55;
-    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+
+  .splat-loader-gem:first-child b:first-child {
+    opacity: 1;
   }
 
   /* The inline script in index.html already declines to arm the intro, but this

@@ -87,7 +87,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-loader-constellation" />
+    <link rel="stylesheet" href="styles.css?v=20261027-loader-mark" />
     <script type="importmap">
       {
         "imports": {
@@ -106,30 +106,13 @@
       aria-live="polite"
       aria-label="Loading 3D scene"
     >
-      <svg class="splat-loader-field" viewBox="0 0 100 100" aria-hidden="true">
-        <g class="splat-loader-links">
-          <line pathLength="1" x1="28" y1="22" x2="58" y2="16" style="--i: 0" />
-          <line pathLength="1" x1="58" y1="16" x2="78" y2="36" style="--i: 1" />
-          <line pathLength="1" x1="28" y1="22" x2="42" y2="44" style="--i: 2" />
-          <line pathLength="1" x1="58" y1="16" x2="42" y2="44" style="--i: 3" />
-          <line pathLength="1" x1="78" y1="36" x2="66" y2="58" style="--i: 4" />
-          <line pathLength="1" x1="42" y1="44" x2="66" y2="58" style="--i: 5" />
-          <line pathLength="1" x1="42" y1="44" x2="22" y2="60" style="--i: 6" />
-          <line pathLength="1" x1="22" y1="60" x2="46" y2="78" style="--i: 7" />
-          <line pathLength="1" x1="66" y1="58" x2="46" y2="78" style="--i: 8" />
-          <line pathLength="1" x1="66" y1="58" x2="84" y2="74" style="--i: 9" />
-        </g>
-        <g class="splat-loader-stars">
-          <circle cx="28" cy="22" r="2.5" />
-          <circle cx="58" cy="16" r="1.7" />
-          <circle cx="78" cy="36" r="1.7" />
-          <circle cx="42" cy="44" r="2.7" />
-          <circle cx="66" cy="58" r="1.8" />
-          <circle cx="22" cy="60" r="1.6" />
-          <circle cx="84" cy="74" r="1.6" />
-          <circle cx="46" cy="78" r="2.3" />
-        </g>
-      </svg>
+      <span class="splat-loader-seq" aria-hidden="true">
+        <span class="splat-loader-gem" style="--i: 0"><b>◈</b><b>◇</b></span>
+        <span class="splat-loader-bar">───</span>
+        <span class="splat-loader-gem" style="--i: 1"><b>◈</b><b>◇</b></span>
+        <span class="splat-loader-bar">───</span>
+        <span class="splat-loader-gem" style="--i: 2"><b>◈</b><b>◇</b></span>
+      </span>
     </div>
     <header class="site-header" id="site-navigation" aria-hidden="true">
       <div class="header-controls">
