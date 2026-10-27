@@ -40,19 +40,45 @@ float heroRevealMask(vec3 scenePosition) {
 }
 `;
 export function patchRevealShader(shader) {
-  const anchor = 'gl_Position = quadPos;';
+  const anchor = 'vec2 ndcOffset =';
   if (!shader.includes(anchor) || !shader.includes('vec3 splatCenter')) {
     throw new Error('This splat shader does not support the hero reveal.');
   }
-  return REVEAL_GLSL + shader.replace(anchor, 'vColor.a *= heroRevealMask(splatCenter);\n' + anchor);
+  return REVEAL_GLSL + '\nvarying float vHeroRevealAmount;\nuniform float heroRevealPixelRatio;\n' + shader.replace(anchor, `
+    float revealAmount = heroRevealMask(splatCenter);
+    vHeroRevealAmount = revealAmount;
+    if (revealAmount < 1.0) {
+      // A stable subset of scene points becomes small, round screen-space dots.
+      // Morph the same draw into full splats instead of rendering a second scene.
+      float keepPoint = step(0.90, fract(float(splatIndex) * 0.61803398875));
+      float pointRadius = 1.35 * heroRevealPixelRatio;
+      basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, revealAmount);
+      basisVector2 = mix(vec2(0.0, pointRadius), basisVector2, revealAmount);
+      vColor.a *= mix(keepPoint * 0.65, 1.0, revealAmount);
+    }
+    ` + anchor);
 }
-export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, reducedMotion = false, onState = () => {} } = {}) {
+export function patchRevealFragment(shader) {
+  const anchor = 'float opacity = exp(-0.5 * A) * vColor.a;';
+  if (!shader.includes(anchor)) throw new Error('This fragment shader does not support the hero point cloud.');
+  return 'varying float vHeroRevealAmount;\nuniform float heroRevealPointTone;\n' + shader.replace(anchor, `
+    if (vHeroRevealAmount < 1.0) {
+      float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+      vec3 pointColor = vec3(heroRevealPointTone * (0.7 + 0.3 * luminance));
+      color = mix(pointColor, color, vHeroRevealAmount);
+    }
+    ` + anchor);
+}
+export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, lightTheme = false, reducedMotion = false, onState = () => {} } = {}) {
   const material = viewer.getSplatMesh().material;
   if (!reducedMotion) {
     material.vertexShader = patchRevealShader(material.vertexShader);
+    material.fragmentShader = patchRevealFragment(material.fragmentShader);
     material.uniforms.heroRevealProgress = { value: 0 };
     material.uniforms.heroRevealOrigin = { value: HERO_REVEAL.bodyOrigin.map((v, i) => v * scale + position[i]) };
     material.uniforms.heroRevealScale = { value: scale };
+    material.uniforms.heroRevealPixelRatio = { value: viewer.devicePixelRatio || 1 };
+    material.uniforms.heroRevealPointTone = { value: lightTheme ? 0.25 : 0.78 };
     material.needsUpdate = true;
   }
   let startTime = null;
@@ -73,6 +99,9 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, red
       return true; // Include the final frame, even when the camera is stationary.
     },
     get active() { return startTime !== null && !complete; },
+    setLightTheme(light) {
+      if (material.uniforms.heroRevealPointTone) material.uniforms.heroRevealPointTone.value = light ? 0.25 : 0.78;
+    },
   };
 }
 
@@ -111,7 +140,7 @@ export async function prepareHeroReveal(viewer, nextFrame = () => new Promise(re
   } finally {
     if (progress) progress.value = original;
   }
-  // Clear the hidden canvas back to its first (empty) animation frame.
+  // Reset the hidden canvas to the first point-cloud animation frame.
   viewer.forceRenderNextFrame();
   viewer.render();
   await waitForGpu(renderer, nextFrame);

@@ -108,6 +108,9 @@ The shader uses each splat's horizontal XZ distance from that point in scene spa
 independent of camera projection. Distance and noise ignore height, producing a
 vertical cylinder that reveals the head and body together. The same model-space
 origin follows both scene scales.
+Unrevealed geometry appears as sparse monochrome dots; the same draw morphs
+them into full-sized, graded splats as the cylinder passes. Dot selection stays
+stable, and their tone follows the site theme.
 The radius grows through the nearby body and furniture before reaching the
 capture's distant background shell. The existing frame driver keeps the mobile
 renderer awake through the final frame, then returns to its usual idle behavior.

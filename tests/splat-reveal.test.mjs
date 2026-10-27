@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
-import { HERO_REVEAL, installHeroReveal, patchRevealShader, revealRadiusAt, prepareHeroReveal } from '../splat-reveal.mjs';
-const source = 'uniform vec2 viewport; varying vec4 vColor; void main() { vec3 splatCenter; vec4 quadPos; gl_Position = quadPos; }';
+import { HERO_REVEAL, installHeroReveal, patchRevealShader, revealRadiusAt, prepareHeroReveal, patchRevealFragment } from '../splat-reveal.mjs';
+const source = 'uniform vec2 viewport; varying vec4 vColor; void main() { vec3 splatCenter; vec2 ndcOffset = vec2(0.0); vec4 quadPos; gl_Position = quadPos; }';
 const patched = patchRevealShader(source);
-assert(patched.includes('vColor.a *= heroRevealMask(splatCenter);'));
+assert(patched.includes('float revealAmount = heroRevealMask(splatCenter);'));
+assert(patched.includes('basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, revealAmount)'), 'unrevealed geometry becomes small dots');
+assert(patched.includes('mix(keepPoint * 0.65, 1.0, revealAmount)'), 'sparse dots transition to full original opacity');
+const fragment = 'void main() { float opacity = exp(-0.5 * A) * vColor.a; }';
+assert(patchRevealFragment(fragment).includes('color = mix(pointColor, color, vHeroRevealAmount)'), 'monochrome dots transition to graded color');
+assert.throws(()=>patchRevealFragment('incompatible'), /does not support/);
 assert.equal((patched.match(/uniform vec2 viewport;/g)||[]).length,1);
 assert(!patched.includes('heroRevealMask(ndcCenter'), 'reveal never uses camera projection');
 assert(patched.includes('length(p.xz)'), 'cylinder radius measures horizontal scene distance');
@@ -10,7 +15,7 @@ assert(patched.includes('vec2 noisePosition = p.xz;'), 'noise boundary is identi
 assert(!patched.includes('p.y'), 'vertical position cannot delay the head or other geometry');
 assert.throws(()=>patchRevealShader('incompatible'),/does not support/);
 function fixture(options) {
-  const material={vertexShader:source, uniforms:{}};
+  const material={vertexShader:source, fragmentShader:fragment, uniforms:{}};
   let forced=0;
   const states=[];
   const viewer={getSplatMesh:()=>({material}),forceRenderNextFrame:()=>forced++};
@@ -19,7 +24,7 @@ function fixture(options) {
 }
 for (const mobile of [false,true]) {
   const {material,reveal,states,forced}=fixture({position:[-1.65,.87,-.71],scale:mobile?.75*.73:.75});
-  assert.equal(material.uniforms.heroRevealProgress.value,0,'first sorted frame starts hidden');
+  assert.equal(material.uniforms.heroRevealProgress.value,0,'first sorted frame starts as point cloud');
   assert.deepEqual(material.uniforms.heroRevealOrigin.value,HERO_REVEAL.bodyOrigin.map((v,i)=>v*(mobile?.75*.73:.75)+[-1.65,.87,-.71][i]));
   assert.equal(reveal.update(500),false,'wait for render readiness');
   reveal.start(1000);
@@ -33,6 +38,7 @@ for (const mobile of [false,true]) {
   assert.equal(forced(),2);
   assert.deepEqual(states,['revealing','complete']);
 }
+const themed=fixture();themed.reveal.setLightTheme(true);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.25);themed.reveal.setLightTheme(false);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.78);
 const scrolled=fixture();scrolled.reveal.start(1000);scrolled.reveal.update(1100,.08);
 assert.equal(scrolled.material.uniforms.heroRevealProgress.value,1,'scroll transition takes over without a partially hidden scene');
 const reduced=fixture({reducedMotion:true});reduced.reveal.start(1000);

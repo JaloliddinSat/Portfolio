@@ -1968,7 +1968,7 @@ const initSplat = async () => {
     const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal, prepareHeroReveal }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=3'),
+      import('./splat-reveal.mjs?v=4'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -2092,6 +2092,7 @@ const initSplat = async () => {
     const heroReveal = installHeroReveal(viewer, {
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
+      lightTheme: isLightTheme(),
       reducedMotion: reducedRevealMotion,
       onState(state) {
         splatStage.dataset.revealState = state;
@@ -2478,6 +2479,7 @@ const initSplat = async () => {
     };
 
     syncHeroDepthTheme = () => {
+      heroReveal.setLightTheme(isLightTheme());
       heroFrameDriver.request({ force: true });
     };
 
