@@ -77,6 +77,47 @@ let publishedAsciiEnabled = false;
 const tuningForm = document.querySelector("#ascii-settings-form");
 const tuningFields = document.querySelector("#ascii-tuning-fields");
 const tuningStatus = document.querySelector("#ascii-tuning-status");
+const cameraForm = document.querySelector("#camera-settings-form");
+const cameraFields = document.querySelector("#camera-settings-fields");
+const cameraDuration = document.querySelector("#hero-camera-duration");
+const cameraOutput = document.querySelector("#hero-camera-duration-output");
+const cameraStatus = document.querySelector("#camera-settings-status");
+let cameraDraftDirty = false;
+const updateCameraOutput = () => {
+  const seconds = Number(cameraDuration.value);
+  cameraOutput.textContent = `${seconds.toFixed(1)} seconds`;
+};
+const renderCameraSettings = (settings) => {
+  if (!cameraDraftDirty) cameraDuration.value = settings.heroCameraDuration ?? 3.2;
+  updateCameraOutput();
+};
+cameraDuration.addEventListener("input", () => {
+  cameraDraftDirty = true;
+  updateCameraOutput();
+  setStatus(cameraStatus, "Unsaved changes.");
+});
+cameraForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!cameraForm.reportValidity()) return;
+  cameraFields.disabled = true;
+  setStatus(cameraStatus, "Saving…");
+  try {
+    const saved = await request("settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ heroCameraDuration: Number(cameraDuration.value) }),
+    });
+    cameraDraftDirty = false;
+    renderCameraSettings(saved);
+    document.querySelector("#camera-preview-link").href = `/?cameraPreview=${Date.now()}`;
+    setStatus(cameraStatus, "Saved. Open the preview to replay the movement.", "success");
+  } catch (error) {
+    setStatus(cameraStatus, error.message, "error");
+    if (error.status === 401) {
+      showView(loginView);
+      setStatus(loginStatus, "Your session expired. Please sign in again.", "error");
+    }
+  } finally { cameraFields.disabled = false; }
+});
 const tuningInputs = {
   asciiThrowCooldown: document.querySelector("#ascii-throw-cooldown"),
   asciiLightCursorStrength: document.querySelector("#ascii-light-cursor-strength"),
@@ -106,6 +147,7 @@ const updateSpawnPreview = () => {
 };
 
 const renderSiteSettings = (settings, preserveDraft = false) => {
+  renderCameraSettings(settings);
   publishedAsciiEnabled = settings.asciiEnabled === true;
   featureToggle.checked = publishedAsciiEnabled;
   if (!preserveDraft) {
@@ -123,14 +165,17 @@ const renderSiteSettings = (settings, preserveDraft = false) => {
 const loadSiteSettings = async () => {
   featureToggle.disabled = true;
   tuningFields.disabled = true;
+  cameraFields.disabled = true;
   setStatus(settingsStatus);
   try {
     renderSiteSettings(await request("settings"));
     featureToggle.disabled = false;
     tuningFields.disabled = false;
+    cameraFields.disabled = false;
   } catch (error) {
     featureDetail.textContent = "Setting unavailable.";
     setStatus(settingsStatus, error.message, "error");
+    setStatus(cameraStatus, error.message, "error");
   }
 };
 

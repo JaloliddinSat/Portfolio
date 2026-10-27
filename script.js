@@ -1969,7 +1969,7 @@ const initSplat = async () => {
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=4'),
-      import('./splat-camera-intro.mjs?v=3'),
+      import('./splat-camera-intro.mjs?v=4'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -1986,6 +1986,7 @@ const initSplat = async () => {
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
       finalPose: SPLAT_CONFIG.cameraStart,
+      durationMs: Number(document.documentElement.dataset.heroCameraDuration || 3.2) * 1000,
       enabled: !reducedRevealMotion,
     });
     const initialCameraPosition = [...heroCameraIntro.initialPose.position];
@@ -2104,7 +2105,7 @@ const initSplat = async () => {
       reducedMotion: reducedRevealMotion,
       onState(state) {
         splatStage.dataset.revealState = state;
-        if (state === "complete") document.documentElement.classList.remove("splat-reveal-pending");
+        if (state === "complete" && !heroCameraIntro.active) document.documentElement.classList.remove("splat-reveal-pending");
       },
     });
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
@@ -2470,6 +2471,7 @@ const initSplat = async () => {
       );
       const introPose = heroCameraIntro.update(performance.now(), scrollPose, smoothed);
       if (heroCameraIntro.active) requestNextFrame();
+      else if (!heroReveal.active) document.documentElement.classList.remove("splat-reveal-pending");
       const { position, lookAt } = heroCameraIntro.active ? introPose : applyPointerParallax(
         introPose.position,
         introPose.lookAt,

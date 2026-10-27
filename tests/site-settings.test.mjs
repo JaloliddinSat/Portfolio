@@ -41,6 +41,9 @@ assert.equal(migrated.asciiLightCursorStrength,750);assert.equal(migrated.asciiL
 await call('settings','POST',{asciiLightCursorStrength:250,asciiThrowCooldown:2.5},cookie);
 const separate=await (await call('settings','GET',undefined,cookie)).json();assert.equal(separate.asciiCursorStrength,750);assert.equal(separate.asciiLightCursorStrength,250);assert.equal(separate.asciiThrowCooldown,2.5);
 
+assert.equal((await call('settings','POST',{heroCameraDuration:7.4},cookie)).status,200);
+assert.equal((await (await call('settings','GET',undefined,cookie)).json()).heroCameraDuration,7.4);
+for (const bad of [0,10.1,'3.2',null]) assert.equal((await call('settings','POST',{heroCameraDuration:bad},cookie)).status,400);
 await call('settings','POST',{...DEFAULT_SITE_SETTINGS},cookie);
 let transforms=0;
 globalThis.HTMLRewriter=class {
@@ -52,6 +55,8 @@ const html=await readFile(root+'/index.html','utf8');
 assert(!/ascii/i.test(html));assert(!/ascii/i.test(await readFile(root+'/script.js','utf8')));assert(!/ascii/i.test(await readFile(root+'/styles.css','utf8')));
 const page=(path='/')=>middleware({env,request:new Request('https://portfolio.test'+path),next:async()=>new Response(html,{headers:{'Content-Type':'text/html'}})});
 let response=await page();assert.equal(JSON.parse(await response.text())[0][1],'0.25');assert.equal(response.headers.get('Cache-Control'),'no-store');
+assert((await (await page()).text()).includes('data-hero-camera-duration'),'camera duration reaches public pages with particles disabled');
+assert((await (await page()).text()).includes('20261027-camera-controls-4'),'public script reference stays current');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});

@@ -14,6 +14,7 @@ for(const scale of [.75,.75*.73]) {
   assert.notDeepEqual(lead.position,intro.initialPose.position,'camera is already moving before colored geometry appears');
   const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
   const early=intro.update(1000+100);
+  assert(distance(early.position,intro.initialPose.position)>.01,'first 100ms produces visible movement instead of a flat starting beat');
   const earlyNext=intro.update(1000+200);
   const midBefore=intro.update(1000+HERO_CAMERA_INTRO.durationMs/2-50);
   const midAfter=intro.update(1000+HERO_CAMERA_INTRO.durationMs/2+50);
@@ -47,3 +48,12 @@ const skip=createHeroCameraIntro({...options,enabled:false});skip.start(0);
 assert.deepEqual(skip.initialPose,finalPose);assert.deepEqual(skip.update(100),finalPose);assert.equal(skip.active,false);
 const scroll=createHeroCameraIntro(options);scroll.start(0);assert.deepEqual(scroll.update(100,finalPose,.02),finalPose);assert.equal(scroll.active,false);
 console.log('PASS: overhead body framing on both scales, immediate eased descent and reveal lead, finite arc, exact original camera handoff, scrolling and reduced motion');
+
+for(const durationMs of [1000,6400,10000]) {
+ const custom=createHeroCameraIntro({...options,durationMs});custom.start(0);
+ assert.notDeepEqual(custom.update(durationMs/2).position,finalPose.position);
+ assert.equal(custom.active,true);
+ assert.deepEqual(custom.update(durationMs),finalPose);
+ assert.equal(custom.active,false);
+}
+console.log('PASS: visible initial motion and configurable A-to-B duration');

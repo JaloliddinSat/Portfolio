@@ -2,9 +2,11 @@
 // camera a short lead before colored geometry grows in, preserving both poses.
 export const HERO_CAMERA_INTRO = { delayMs: 0, durationMs: 3200, revealLeadMs: 250, height: 1.8, setback: 0.16 };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-// Zero velocity and acceleration at both ends soften the takeoff and landing.
-const smooth = t => t * t * t * (t * (6 * t - 15) + 10);
-export function createHeroCameraIntro({ bodyOrigin, position, scale, finalPose, enabled = true }) {
+// A small starting velocity makes movement visible on the very first frames;
+// the quintic ramp still softens acceleration and comes to a gentle full stop.
+const smooth = t => .84 * (t * t * t * (t * (6 * t - 15) + 10)) + .16 * (1 - (1 - t) ** 3);
+export function createHeroCameraIntro({ bodyOrigin, position, scale, finalPose, durationMs = HERO_CAMERA_INTRO.durationMs, enabled = true }) {
+  durationMs = Number.isFinite(durationMs) ? Math.max(1000, Math.min(10000, durationMs)) : HERO_CAMERA_INTRO.durationMs;
   const body = bodyOrigin.map((v, i) => v * scale + position[i]);
   const horizontal = [finalPose.position[0] - body[0], 0, finalPose.position[2] - body[2]];
   const length = Math.hypot(horizontal[0], horizontal[2]) || 1;
@@ -23,7 +25,7 @@ export function createHeroCameraIntro({ bodyOrigin, position, scale, finalPose, 
     get active() { return startTime !== null && !finished; },
     update(now, scrollPose = finalPose, scrollProgress = 0) {
       if (finished || startTime === null) return scrollPose;
-      const t = Math.max(0, Math.min(1, (now - startTime - HERO_CAMERA_INTRO.delayMs) / HERO_CAMERA_INTRO.durationMs));
+      const t = Math.max(0, Math.min(1, (now - startTime - HERO_CAMERA_INTRO.delayMs) / durationMs));
       if (t === 1 || scrollProgress >= .015) { finished = true; return scrollPose; }
       const eased = smooth(t);
       return {

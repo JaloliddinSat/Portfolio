@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=15" />
+    <link rel="stylesheet" href="/admin/styles.css?v=16" />
   </head>
   <body>
     <main class="admin-shell">
@@ -73,6 +73,21 @@
             <p class="lede">Manage your site features, animation settings, and résumé.</p>
           </div>
         </div>
+
+        <section class="site-settings" aria-labelledby="camera-settings-title">
+          <h2 id="camera-settings-title">Hero camera movement</h2>
+          <form id="camera-settings-form">
+            <fieldset id="camera-settings-fields" disabled>
+              <label class="ascii-spawn-label" for="hero-camera-duration">A → B duration <output id="hero-camera-duration-output" for="hero-camera-duration">3.2 seconds</output></label>
+              <input id="hero-camera-duration" type="range" min="1" max="10" step="0.1" value="3.2" aria-describedby="camera-duration-help" />
+              <div class="camera-speed-labels" aria-hidden="true"><span>Faster · 1 second</span><span>Slower · 10 seconds</span></div>
+              <p class="debug-portfolio-note" id="camera-duration-help">Choose how long the camera takes to travel from the overhead view to the final view. Save, then open the portfolio to replay it.</p>
+              <button class="primary-button" type="submit">Save camera movement</button>
+            </fieldset>
+            <p class="form-status" id="camera-settings-status" role="status" aria-live="polite"></p>
+            <a class="secondary-button debug-portfolio-link" id="camera-preview-link" href="/?cameraPreview" target="_blank" rel="noopener noreferrer">Preview camera movement ↗</a>
+          </form>
+        </section>
 
         <section class="site-settings" aria-labelledby="site-settings-title">
           <h2 id="site-settings-title">Site features</h2>
@@ -258,6 +273,6 @@
       </section>
     </main>
 
-    <script src="/admin/admin.js?v=14" defer></script>
+    <script src="/admin/admin.js?v=15" defer></script>
   </body>
 </html>

@@ -126,12 +126,16 @@ Immediate scrolling completes the reveal before the depth transition takes over.
 Reduced motion and camera debug mode skip the reveal. Refresh to replay it.
 
 The camera starts almost directly above the body. After loading, it immediately
-begins a 3.2-second arc with zero starting/ending velocity and acceleration. The
+begins an arc with visible initial motion and a soft landing (3.2 seconds by default). The
 colored cylinder reveal starts 250 ms later, so the camera is moving as the head
 appears. It lands at the original hero camera position and aim. Mobile transforms the overhead
 origin with the scene scale. The same readiness and hidden GPU warm-up gate both
 animations; reduced motion skips the camera move as well. Scrolling takes over
 immediately, and the normal scroll path and pointer parallax resume after landing.
+Admin’s **Hero camera movement** slider sets the A-to-B duration from 1–10 seconds.
+Save, then open the preview to replay the current public settings. The value is
+stored independently of animation controls and injected into every portfolio page.
+The poster remains hidden until both the reveal and camera movement finish.
 Higher angles can expose stretched or sparse peripheral geometry in this capture.
 
 ### Hero splat color grading
