@@ -4465,8 +4465,11 @@ const initHeroScrollTransition = () => {
     // The wash element is display:none in dark mode, so the var is harmless
     // there; writing it unconditionally avoids a theme-dependent branch and a
     // stale value if the theme flips mid-scroll.
-    const lightWash =
+    const defaultLightWash =
       LIGHT_WASH_MAX * fadeBetween(smoothed, LIGHT_WASH_START, LIGHT_WASH_END);
+    const lightWash =
+      window.__splatWashDebug?.evaluate({ smoothed, lightWash: defaultLightWash }) ??
+      defaultLightWash;
 
     if (lightWash !== appliedLightWash) {
       appliedLightWash = lightWash;
@@ -4480,6 +4483,10 @@ const initHeroScrollTransition = () => {
   };
 
   window.__splatOverlayDebug?.attach({ refresh: () => update({ smoothed: lastOverlayProgress }) });
+  window.__splatWashDebug?.attach({
+    refresh: () => update({ smoothed: lastOverlayProgress }),
+    defaults: { start: LIGHT_WASH_START, end: LIGHT_WASH_END, max: LIGHT_WASH_MAX },
+  });
   heroFrameDriver.subscribe(update, 10);
   update({ smoothed: getScrollProgress() });
 };
