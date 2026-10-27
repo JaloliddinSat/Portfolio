@@ -4405,8 +4405,8 @@ const initHeroScrollTransition = () => {
   const COPY_FADE_END = 0.16;
   // Light-theme white wash: starts appearing near the end of the hero scroll
   // and reaches 90% at the very end.
-  const LIGHT_WASH_START = 0.78;
-  const LIGHT_WASH_END = 0.98;
+  const LIGHT_WASH_START = 0.36;
+  const LIGHT_WASH_END = 0.59;
   const LIGHT_WASH_MAX = 0.9;
 
   const smoothstep = (value) => {
