@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
-import { HERO_REVEAL, installHeroReveal, patchRevealShader, revealRadiusAt, prepareHeroReveal, patchRevealFragment } from '../splat-reveal.mjs';
+import { HERO_REVEAL, HERO_REVEAL_RIM, installHeroReveal, patchRevealShader, revealRadiusAt, frontRadiusAt, setRevealProgress, prepareHeroReveal, patchRevealFragment } from '../splat-reveal.mjs';
 const source = 'uniform vec2 viewport; varying vec4 vColor; void main() { vec3 splatCenter; vec2 ndcOffset = vec2(0.0); vec4 quadPos; gl_Position = quadPos; }';
 const patched = patchRevealShader(source);
-assert(patched.includes('float revealAmount = heroRevealMask(splatCenter);'));
-assert(patched.includes('basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, revealAmount)'), 'unrevealed geometry becomes small dots');
-assert(patched.includes('mix(keepPoint * 0.65, 1.0, revealAmount)'), 'sparse dots transition to full original opacity');
+assert(patched.includes('vec3 revealField = heroRevealMask(splatCenter);'));
+assert(patched.includes('float shapeAmount = max(revealAmount, revealField.z);'), 'hex ghost zone restores full splat shape ahead of colour');
+assert(patched.includes('basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, shapeAmount)'), 'unrevealed geometry becomes small dots');
+assert(patched.includes('float pointRadius = 2.0 * heroRevealPixelRatio;'), 'bigger point cloud dots');
+assert(patched.includes('vColor.a *= mix(ghostAlpha, 1.0, revealAmount)'), 'sparse dots and ghosts transition to full original opacity');
+assert(patched.includes('max(q.y, dot(q, vec2(0.8660254, 0.5)))'), 'secondary front is a hexagon measured by apothem');
+assert(patched.includes('uniform float heroRevealRadius;') && patched.includes('uniform float heroRevealFrontRadius;'), 'radii are per-frame uniforms');
+assert(!patched.includes('exp(log('), 'no per-splat exponential radius remains');
 const fragment = 'void main() { float opacity = exp(-0.5 * A) * vColor.a; }';
-assert(patchRevealFragment(fragment).includes('color = mix(pointColor, color, vHeroRevealAmount)'), 'monochrome dots transition to graded color');
+const patchedFragment = patchRevealFragment(fragment);
+assert(patchedFragment.includes('color = mix(mix(pointColor, ghostColor, vHeroRevealFx.y), color, vHeroRevealAmount)'), 'monochrome dots and ghosts transition to graded color');
+assert(patchedFragment.includes('color = mix(color, heroRevealRimColor, min(1.0, vHeroRevealFx.x * 1.1))'), 'light growth edge tints the front');
 assert.throws(()=>patchRevealFragment('incompatible'), /does not support/);
 assert.equal((patched.match(/uniform vec2 viewport;/g)||[]).length,1);
 assert(!patched.includes('heroRevealMask(ndcCenter'), 'reveal never uses camera projection');
@@ -31,14 +38,19 @@ for (const mobile of [false,true]) {
   assert.equal(reveal.active,true);
   assert.equal(reveal.update(1000+HERO_REVEAL.durationMs/2),true,'stationary cameras keep rendering the reveal');
   assert.equal(material.uniforms.heroRevealProgress.value,.5);
+  assert.equal(material.uniforms.heroRevealRadius.value,revealRadiusAt(.5),'radius uniform follows the growth curve');
+  assert.equal(material.uniforms.heroRevealFrontRadius.value,frontRadiusAt(.5),'hex front uniform follows the compressed curve');
   assert.equal(reveal.update(1000+HERO_REVEAL.durationMs),true,'render the final fully visible frame');
   assert.equal(material.uniforms.heroRevealProgress.value,1);
+  assert(Math.abs(material.uniforms.heroRevealRadius.value-HERO_REVEAL.maxRadius)<1e-9);
   assert.equal(reveal.active,false);
   assert.equal(reveal.update(100000),false,'no animation work remains after completion');
   assert.equal(forced(),2);
   assert.deepEqual(states,['revealing','complete']);
 }
-const themed=fixture();themed.reveal.setLightTheme(true);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.25);themed.reveal.setLightTheme(false);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.78);
+const themed=fixture();assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.dark);
+themed.reveal.setLightTheme(true);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.25);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.light);
+themed.reveal.setLightTheme(false);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.78);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.dark);
 const scrolled=fixture();scrolled.reveal.start(1000);scrolled.reveal.update(1100,.08);
 assert.equal(scrolled.material.uniforms.heroRevealProgress.value,1,'scroll transition takes over without a partially hidden scene');
 const reduced=fixture({reducedMotion:true});reduced.reveal.start(1000);
@@ -52,6 +64,11 @@ console.log('PASS: organic reveal shader, shared 3D body origin and scene transf
 
 assert(revealRadiusAt(.15) < revealRadiusAt(.5));
 assert(Math.abs(revealRadiusAt(1)-HERO_REVEAL.maxRadius)<1e-9, 'reach the far background shell smoothly');
+for(const t of [.05,.2,.35,.5,.69]) assert(frontRadiusAt(t) > revealRadiusAt(t), 'hex front always leads the coloured reveal');
+assert(Math.abs(frontRadiusAt(HERO_REVEAL.frontFinishAt)-HERO_REVEAL.maxRadius)<1e-9,'hex front finishes early');
+assert(Math.abs(frontRadiusAt(1)-HERO_REVEAL.maxRadius)<1e-9,'hex front clamps at the far shell');
+const synced={heroRevealProgress:{value:0},heroRevealRadius:{value:0},heroRevealFrontRadius:{value:0}};
+setRevealProgress(synced,.4);assert.equal(synced.heroRevealRadius.value,revealRadiusAt(.4));assert.equal(synced.heroRevealFrontRadius.value,frontRadiusAt(.4));
 const warm=[];
 const warmMaterial={uniforms:{heroRevealProgress:{value:0}}};
 let polls=0;
