@@ -102,14 +102,20 @@ The private debugger shows the last release velocity and sample count.
 
 ### Hero scene reveal
 
-On desktop and mobile, the Fairview hero starts around the subject and reveals
-outward over 2.4 seconds with a soft, noise-shaped boundary. The shader evaluates
-the mask per splat vertex using its projected position and the viewport aspect,
-with separate subject origins for the desktop and mobile compositions. The
-existing frame driver keeps the mobile renderer awake through the final frame,
-then returns to its usual idle behavior. No extra rendering pass is added.
+On desktop and mobile, the Fairview hero reveals outward through 3D geometry
+over 3 seconds from a point on the torso, with a soft, noise-shaped boundary.
+The shader uses each splat's distance from that point in scene space, independent
+of camera projection. The same model-space origin follows both scene scales.
+The radius grows through the nearby body and furniture before reaching the
+capture's distant background shell. The existing frame driver keeps the mobile
+renderer awake through the final frame, then returns to its usual idle behavior.
+No extra rendering pass is added during the animation.
 
-The reveal starts after scene readiness (including mobile's post-tree sort).
+Both devices download the complete scene, finish the visibility tree and final
+sort, then compile and render the graded scene and active reveal while hidden.
+GPU fences yield until that work finishes before starting the animation clock.
+The offscreen StepNote renderer initializes near its section so its scene loading
+does not compete with the hero intro; its dedicated debug mode still loads at once.
 The full-scene poster stays hidden until completion and returns on failure.
 Immediate scrolling completes the reveal before the depth transition takes over.
 Reduced motion and camera debug mode skip the reveal. Refresh to replay it.

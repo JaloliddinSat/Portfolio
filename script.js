@@ -1965,10 +1965,10 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal, prepareHeroReveal }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=1'),
+      import('./splat-reveal.mjs?v=2'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -2049,7 +2049,7 @@ const initSplat = async () => {
     // scene's first sort before that tree necessarily exists. In static mode, an
     // unchanged camera will not request another sort, leaving the unculled initial
     // ordering visible until a large enough scroll movement wakes it. Wait for the
-    // tree explicitly so the first displayed mobile frame uses the final view data.
+    // tree explicitly on both devices before starting the reveal.
     splatMesh.onSplatTreeReady((tree) => {
       splatLoadDebug.treeReady = Boolean(tree);
       recordSplatLoadDebug(
@@ -2063,7 +2063,7 @@ const initSplat = async () => {
     });
 
     const sceneOptions = {
-      progressiveLoad: !manualRendering,
+      progressiveLoad: false,
       showLoadingUI: false,
       splatAlphaRemovalThreshold: SPLAT_CONFIG.alphaThreshold,
       scale: [splatScale, splatScale, splatScale],
@@ -2090,7 +2090,8 @@ const initSplat = async () => {
 
     const updateHeroDepthShader = installHeroDepthShader(splatMesh);
     const heroReveal = installHeroReveal(viewer, {
-      mobile: isMobile,
+      position: SPLAT_CONFIG.splatPosition,
+      scale: splatScale,
       reducedMotion: reducedRevealMotion,
       onState(state) {
         splatStage.dataset.revealState = state;
@@ -2100,7 +2101,7 @@ const initSplat = async () => {
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
     else installSplatColorGrade(viewer);
 
-    if (manualRendering) {
+    {
       const existingTree = splatMesh.getSplatTree?.();
 
       if (existingTree && !splatLoadDebug.treeReady) {
@@ -2109,6 +2110,8 @@ const initSplat = async () => {
       }
 
       await splatTreeReady;
+      // Drain any earlier ordering before requesting the final tree-aware sort.
+      if (viewer.sortRunning && viewer.sortPromise) await viewer.sortPromise;
       recordSplatLoadDebug("post-tree-sort-start");
 
       // lookAt updates the quaternion, while the sorter reads matrixWorld directly.
@@ -2140,6 +2143,12 @@ const initSplat = async () => {
         `instances:${splatMesh.geometry.instanceCount}`,
       );
     }
+
+    // Compile and upload the exact graded/reveal shader, then wait for the GPU
+    // while the canvas is still hidden. Start the animation clock afterwards.
+    recordSplatLoadDebug("reveal-warmup-start");
+    await prepareHeroReveal(viewer);
+    recordSplatLoadDebug("reveal-warmup-done");
 
     if (!manualRendering) {
       viewer.start();
@@ -4086,7 +4095,18 @@ const initStepNoteProject = () => {
     initStepNoteSplat();
   };
 
-  requestAnimationFrame(startSplat);
+  // Keep the offscreen project renderer's downloads, tree build and shader
+  // compilation from competing with the hero's load/reveal animation.
+  if (DEBUG_STEPNOTE_SPLAT || !("IntersectionObserver" in window)) {
+    requestAnimationFrame(startSplat);
+  } else {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      startSplat();
+    }, { rootMargin: "500px" });
+    observer.observe(stage);
+  }
 };
 
 const initHeroScrollTransition = () => {
