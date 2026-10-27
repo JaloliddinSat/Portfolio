@@ -19,6 +19,8 @@ export const HERO_REVEAL = {
 export const HERO_REVEAL_GHOST = { minOpacity: 0.05, maxOpacity: 0.8, gapRange: 1 };
 // Light growth edge and ghost tone. The same warm near-white rim in both themes.
 export const HERO_REVEAL_RIM = { dark: [0.96, 0.93, 0.86], light: [0.96, 0.93, 0.86] };
+// Unrevealed dot brightness, also identical across themes.
+export const HERO_REVEAL_POINT_TONE = { dark: 0.78, light: 0.78 };
 export const revealRadiusAt = progress => 0.1 * (Math.expm1(Math.log1p(HERO_REVEAL.maxRadius / 0.1) * Math.max(0, Math.min(1, progress))));
 export const frontRadiusAt = progress => revealRadiusAt(progress / HERO_REVEAL.frontFinishAt);
 export const ghostOpacityAt = progress => {
@@ -139,7 +141,7 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, dur
     material.uniforms.heroRevealOrigin = { value: HERO_REVEAL.bodyOrigin.map((v, i) => v * scale + position[i]) };
     material.uniforms.heroRevealScale = { value: scale };
     material.uniforms.heroRevealPixelRatio = { value: viewer.devicePixelRatio || 1 };
-    material.uniforms.heroRevealPointTone = { value: lightTheme ? 0.25 : 0.78 };
+    material.uniforms.heroRevealPointTone = { value: lightTheme ? HERO_REVEAL_POINT_TONE.light : HERO_REVEAL_POINT_TONE.dark };
     material.uniforms.heroRevealRimColor = { value: [...(lightTheme ? HERO_REVEAL_RIM.light : HERO_REVEAL_RIM.dark)] };
     material.needsUpdate = true;
   }
@@ -163,7 +165,7 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, dur
     },
     get active() { return startTime !== null && !complete; },
     setLightTheme(light) {
-      if (material.uniforms.heroRevealPointTone) material.uniforms.heroRevealPointTone.value = light ? 0.25 : 0.78;
+      if (material.uniforms.heroRevealPointTone) material.uniforms.heroRevealPointTone.value = light ? HERO_REVEAL_POINT_TONE.light : HERO_REVEAL_POINT_TONE.dark;
       if (material.uniforms.heroRevealRimColor) material.uniforms.heroRevealRimColor.value = [...(light ? HERO_REVEAL_RIM.light : HERO_REVEAL_RIM.dark)];
     },
   };

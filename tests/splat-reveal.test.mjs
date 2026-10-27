@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { HERO_REVEAL, HERO_REVEAL_RIM, HERO_REVEAL_GHOST, installHeroReveal, patchRevealShader, revealRadiusAt, frontRadiusAt, ghostOpacityAt, setRevealProgress, prepareHeroReveal, patchRevealFragment } from '../splat-reveal.mjs';
+import { HERO_REVEAL, HERO_REVEAL_RIM, HERO_REVEAL_POINT_TONE, HERO_REVEAL_GHOST, installHeroReveal, patchRevealShader, revealRadiusAt, frontRadiusAt, ghostOpacityAt, setRevealProgress, prepareHeroReveal, patchRevealFragment } from '../splat-reveal.mjs';
 const source = 'uniform vec2 viewport; varying vec4 vColor; void main() { vec3 splatCenter; vec2 ndcOffset = vec2(0.0); vec4 quadPos; gl_Position = quadPos; }';
 const patched = patchRevealShader(source);
 assert(patched.includes('vec3 revealField = heroRevealMask(splatCenter);'));
@@ -52,8 +52,8 @@ for (const mobile of [false,true]) {
   assert.deepEqual(states,['revealing','complete']);
 }
 const themed=fixture();assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.dark);
-themed.reveal.setLightTheme(true);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.25);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.light);
-themed.reveal.setLightTheme(false);assert.equal(themed.material.uniforms.heroRevealPointTone.value,.78);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.dark);
+themed.reveal.setLightTheme(true);assert.equal(themed.material.uniforms.heroRevealPointTone.value,HERO_REVEAL_POINT_TONE.light);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.light);
+themed.reveal.setLightTheme(false);assert.equal(themed.material.uniforms.heroRevealPointTone.value,HERO_REVEAL_POINT_TONE.dark);assert.deepEqual(themed.material.uniforms.heroRevealRimColor.value,HERO_REVEAL_RIM.dark);
 const scrolled=fixture();scrolled.reveal.start(1000);scrolled.reveal.update(1100,.08);
 assert.equal(scrolled.material.uniforms.heroRevealProgress.value,1,'scroll transition takes over without a partially hidden scene');
 const reduced=fixture({reducedMotion:true});reduced.reveal.start(1000);
