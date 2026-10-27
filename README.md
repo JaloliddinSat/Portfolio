@@ -226,3 +226,5 @@ The same private viewer includes **Light theme backdrop** start/end sliders and 
 The public hero now uses the selected overlay settings: dark strength 2.4×, light strength 21×, both starting at 0% scroll. In light theme, the backdrop blends from #111111 to #ffffff across the full 0–100% hero scroll cycle. Fog stays active. The admin studio resets to these public values and still keeps edits local.
 
 Vignette strength applies only to the radial edge gradient. The full-frame wash was removed so the center stays transparent even at high strengths; selected timing, theme strengths, fog, and light backdrop transition remain unchanged.
+
+The selected full-frame tint is restored. A separate black screen-space vignette sits above the scene, weighted toward the left, top, and bottom with a clearer right side. It uses the intro-overlay fade (scroll 8% to the existing vignette fade end); the theme-colored scroll fade remains independent. Shared pseudo-element positioning/content is restored so both layers render.

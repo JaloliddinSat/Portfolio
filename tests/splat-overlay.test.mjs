@@ -36,10 +36,11 @@ assert(css.includes('background: var(--hero-light-scroll-gradient)'));
 assert(css.includes('background-color: var(--overlay-backdrop, #111111)'));
 console.log('PASS: exact selected public values and shared theme gradient/backdrop integration');
 
-for (const theme of ['dark','light']) for (const strength of [0,1,2.4,21,100]) {
- const gradient=overlayBackground(theme,strength);
- assert(gradient.includes('transparent 6%'),'vignette center stays clear at every strength');
- assert(!gradient.includes('), rgba('),'strength cannot add a full-frame color wash');
- assert.equal((gradient.match(/radial-gradient/g)||[]).length,1);
-}
-console.log('PASS: both themes retain a clear vignette center without a uniform wash, including 21x and 100x strength');
+// The chosen flat tint is restored; the separate intro vignette must exist.
+for (const theme of ['dark','light']) assert(overlayBackground(theme,21).includes('), rgba('),'restore selected full-frame tint');
+const pseudo=css.slice(css.indexOf('.splat-stage::before,'),css.indexOf('html[data-theme="light"] .splat-stage::after'));
+for(const rule of ['position: absolute','inset: 0','pointer-events: none','content: ""','opacity: var(--hero-intro-overlay)','at 74% 48%','linear-gradient(to right','linear-gradient(to bottom'])assert(pseudo.includes(rule),rule);
+assert(script.includes('const introOverlay = 1 - fadeBetween(smoothed, 0.08, heroVignetteFadeEnd)'),'vignette fades out with smoothed scroll');
+console.log('PASS: restored tint plus independently positioned asymmetric vignette and existing scroll fade-out');
+
+assert(!css.includes('ellipse 125% 95% at 48% 40%'),'mobile inherits the same asymmetric vignette');

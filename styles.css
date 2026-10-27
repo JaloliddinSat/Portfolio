@@ -790,6 +790,25 @@ html.hero-intro.hero-intro-play .hero-copy .button + .button {
 
 .splat-stage::before,
 .splat-stage::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+/* A screen-space vignette over the rendered scene, clear toward the right.
+   It fades out independently of the existing theme-colored scroll fade. */
+.splat-stage::before {
+  z-index: 1;
+  opacity: var(--hero-intro-overlay);
+  background:
+    radial-gradient(ellipse 90% 100% at 74% 48%,
+      transparent 28%, rgba(0, 0, 0, 0.18) 55%, rgba(0, 0, 0, 0.78) 100%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.6), transparent 68%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 28%, transparent 70%, rgba(0, 0, 0, 0.6));
+}
+
+.splat-stage::after {
   z-index: 2;
   opacity: var(--hero-collapse-overlay);
   background: var(--hero-dark-scroll-gradient);
@@ -2442,27 +2461,6 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
     font-size: 0.52rem;
     font-weight: 600;
     letter-spacing: 0.07em;
-  }
-
-  .splat-stage::before {
-    background:
-      radial-gradient(
-        ellipse 125% 95% at 48% 40%,
-        rgba(7, 10, 19, 0.1) 0%,
-        rgba(7, 10, 19, 0.28) 48%,
-        rgba(7, 10, 19, 0.58) 100%
-      ),
-      linear-gradient(
-        to right,
-        rgba(7, 10, 19, 0.72) 0%,
-        rgba(7, 10, 19, 0.4) 34%,
-        rgba(7, 10, 19, 0.2) 100%
-      ),
-      linear-gradient(
-        to top,
-        rgba(7, 10, 19, 0.55) 0%,
-        transparent 36%
-      );
   }
 
   .hero-text {

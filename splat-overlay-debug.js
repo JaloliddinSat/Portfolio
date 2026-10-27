@@ -1,4 +1,4 @@
-import {defaultOverlays,overlayOpacity,overlayBackground,hydrateOverlays,backdropColor} from './splat-overlay-core.mjs?v=4';
+import {defaultOverlays,overlayOpacity,overlayBackground,hydrateOverlays,backdropColor} from './splat-overlay-core.mjs?v=5';
 const KEY='portfolio-hero-overlay-v1';
 let config=defaultOverlays(),panel,refresh,bypass=false,progress=0;
 try {const saved=JSON.parse(localStorage.getItem(KEY));config=hydrateOverlays(saved);}catch{}

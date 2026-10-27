@@ -1,4 +1,4 @@
-import { HERO_OVERLAYS, overlayOpacity, overlayBackground, backdropColor } from './splat-overlay-core.mjs?v=4';
+import { HERO_OVERLAYS, overlayOpacity, overlayBackground, backdropColor } from './splat-overlay-core.mjs?v=5';
 import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-history-1';
 
 const portfolioDiagnostics = window.__portfolioDiagnostics;
