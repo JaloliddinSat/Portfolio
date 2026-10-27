@@ -1965,10 +1965,11 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal, prepareHeroReveal }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { createHeroCameraIntro }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=4'),
+      import('./splat-camera-intro.mjs?v=1'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -1980,8 +1981,15 @@ const initSplat = async () => {
     splatLoadDebug.manualRendering = manualRendering;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
-    const initialCameraPosition = [...SPLAT_CONFIG.cameraStart.position];
-    const initialCameraLookAt = [...SPLAT_CONFIG.cameraStart.lookAt];
+    const heroCameraIntro = createHeroCameraIntro({
+      bodyOrigin: HERO_REVEAL.bodyOrigin,
+      position: SPLAT_CONFIG.splatPosition,
+      scale: splatScale,
+      finalPose: SPLAT_CONFIG.cameraStart,
+      enabled: !reducedRevealMotion,
+    });
+    const initialCameraPosition = [...heroCameraIntro.initialPose.position];
+    const initialCameraLookAt = [...heroCameraIntro.initialPose.lookAt];
 
     const viewer = new GaussianSplats3D.Viewer({
       rootElement: splatContainer,
@@ -2157,7 +2165,9 @@ const initSplat = async () => {
     }
     let viewerRunning = true;
 
-    heroReveal.start(performance.now());
+    const introStartedAt = performance.now();
+    heroReveal.start(introStartedAt);
+    heroCameraIntro.start(introStartedAt);
     setStatus("ready");
     recordSplatLoadDebug("status-ready");
 
@@ -2442,9 +2452,10 @@ const initSplat = async () => {
 
       const pointerMoved = updatePointerParallax(delta, requestNextFrame);
       const revealChanged = heroReveal.update(performance.now(), smoothed);
+      const introCameraChanged = heroCameraIntro.active;
       if (heroReveal.active) requestNextFrame();
 
-      if (!force && smoothed === lastRenderedProgress && !pointerMoved && !revealChanged) {
+      if (!force && smoothed === lastRenderedProgress && !pointerMoved && !revealChanged && !introCameraChanged) {
         return;
       }
 
@@ -2457,9 +2468,11 @@ const initSplat = async () => {
         SPLAT_CONFIG.cameraEnd,
         SPLAT_CONFIG.lookAtTiming ?? 1,
       );
-      const { position, lookAt } = applyPointerParallax(
-        scrollPose.position,
-        scrollPose.lookAt,
+      const introPose = heroCameraIntro.update(performance.now(), scrollPose, smoothed);
+      if (heroCameraIntro.active) requestNextFrame();
+      const { position, lookAt } = heroCameraIntro.active ? introPose : applyPointerParallax(
+        introPose.position,
+        introPose.lookAt,
       );
 
       if (viewer.camera) {

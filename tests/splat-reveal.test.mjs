@@ -67,5 +67,5 @@ assert.equal(warm[0],'compiled');assert.equal(warm.filter(x=>x==='delete').lengt
 assert.equal(warm.filter(x=>x==='yield').length,3,'GPU preparation yields without blocking');
 const script = await (await import('node:fs/promises')).readFile('script.js','utf8');
 assert(script.includes('progressiveLoad: false'),'both devices finish the download before revealing');
-assert(script.indexOf('await prepareHeroReveal(viewer)')<script.indexOf('heroReveal.start(performance.now())'),'start animation after GPU preparation');
+assert(script.indexOf('await prepareHeroReveal(viewer)')<script.indexOf('heroReveal.start(introStartedAt)'),'start animation after GPU preparation');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
