@@ -2259,6 +2259,8 @@ const initSplat = async () => {
     else installDistanceCutoff(viewer, defaultCutoff(), distanceContext);
     if (window.__splatFogDebug) window.__splatFogDebug.attach(viewer, distanceContext);
     else installDistanceFog(viewer, defaultFog(), distanceContext);
+    // Admin-only preview for now; no camera clip is installed publicly.
+    window.__splatCameraClipDebug?.attach(viewer);
 
     {
       const existingTree = splatMesh.getSplatTree?.();
