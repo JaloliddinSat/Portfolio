@@ -2089,16 +2089,27 @@ const initSplat = async () => {
 
     // Motion is drawn at 1x and the ceiling returns ~300ms after input settles.
     // A ?splatPixelRatio override pins the resolution so comparisons stay honest.
+    // Resizing the drawing buffer clears it, so the ratio is only recorded here
+    // and applied inside the frame that redraws (see renderSplatFrame); applying
+    // it from the pointer event or the settle timer presented a blank frame.
+    let pendingPixelRatio = null;
     const heroResolution = createAdaptiveResolution({
       ceiling: splatPixelRatio,
       motionRatio: DEBUG_SPLAT_PIXEL_RATIO > 0 ? splatPixelRatio : 1,
       settleMs: HERO_ADAPTIVE_RESOLUTION_SETTLE_MS,
       apply(ratio) {
-        applySplatPixelRatio(viewer, ratio);
-        splatLoadDebug.effectivePixelRatio = ratio;
-        recordSplatLoadDebug("pixel-ratio", String(ratio), false);
+        pendingPixelRatio = ratio;
       },
     });
+    const applyPendingPixelRatio = () => {
+      if (pendingPixelRatio === null) return false;
+      const ratio = pendingPixelRatio;
+      pendingPixelRatio = null;
+      applySplatPixelRatio(viewer, ratio);
+      splatLoadDebug.effectivePixelRatio = ratio;
+      recordSplatLoadDebug("pixel-ratio", String(ratio), false);
+      return true;
+    };
     window.__heroSplatResolution = heroResolution;
 
     const splatMesh = viewer.getSplatMesh();
@@ -2606,6 +2617,16 @@ const initSplat = async () => {
 
       ensureViewerRunning();
       viewer.forceRenderNextFrame?.();
+
+      // A resized buffer must be redrawn before this frame is presented. The
+      // self-driven loop would only draw on its next tick (and a parked viewer
+      // has no tick yet), so draw synchronously whenever the ratio changed.
+      if (applyPendingPixelRatio() && !manualRendering) {
+        viewer.update();
+        if (viewer.shouldRender()) viewer.render();
+        viewer.renderNextFrame = false;
+      }
+
       renderManualViewerFrame();
     };
 

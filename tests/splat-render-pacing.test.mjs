@@ -68,4 +68,11 @@ assert(hero.includes('HERO_IDLE_STOP_SAFETY_MS'), 'with a bounded safety ceiling
 assert(hero.includes("motionRatio: DEBUG_SPLAT_PIXEL_RATIO > 0 ? splatPixelRatio : 1"), 'debug pixel ratio override pins the hero resolution');
 assert(hero.includes('heroResolution.settle(performance.now())') && hero.slice(hero.indexOf('heroResolution.settle(')).slice(0, 200).includes('heroFrameDriver.request({ force: true })'), 'restoring the ceiling draws a sharp frame');
 assert(hero.includes("import('./splat-render-pacing.mjs?v=1')"));
+// Resizing the drawing buffer clears it: the ratio must be applied by the frame that redraws, never by an event or timer.
+const applyBlock = hero.slice(hero.indexOf('apply(ratio) {'), hero.indexOf('},', hero.indexOf('apply(ratio) {')));
+assert(applyBlock.includes('pendingPixelRatio = ratio;') && !applyBlock.includes('applySplatPixelRatio'), 'controller only records the ratio');
+const frame = hero.slice(hero.indexOf('const renderSplatFrame ='), hero.indexOf('syncHeroDepthTheme ='));
+assert.equal(hero.match(/applySplatPixelRatio\(viewer, /g).length, 2, 'ratio is applied at load and from applyPendingPixelRatio only');
+assert(frame.includes('if (applyPendingPixelRatio() && !manualRendering)') && frame.indexOf('applyPendingPixelRatio()') < frame.indexOf('renderManualViewerFrame()'), 'the frame applies the pending ratio and draws before presenting');
+console.log('PASS: pixel-ratio switches are applied and redrawn within one frame');
 console.log('PASS: hero and StepNote wiring pinned');

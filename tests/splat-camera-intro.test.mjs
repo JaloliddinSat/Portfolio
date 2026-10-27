@@ -67,12 +67,12 @@ const end=source.indexOf('syncHeroDepthTheme =',start);
 let calls=0,rendered=[],motion=0;
 const pose={position:[1,2,3],lookAt:[4,5,6]};
 const context={performance:{now:()=>0},document:{hidden:false,documentElement:{classList:{remove(){}}}},splatInView:true,
- noteHeroMotion:()=>motion++,
+ noteHeroMotion:()=>motion++,applyPendingPixelRatio:()=>false,manualRendering:false,
  updatePointerParallax:()=>false,heroReveal:{update:()=>false,active:false},
  heroCameraIntro:{active:true,update:()=>pose},lastRenderedProgress:null,
  easeScrollProgress:x=>x,computeScrollPosition:()=>pose,SPLAT_CONFIG:{cameraStart:pose,cameraEnd:pose},
  applyPointerParallax:(position,lookAt)=>{calls++;return {position:position.map(v=>v+.05),lookAt};},
- viewer:{camera:{position:{set(...values){rendered.push(values);}},lookAt(){}},forceRenderNextFrame(){}},
+ viewer:{camera:{position:{set(...values){rendered.push(values);}},lookAt(){}},forceRenderNextFrame(){},update(){},shouldRender:()=>true,render(){rendered.push('draw');}},
  updateHeroDepthShader(){},ensureViewerRunning(){},renderManualViewerFrame(){}};
 vm.createContext(context);vm.runInContext(source.slice(start,end).replace('const renderSplatFrame =','globalThis.frame ='),context);
 context.frame({smoothed:0,delta:16,force:true,requestNextFrame(){}});
@@ -83,4 +83,12 @@ assert.deepEqual(rendered[0],rendered[1],'ending the intro cannot snap to a new 
 assert.equal(motion,1,'the moving intro reports motion; a forced redraw of an unchanged picture does not');
 context.frame({smoothed:.2,delta:16,force:false,requestNextFrame(){}});
 assert.equal(motion,2,'a changing scroll position reports motion');
+assert(!rendered.includes('draw'),'no synchronous draw while the pixel ratio is unchanged');
+context.applyPendingPixelRatio=()=>true;
+context.frame({smoothed:.2,delta:16,force:true,requestNextFrame(){}});
+assert.equal(rendered.filter(v=>v==='draw').length,1,'a resized drawing buffer is redrawn inside the same frame');
+assert.equal(context.viewer.renderNextFrame,false,'the self-driven tick does not draw the same frame again');
+context.manualRendering=true;
+context.frame({smoothed:.2,delta:16,force:true,requestNextFrame(){}});
+assert.equal(rendered.filter(v=>v==='draw').length,1,'mobile keeps its existing synchronous manual render path');
 console.log('PASS: continuous parallax before and after intro completion');

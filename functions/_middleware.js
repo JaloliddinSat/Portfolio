@@ -69,10 +69,10 @@ export async function onRequest(context) {
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-render-tier2-1');
+      element.setAttribute('src', '/script.js?v=20261027-render-tier2-2');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
-      element.setAttribute('href', '/styles.css?v=20261027-render-tier2-1');
+      element.setAttribute('href', '/styles.css?v=20261027-render-tier2-2');
     } });
   if (!enabled) return rewriter.transform(response);
   return rewriter
