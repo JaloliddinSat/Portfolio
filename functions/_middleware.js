@@ -56,7 +56,7 @@ export async function onRequest(context) {
 
   const rewriter = new HTMLRewriter()
     .on('head', { element(element) {
-      if (overlayDebug) element.append('<link rel="stylesheet" href="/splat-overlay-debug.css?v=1"><script type="module" src="/splat-overlay-debug.js?v=1"></script>', { html: true });
+      if (overlayDebug) element.append('<link rel="stylesheet" href="/splat-overlay-debug.css?v=2"><script type="module" src="/splat-overlay-debug.js?v=2"></script>', { html: true });
       if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=2"></script>', { html: true });
       if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=4"></script>', { html: true });
       if (cutoffDebug) element.append('<link rel="stylesheet" href="/splat-cutoff-debug.css?v=1"><script type="module" src="/splat-cutoff-debug.js?v=2"></script>', { html: true });

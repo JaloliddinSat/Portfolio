@@ -16,3 +16,13 @@ for(const theme of ['dark','light']){
  assert.notEqual(overlayBackground(theme,100),overlayBackground(theme,1));
 }
 console.log('PASS: overlay export validation, 100x strength range, independent themes, scroll timing and finite high-strength gradient');
+const {hydrateOverlays,backdropColor}=await import('../splat-overlay-core.mjs');
+const b=defaultOverlays().themes.light.backdrop;
+assert.equal(backdropColor(0,b),'rgb(17, 17, 17)');
+assert.equal(backdropColor(b.end,b),'rgb(255, 255, 255)');
+assert.equal(backdropColor(1,{...b,color:'#ff0000'}),'rgb(255, 0, 0)');
+assert.equal(backdropColor((b.start+b.end)/2,b),'rgb(136, 136, 136)');
+assert(!validOverlays({...defaultOverlays(),themes:{...defaultOverlays().themes,light:{strength:1,start:.5,backdrop:{start:.8,end:.2,color:'#ffffff'}}}}));
+const migrated=hydrateOverlays({version:1,target:'hero-edge-scroll-overlay',themes:{dark:{strength:8,start:.1},light:{strength:4,start:.2}}});
+assert.equal(migrated.themes.dark.strength,8);assert.equal(migrated.themes.light.strength,4);assert.deepEqual(migrated.themes.light.backdrop,b);assert(validOverlays(migrated));
+console.log('PASS: backdrop starts dark, interpolates to selected color, validates timing, and preserves existing drafts');

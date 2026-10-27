@@ -220,3 +220,5 @@ Fog remains active throughout scrolling. The existing theme-aware CSS edge gradi
 In admin, open **Tune edge / scroll gradients** (`/?debugSplatOverlay`). Dark and light each have independent strength (0–100×) and scroll start (0–97% of the hero cycle). Strength increases gradient stop opacity rather than relying on CSS opacity above 1. The gradient finishes fading in at 98%. Switch preview theme, scroll normally or use the scroll-position slider, compare original overlays, and copy both themes as JSON. Drafts persist only in the browser; public overlays are unchanged. Fog stays active under the overlay.
 
 Run `node tests/splat-overlay.test.mjs` and `node tests/site-settings.test.mjs`.
+
+The same private viewer includes **Light theme backdrop** start/end sliders and a final color picker (white by default). The backdrop interpolates from #111111 with smooth easing, affects only light theme, and is included in version 2 copied settings. Existing version 1 theme drafts migrate without losing strength or timing.
