@@ -140,6 +140,23 @@ stored independently of animation controls and injected into every portfolio pag
 The poster remains hidden after both the reveal and camera movement finish.
 Higher angles can expose stretched or sparse peripheral geometry in this capture.
 
+### Private distance cutoff preview
+
+Choose **Tune splat distance cutoff** in admin to open `/?debugSplatCutoff`.
+The authenticated preview defaults to a 20-unit sphere around the body point
+with a 1.5-unit soft edge. Use the live logarithmic distance slider (1–300 units),
+exact numeric distance, and edge-softness control (0–5 units). Both desktop and
+mobile use the same model-space distances, independent of camera position.
+**Show full scene** bypasses cutoff for comparison; **Replay intro** reloads the
+animation with the current draft. The shader multiplies the existing reveal
+opacity and updates uniforms without recompilation, including while idle.
+
+**Copy cutoff settings** exports versioned JSON with the asset, 3D distance
+metric, model-space origin, radius, and feather. The comparison toggle does not
+alter the exported choice. A manual-copy field is available if clipboard access
+fails. Drafts stay in this browser; the public scene and original file remain
+unchanged. The debug page and all its assets require login and are uncached.
+
 ### Hero splat color grading
 
 Choose **Color grade the hero splat** in admin to open `/?debugSplatColor`.
@@ -183,4 +200,5 @@ node tests/admin-settings.test.cjs
 node tests/splat-color.test.mjs
 node tests/splat-reveal.test.mjs
 node tests/splat-camera-intro.test.mjs
+node tests/splat-cutoff.test.mjs
 ```

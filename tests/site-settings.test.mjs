@@ -59,7 +59,7 @@ const page=(path='/')=>middleware({env,request:new Request('https://portfolio.te
 let response=await page();assert.equal(JSON.parse(await response.text())[0][1],'0.25');assert.equal(response.headers.get('Cache-Control'),'no-store');
 assert((await (await page()).text()).includes('data-hero-camera-duration'),'camera duration reaches public pages with particles disabled');
 assert((await (await page()).text()).includes('data-hero-reveal-duration'),'cylinder duration reaches public pages independently');
-assert((await (await page()).text()).includes('20261027-continuous-parallax-5'),'public script reference stays current');
+assert((await (await page()).text()).includes('20261027-cutoff-preview-7'),'public script reference stays current');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});
@@ -68,6 +68,18 @@ assert.equal((await page('/ascii-physics.js')).status,200);
 await call('settings','POST',{asciiEnabled:false},cookie);assert.equal((await page('/ascii-physics.js')).status,404);assert(!/ascii/i.test(await (await page()).text()));
 const authenticatedPage=(path)=>middleware({env,request:new Request('https://portfolio.test'+path,{headers:{Cookie:cookie}}),next:async()=>new Response(html,{headers:{'Content-Type':'text/html'}})});
 assert.equal((await page('/?debugSplatColor')).status,302);
+assert.equal((await page('/?debugSplatCutoff')).status,302);
+for(const path of ['/splat-cutoff-debug.js','/splat-cutoff-debug.css','/splat-cutoff-core.mjs']) {
+ assert.equal((await page(path)).status,404,'cutoff tools require authentication');
+ const response=await authenticatedPage(path);assert.equal(response.status,200);
+ assert.equal(response.headers.get('Cache-Control'),'no-store');
+}
+const cutoffResponse=await authenticatedPage('/?debugSplatCutoff');
+assert.equal(cutoffResponse.headers.get('X-Robots-Tag'),'noindex, nofollow');
+const cutoffMarkup=await cutoffResponse.text();assert(cutoffMarkup.includes('splat-cutoff-debug.js'));
+assert(!cutoffMarkup.includes('ascii-physics.js'),'distance debug does not enable unrelated effects');
+assert(!(await (await authenticatedPage('/')).text()).includes('splat-cutoff-debug'),'cutoff never runs on a normal public visit');
+
 for (const path of ['/splat-color-debug.js', '/splat-color-debug.css']) {
   assert.equal((await page(path)).status,404,'grading assets require authentication');
   const asset = await authenticatedPage(path);

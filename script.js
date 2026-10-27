@@ -2111,6 +2111,11 @@ const initSplat = async () => {
     });
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
     else installSplatColorGrade(viewer);
+    window.__splatCutoffDebug?.attach(viewer, {
+      origin: HERO_REVEAL.bodyOrigin,
+      position: SPLAT_CONFIG.splatPosition,
+      scale: splatScale,
+    });
 
     {
       const existingTree = splatMesh.getSplatTree?.();
