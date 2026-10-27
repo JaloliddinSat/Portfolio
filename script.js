@@ -610,6 +610,8 @@ const setStatus = (state, message = "") => {
     splatStage.dataset.loadState = state;
     splatStage.setAttribute("aria-busy", String(state === "loading"));
   }
+  // The loader lives at body level (above the header), so it reads the state here.
+  document.documentElement.dataset.splatLoadState = state;
 
   if (splatError) {
     splatError.hidden = state !== "error";
@@ -618,16 +620,54 @@ const setStatus = (state, message = "") => {
     }
   }
 
-  // Release the hero intro as soon as the scene has settled so the copy and the
-  // splat arrive as one composition. index.html caps the wait, and releases on
-  // error too, so a scene that never resolves cannot strand the copy.
-  if (state === "ready" || state === "error") {
-    document.documentElement.classList.add("hero-intro-play");
-  }
+  // The copy normally enters once the colour reveal is 60% grown (see
+  // installHeroReveal's onProgress). An error releases it immediately so a
+  // scene that never resolves cannot strand the copy behind the loader.
   if (state === "error") {
+    playHeroIntro();
     document.documentElement.classList.remove("splat-reveal-pending");
     if (splatStage) delete splatStage.dataset.revealState;
   }
+};
+
+const playHeroIntro = () => {
+  document.documentElement.classList.add("hero-intro-play");
+};
+
+// If the download is still running after this long, drop the full-screen
+// loader back to its corner indicator and let the copy enter, so a slow
+// connection sees the page rather than a blank screen. Only visible time
+// counts: the GPU warm-up waits on animation frames, which a background tab
+// never gets, and that should not read as a slow connection.
+const SLOW_SPLAT_LOAD_MS = 20000;
+
+const armSlowLoadWatchdog = () => {
+  let remainingMs = SLOW_SPLAT_LOAD_MS;
+  let startedAt = null;
+  let timer = null;
+
+  const markSlow = () => {
+    timer = null;
+    document.removeEventListener("visibilitychange", onVisibility);
+    if (splatStage?.dataset.loadState !== "loading") return;
+    document.documentElement.classList.add("splat-load-slow");
+    playHeroIntro();
+  };
+  const resume = () => {
+    if (timer !== null || document.hidden) return;
+    startedAt = performance.now();
+    timer = setTimeout(markSlow, remainingMs);
+  };
+  const pause = () => {
+    if (timer === null) return;
+    clearTimeout(timer);
+    timer = null;
+    remainingMs = Math.max(0, remainingMs - (performance.now() - startedAt));
+  };
+  const onVisibility = () => (document.hidden ? pause() : resume());
+
+  document.addEventListener("visibilitychange", onVisibility);
+  resume();
 };
 
 const appendSplatVersion = (url) => {
@@ -1982,6 +2022,7 @@ const initSplat = async () => {
   }
 
   setStatus("loading");
+  armSlowLoadWatchdog();
   const reducedRevealMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || DEBUG_SPLAT;
   if (!reducedRevealMotion) {
     document.documentElement.classList.add("splat-reveal-pending");
@@ -1997,7 +2038,7 @@ const initSplat = async () => {
     const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }, { createAdaptiveResolution }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=9'),
+      import('./splat-reveal.mjs?v=10'),
       import('./splat-camera-intro.mjs?v=4'),
       import('./splat-cutoff-core.mjs?v=2'),
       import('./splat-fog-core.mjs?v=4'),
@@ -2170,7 +2211,12 @@ const initSplat = async () => {
       reducedMotion: reducedRevealMotion,
       onState(state) {
         splatStage.dataset.revealState = state;
+        // Covers reduced motion (complete at start) and a scroll that cuts the reveal short.
+        if (state === "complete") playHeroIntro();
         if (state === "complete" && !heroCameraIntro.active) document.documentElement.classList.remove("splat-reveal-pending");
+      },
+      onProgress(progress) {
+        if (progress >= HERO_REVEAL.copyRevealAt) playHeroIntro();
       },
     });
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);

@@ -901,27 +901,73 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
   display: block;
 }
 
+/* The loader is a body-level element (above the fixed header) and reads the
+   splat load state mirrored onto <html> by script.js. The hero is sticky and
+   fills the viewport while it loads, so a viewport-fixed corner lands in the
+   same place the stage-relative one did. */
 .splat-loader {
-  position: absolute;
+  position: fixed;
   right: clamp(24px, 6vw, 96px);
   bottom: clamp(28px, 7vh, 72px);
-  z-index: 3;
+  z-index: 9;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: #c7c7c7;
   opacity: 1;
+  pointer-events: none;
   transition:
     opacity 360ms ease,
     visibility 360ms step-start;
 }
 
-.splat-stage:not([data-load-state="loading"]) .splat-loader {
+html:not([data-splat-load-state="loading"]) .splat-loader {
   visibility: hidden;
   opacity: 0;
   transition:
     opacity 360ms ease,
     visibility 0s linear 360ms;
+}
+
+/* Loading screen. While the intro is armed the loader covers the viewport as a
+   blank page-coloured screen with the label centred; the hero copy and the
+   point cloud only appear once it fades. The corner indicator above remains
+   the fallback for reduced motion, a load that runs long (.splat-load-slow),
+   and JS being unavailable, since the arming class is only set by script. */
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  opacity: 1;
+  background: var(--bg);
+  transform: none;
+  transition: none;
+}
+
+html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="loading"]) .splat-loader {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 520ms ease,
+    visibility 0s linear 520ms;
+}
+
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-spinner {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+  border-color: color-mix(in srgb, currentColor 36%, transparent);
+  border-top-color: currentColor;
+}
+
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .splat-loader-spinner {

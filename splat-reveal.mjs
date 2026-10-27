@@ -10,6 +10,8 @@ export const HERO_REVEAL = {
   pointRadius: 2,
   // Points the hex front passes over shrink to this fraction instead of vanishing.
   pointShrink: 0.45,
+  // The hero copy starts its own entrance once the coloured reveal reaches this.
+  copyRevealAt: 0.6,
 };
 // The ghost's opacity follows the gap between the two fronts: nearly invisible
 // while they overlap near the body, reaching its ceiling once the hex is a full
@@ -124,7 +126,7 @@ export function patchRevealFragment(shader) {
     }
     ` + anchor);
 }
-export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, durationMs = HERO_REVEAL.durationMs, lightTheme = false, reducedMotion = false, onState = () => {} } = {}) {
+export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, durationMs = HERO_REVEAL.durationMs, lightTheme = false, reducedMotion = false, onState = () => {}, onProgress = () => {} } = {}) {
   durationMs = Number.isFinite(durationMs) ? Math.max(500, Math.min(10000, durationMs)) : HERO_REVEAL.durationMs;
   const material = viewer.getSplatMesh().material;
   if (!reducedMotion) {
@@ -155,6 +157,7 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, dur
       const done = progress >= 1 || scrollProgress >= 0.08;
       setRevealProgress(material.uniforms, done ? 1 : progress);
       viewer.forceRenderNextFrame();
+      onProgress(done ? 1 : progress);
       if (done) { complete = true; onState('complete'); }
       return true; // Include the final frame, even when the camera is stationary.
     },

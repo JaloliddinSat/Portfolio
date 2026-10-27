@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-splat-load-state="loading">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -38,10 +38,11 @@
       rel="stylesheet"
     />
     <script>
-      // Arms the hero intro before first paint. Nothing in the copy is hidden by
-      // CSS alone, so a browser with JS off just renders the hero normally, and
-      // the timer below reveals it even if script.js never loads. script.js
-      // fires the same class earlier, as soon as the splat resolves.
+      // Arms the hero intro and the full-screen loader before first paint.
+      // Nothing in the copy is hidden by CSS alone, so a browser with JS off
+      // just renders the hero normally. script.js plays the copy once the splat
+      // reveal is 60% grown; the timer below only covers the main module never
+      // initialising, restoring the poster and releasing the copy.
       (function () {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
@@ -50,19 +51,16 @@
         var root = document.documentElement;
 
         root.classList.add("splat-reveal-pending");
-        window.setTimeout(function () {
-          // Restore the poster if the main module fails before initialization.
-          if (!document.querySelector("#splat-stage")?.dataset.revealState) {
-            root.classList.remove("splat-reveal-pending");
-          }
-        }, 15000);
         root.classList.add("hero-intro");
         window.setTimeout(function () {
-          root.classList.add("hero-intro-play");
-        }, 2000);
+          if (!document.querySelector("#splat-stage")?.dataset.revealState) {
+            root.classList.remove("splat-reveal-pending");
+            root.classList.add("hero-intro-play");
+          }
+        }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-render-tier2-2" />
+    <link rel="stylesheet" href="styles.css?v=20261027-loading-screen" />
     <script type="importmap">
       {
         "imports": {
@@ -72,6 +70,17 @@
     </script>
   </head>
   <body>
+    <!-- Sits at body level so the loading screen paints above the header and
+         hero copy; script.js mirrors the splat load state onto <html>. -->
+    <div
+      id="splat-loader"
+      class="splat-loader"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="splat-loader-spinner" aria-hidden="true"></span>
+      <span class="splat-loader-label">Loading 3D scene</span>
+    </div>
     <header class="site-header" id="site-navigation" aria-hidden="true">
       <div class="header-controls">
         <button
@@ -188,15 +197,6 @@
                 data-splat-src="/splats/Fairview.ksplat"
                 data-local-splat-src="/splats/Fairview.ksplat"
               ></div>
-              <div
-                id="splat-loader"
-                class="splat-loader"
-                role="status"
-                aria-live="polite"
-              >
-                <span class="splat-loader-spinner" aria-hidden="true"></span>
-                <span class="splat-loader-label">Loading 3D scene</span>
-              </div>
               <p id="splat-error" class="splat-error" hidden>
                 The splat could not be loaded.
               </p>
@@ -906,6 +906,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20261027-hex-reveal-4"></script>
+    <script type="module" src="script.js?v=20261027-loading-screen"></script>
   </body>
 </html>

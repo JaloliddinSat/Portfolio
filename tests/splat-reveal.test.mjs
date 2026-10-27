@@ -63,6 +63,15 @@ assert.equal(reduced.reveal.update(1100),false);
 assert.deepEqual(reduced.states,['complete']);
 const backgrounded=fixture();backgrounded.reveal.start(1000);backgrounded.reveal.update(100000);
 assert.equal(backgrounded.reveal.active,false,'returning from a hidden tab finishes elapsed animation');
+{
+  const progressed=[];const material={vertexShader:source,fragmentShader:fragment,uniforms:{}};
+  const reveal=installHeroReveal({getSplatMesh:()=>({material}),forceRenderNextFrame(){}},{onProgress:p=>progressed.push(p)});
+  reveal.start(0);for(const t of [600,1500,1800,2400,3000]) reveal.update(t);
+  assert.deepEqual(progressed,[.2,.5,.6,.8,1],'progress is reported every frame so the copy can enter at 60%');
+  assert.equal(HERO_REVEAL.copyRevealAt,.6);
+  const cut=[];const cutReveal=installHeroReveal({getSplatMesh:()=>({material:{vertexShader:source,fragmentShader:fragment,uniforms:{}}}),forceRenderNextFrame(){}},{onProgress:p=>cut.push(p)});
+  cutReveal.start(0);cutReveal.update(300,.5);assert.deepEqual(cut,[1],'a scroll that cuts the reveal short reports completion');
+}
 console.log('PASS: organic reveal shader, shared 3D body origin and scene transforms, readiness, stationary rendering, completion, immediate scrolling, reduced motion and hidden-tab recovery');
 
 assert(revealRadiusAt(.15) < revealRadiusAt(.5));
@@ -93,6 +102,12 @@ assert.equal(warm.filter(x=>x==='yield').length,3,'GPU preparation yields withou
 const script = await (await import('node:fs/promises')).readFile('script.js','utf8');
 assert(script.includes('progressiveLoad: false'),'both devices finish the download before revealing');
 assert(script.indexOf('await prepareHeroReveal(viewer)')<script.indexOf('heroReveal.start(introStartedAt +'),'start animation after GPU preparation');
+assert(script.includes('if (progress >= HERO_REVEAL.copyRevealAt) playHeroIntro();'),'hero copy enters at 60% of the colour reveal');
+assert(script.includes('if (state === "complete") playHeroIntro();'),'reduced motion and cut-short reveals still release the copy');
+assert(!/state === "ready"[^\n]*hero-intro-play/.test(script),'readiness alone no longer releases the copy');
+const indexHtml = await (await import('node:fs/promises')).readFile('index.html','utf8');
+assert(!/hero-intro-play[\s\S]{0,40}\}, 2000\)/.test(indexHtml),'the 2s inline cap is gone; the loader holds the copy until the reveal');
+assert(indexHtml.includes('root.classList.add("hero-intro-play");\n          }\n        }, 15000);'),'copy is released if the module never initialises');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
 
 for(const durationMs of [500,5700,10000]) {
