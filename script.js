@@ -1997,7 +1997,7 @@ const initSplat = async () => {
     const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }, { createAdaptiveResolution }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=7'),
+      import('./splat-reveal.mjs?v=8'),
       import('./splat-camera-intro.mjs?v=4'),
       import('./splat-cutoff-core.mjs?v=2'),
       import('./splat-fog-core.mjs?v=4'),

@@ -8,16 +8,27 @@ export const HERO_REVEAL = {
   // so it is always ahead of the coloured reveal and lands at 70% of the duration.
   frontFinishAt: 0.7,
   pointRadius: 2,
+  // Points the hex front passes over shrink to this fraction instead of vanishing.
+  pointShrink: 0.45,
 };
+// The ghost's opacity follows the gap between the two fronts: nearly invisible
+// while they overlap near the body, reaching its ceiling once the hex is a full
+// model unit ahead. Fractions of the ghost's base alpha, evaluated per frame.
+export const HERO_REVEAL_GHOST = { minOpacity: 0.05, maxOpacity: 0.25, gapRange: 1 };
 // Light growth edge and ghost tone. Light theme points are dark, so its rim is too.
 export const HERO_REVEAL_RIM = { dark: [0.96, 0.93, 0.86], light: [0.3, 0.36, 0.5] };
 export const revealRadiusAt = progress => 0.1 * (Math.expm1(Math.log1p(HERO_REVEAL.maxRadius / 0.1) * Math.max(0, Math.min(1, progress))));
 export const frontRadiusAt = progress => revealRadiusAt(progress / HERO_REVEAL.frontFinishAt);
-// Both radii are evaluated once per frame here instead of per splat in the shader.
+export const ghostOpacityAt = progress => {
+  const t = Math.max(0, Math.min(1, (frontRadiusAt(progress) - revealRadiusAt(progress)) / HERO_REVEAL_GHOST.gapRange));
+  return HERO_REVEAL_GHOST.minOpacity + (HERO_REVEAL_GHOST.maxOpacity - HERO_REVEAL_GHOST.minOpacity) * t * t * (3 - 2 * t);
+};
+// Radii and ghost opacity are evaluated once per frame here instead of per splat.
 export function setRevealProgress(uniforms, progress) {
   if (uniforms.heroRevealProgress) uniforms.heroRevealProgress.value = progress;
   if (uniforms.heroRevealRadius) uniforms.heroRevealRadius.value = revealRadiusAt(progress);
   if (uniforms.heroRevealFrontRadius) uniforms.heroRevealFrontRadius.value = frontRadiusAt(progress);
+  if (uniforms.heroRevealGhostOpacity) uniforms.heroRevealGhostOpacity.value = ghostOpacityAt(progress);
 }
 export const REVEAL_GLSL = `
 uniform float heroRevealProgress;
@@ -72,25 +83,30 @@ export function patchRevealShader(shader) {
   if (!shader.includes(anchor) || !shader.includes('vec3 splatCenter')) {
     throw new Error('This splat shader does not support the hero reveal.');
   }
-  return REVEAL_GLSL + '\nvarying float vHeroRevealAmount;\nvarying vec2 vHeroRevealFx;\nuniform float heroRevealPixelRatio;\n' + shader.replace(anchor, `
+  return REVEAL_GLSL + '\nvarying float vHeroRevealAmount;\nvarying vec2 vHeroRevealFx;\nuniform float heroRevealPixelRatio;\nuniform float heroRevealGhostOpacity;\n' + shader.replace(anchor, `
     vec3 revealField = heroRevealMask(splatCenter);
     float revealAmount = revealField.x;
+    // A stable subset of scene points becomes small, round screen-space dots.
+    // Morph the same draw into full splats instead of rendering a second scene.
+    float keepPoint = step(0.90, fract(float(splatIndex) * 0.61803398875));
+    // The hex ghost is made of the splats that are not points, so the point
+    // cloud survives the hex passing over it and only shrinks there.
+    float ghostZone = revealField.z * (1.0 - keepPoint);
     vHeroRevealAmount = revealAmount;
-    vHeroRevealFx = revealField.yz;
+    vHeroRevealFx = vec2(revealField.y, ghostZone);
     if (revealAmount < 1.0) {
-      // A stable subset of scene points becomes small, round screen-space dots.
-      // Morph the same draw into full splats instead of rendering a second scene.
-      float keepPoint = step(0.90, fract(float(splatIndex) * 0.61803398875));
-      float pointRadius = ${HERO_REVEAL.pointRadius.toFixed(1)} * heroRevealPixelRatio;
-      // Inside the hexagonal front every splat already has its full shape, drawn
-      // as a translucent ghost that the coloured reveal then fills in.
-      float shapeAmount = max(revealAmount, revealField.z);
+      float pointRadius = ${HERO_REVEAL.pointRadius.toFixed(1)} * heroRevealPixelRatio
+        * mix(1.0, ${HERO_REVEAL.pointShrink.toFixed(2)}, revealField.z);
+      // Inside the hexagonal front the ghost splats already have their full
+      // shape, drawn translucently until the coloured reveal fills them in.
+      float shapeAmount = max(revealAmount, ghostZone);
       basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, shapeAmount);
       basisVector2 = mix(vec2(0.0, pointRadius), basisVector2, shapeAmount);
-      // Dozens of splats overlap per pixel on the body, so the ghost stays very
-      // faint: it should register as a shape without competing with the colour.
-      float ghostAlpha = mix(keepPoint * 0.65, 0.018 + 0.06 * revealField.y, revealField.z);
-      vColor.a *= mix(ghostAlpha, 1.0, revealAmount);
+      // Dozens of splats overlap per pixel on the body, so the ghost stays faint;
+      // heroRevealGhostOpacity scales it by how far ahead of the colour it is.
+      float ghostAlpha = (0.06 + 0.2 * revealField.y) * heroRevealGhostOpacity;
+      float unrevealedAlpha = mix(keepPoint * 0.65, ghostAlpha, ghostZone);
+      vColor.a *= mix(unrevealedAlpha, 1.0, revealAmount);
     }
     vColor.a = min(1.0, vColor.a * (1.0 + revealField.y * 0.3));
     ` + anchor);
@@ -117,6 +133,7 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, dur
     material.uniforms.heroRevealProgress = { value: 0 };
     material.uniforms.heroRevealRadius = { value: 0 };
     material.uniforms.heroRevealFrontRadius = { value: 0 };
+    material.uniforms.heroRevealGhostOpacity = { value: HERO_REVEAL_GHOST.minOpacity };
     material.uniforms.heroRevealOrigin = { value: HERO_REVEAL.bodyOrigin.map((v, i) => v * scale + position[i]) };
     material.uniforms.heroRevealScale = { value: scale };
     material.uniforms.heroRevealPixelRatio = { value: viewer.devicePixelRatio || 1 };
