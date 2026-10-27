@@ -4403,6 +4403,11 @@ const initHeroScrollTransition = () => {
 
   const COPY_FADE_START = 0.05;
   const COPY_FADE_END = 0.16;
+  // Light-theme white wash: starts appearing near the end of the hero scroll
+  // and reaches 90% at the very end.
+  const LIGHT_WASH_START = 0.78;
+  const LIGHT_WASH_END = 0.98;
+  const LIGHT_WASH_MAX = 0.9;
 
   const smoothstep = (value) => {
     const t = Math.min(1, Math.max(0, value));
@@ -4417,6 +4422,7 @@ const initHeroScrollTransition = () => {
   let appliedCopyOpacity = null;
   let appliedIntroOverlay = null;
   let appliedCollapseOverlay = null;
+  let appliedLightWash = null;
   let appliedPointerEvents = null;
 
   // These layers all sit on top of the splat, so they follow the same smoothed
@@ -4454,6 +4460,17 @@ const initHeroScrollTransition = () => {
     if (collapseOverlay !== appliedCollapseOverlay) {
       appliedCollapseOverlay = collapseOverlay;
       hero.style.setProperty("--hero-collapse-overlay", String(collapseOverlay));
+    }
+
+    // The wash element is display:none in dark mode, so the var is harmless
+    // there; writing it unconditionally avoids a theme-dependent branch and a
+    // stale value if the theme flips mid-scroll.
+    const lightWash =
+      LIGHT_WASH_MAX * fadeBetween(smoothed, LIGHT_WASH_START, LIGHT_WASH_END);
+
+    if (lightWash !== appliedLightWash) {
+      appliedLightWash = lightWash;
+      hero.style.setProperty("--hero-light-wash", String(lightWash));
     }
 
     if (pointerEvents !== appliedPointerEvents) {

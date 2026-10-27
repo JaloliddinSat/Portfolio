@@ -855,6 +855,25 @@ html[data-theme="light"] .splat-stage {
   background-color: var(--overlay-backdrop, #111111);
 }
 
+/* Light theme only: a flat white wash that rises to 90% over the last stretch
+   of the hero scroll. Solid color + opacity-only animation on its own
+   compositor layer, so each frame is a layer-opacity change and never a paint.
+   It stays display:none in dark mode so it costs nothing there. */
+.splat-light-wash {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: #ffffff;
+  opacity: var(--hero-light-wash, 0);
+  will-change: opacity;
+}
+
+html[data-theme="light"] .splat-light-wash {
+  display: block;
+}
+
 .splat-viewer {
   --hero-depth-tint: 0;
   position: absolute;
