@@ -1,0 +1,40 @@
+#splat-overlay-panel {
+  position: fixed; z-index: 10000; top: 80px; right: 18px;
+  width: 350px; max-height: calc(100dvh - 98px); overflow-y: auto;
+  padding: 18px; border: 1px solid #414141; border-radius: 16px;
+  background: #181818; color: #f5f5f5; box-shadow: 0 12px 45px #0006;
+  font: 13px/1.5 Inter, system-ui, sans-serif; color-scheme: dark;
+  overscroll-behavior: contain;
+}
+#splat-overlay-panel * { box-sizing: border-box; }
+#splat-overlay-panel [hidden] { display: none !important; }
+#splat-overlay-panel h2 { margin: 6px 0 10px; font: 700 23px/1.2 Inter, system-ui, sans-serif; letter-spacing: -.04em; }
+#splat-overlay-panel .overlay-top { position: sticky; top: -18px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; background: #181818; }
+#splat-overlay-panel a { color: #ddd; text-decoration: none; }
+#splat-overlay-panel a:hover { text-decoration: underline; }
+#splat-overlay-panel button, #splat-overlay-panel input[type="number"] { font: inherit; color: #eee; background: #252525; border: 1px solid #505050; border-radius: 7px; padding: 7px; }
+#splat-overlay-panel button { cursor: pointer; }
+#splat-overlay-panel button:hover { background: #363636; }
+#splat-overlay-panel :focus-visible { outline: 2px solid #a7d5ff; outline-offset: 3px; }
+#splat-overlay-panel .overlay-eyebrow { margin: 18px 0 0; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #bbb; }
+#splat-overlay-panel .overlay-note { font-size: 11px; color: #bdbdbd; line-height: 1.5; margin: 8px 0 16px; }
+#splat-overlay-panel .overlay-label { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
+#splat-overlay-panel input[type="range"] { display: block; width: 100%; margin: 16px 0 8px; accent-color: #eee; }
+#splat-overlay-panel .overlay-scale { display: flex; justify-content: space-between; color: #aaa; font-size: 10px; margin-bottom: 14px; }
+#splat-overlay-panel .overlay-exact { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#splat-overlay-panel input[type="number"] { width: 100px; }
+#splat-overlay-panel .overlay-compare { display: flex; align-items: center; gap: 8px; margin: 18px 0; }
+#splat-overlay-panel .overlay-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+#splat-overlay-panel .overlay-actions button { flex: 1; }
+#splat-overlay-panel .overlay-copy { width: 100%; background: #eee; color: #171717; font-weight: 700; }
+#splat-overlay-panel .overlay-copy:hover { background: #ccc; }
+#splat-overlay-panel [data-status] { font-size: 11px; color: #c2d7c7; min-height: 32px; }
+#splat-overlay-panel summary { cursor: pointer; }
+#splat-overlay-panel textarea { width: 100%; min-height: 180px; background: #111; color: #ddd; border: 1px solid #444; padding: 10px; font: 11px/1.5 monospace; resize: vertical; }
+@media (max-width: 700px) { #splat-overlay-panel { top: auto; bottom: 12px; right: 12px; width: min(350px, calc(100vw - 24px)); max-height: 55dvh; } }
+
+#splat-overlay-panel input[type="color"] { width:100%; height:36px; margin-top:10px; background:#252525; border:1px solid #505050; border-radius:7px; }
+
+#splat-overlay-panel select {background:#252525;color:#eee;font:inherit;padding:6px;border:1px solid #555;border-radius:6px;}
+#splat-overlay-panel .overlay-theme {border-top:1px solid #444;margin-top:18px;padding-top:6px;}
+#splat-overlay-panel h3 {margin:10px 0 0;}

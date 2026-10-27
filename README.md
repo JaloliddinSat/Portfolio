@@ -214,3 +214,9 @@ Run `node tests/splat-fog.test.mjs` to verify distance falloff, shader compositi
 The public hero now also uses the approved black distance fog: start 1.1, falloff 2.2, darkening 0.47, blur 4.2 px, fogginess 0.52. The shared renderer applies this on desktop and mobile before shader warmup. Studio drafts and comparisons remain private.
 
 Fog remains active throughout scrolling. The existing theme-aware CSS edge gradient overlays the fogged splat; scrolling never bypasses the chosen fog or blur. This uses the existing single scene render.
+
+### Private edge / scroll gradient preview
+
+In admin, open **Tune edge / scroll gradients** (`/?debugSplatOverlay`). Dark and light each have independent strength (0–100×) and scroll start (0–97% of the hero cycle). Strength increases gradient stop opacity rather than relying on CSS opacity above 1. The gradient finishes fading in at 98%. Switch preview theme, scroll normally or use the scroll-position slider, compare original overlays, and copy both themes as JSON. Drafts persist only in the browser; public overlays are unchanged. Fog stays active under the overlay.
+
+Run `node tests/splat-overlay.test.mjs` and `node tests/site-settings.test.mjs`.

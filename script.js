@@ -4154,6 +4154,7 @@ const initHeroScrollTransition = () => {
   const fadeBetween = (progress, start, end) =>
     smoothstep((progress - start) / (end - start));
 
+  let lastOverlayProgress = getScrollProgress();
   let appliedCopyOpacity = null;
   let appliedIntroOverlay = null;
   let appliedCollapseOverlay = null;
@@ -4164,7 +4165,9 @@ const initHeroScrollTransition = () => {
   const update = ({ smoothed }) => {
     const copyOpacity = 1 - fadeBetween(smoothed, COPY_FADE_START, COPY_FADE_END);
     const introOverlay = 1 - fadeBetween(smoothed, 0.08, heroVignetteFadeEnd);
-    const collapseOverlay = fadeBetween(smoothed, 0.5, 0.98);
+    lastOverlayProgress = smoothed;
+    const defaultCollapseOverlay = fadeBetween(smoothed, 0.5, 0.98);
+    const collapseOverlay = window.__splatOverlayDebug?.evaluate({ smoothed, collapseOverlay: defaultCollapseOverlay }) ?? defaultCollapseOverlay;
     const pointerEvents = copyOpacity > 0.4 ? "auto" : "none";
 
     // Each of these vars feeds a full-viewport gradient, so skipping unchanged
@@ -4197,6 +4200,7 @@ const initHeroScrollTransition = () => {
     }
   };
 
+  window.__splatOverlayDebug?.attach({ refresh: () => update({ smoothed: lastOverlayProgress }) });
   heroFrameDriver.subscribe(update, 10);
   update({ smoothed: getScrollProgress() });
 };
