@@ -5,6 +5,7 @@ import {defaultCutoff,patchCutoffShader} from '../splat-cutoff-core.mjs';
 import {patchRevealShader,patchRevealFragment} from '../splat-reveal.mjs';
 import {patchGradeShader} from '../splat-color-core.mjs';
 const config=defaultFog();
+assert.deepEqual(config,{version:1,target:'hero',asset:'/splats/Fairview.ksplat',pipeline:'warm-film -> distance-fog-v1',metric:'3d-distance',originSpace:'model',origin:[-.24,-.06,-.05],cutoff:{radius:10,feather:0},start:1.1,falloff:2.2,darkening:.47,blur:4.2,fogginess:.52,color:'#000000'},'public fog exactly matches the supplied settings');
 assert(validFog(JSON.parse(JSON.stringify(config))));
 for(const bad of [{start:-1},{falloff:0},{blur:13},{darkening:1.1},{fogginess:NaN},{color:'red'},{origin:[0,0,0]},{cutoff:{radius:20,feather:1.5}},{metric:'camera-depth'}]) assert(!validFog({...config,...bad}));
 assert.equal(fogAmountAtDistance(1,2,4),0);
@@ -29,6 +30,8 @@ for(const scale of [.75,.75*.73]) {
  const viewer={getSplatMesh:()=>({material}),renderer:{getPixelRatio:()=>2},forceRenderNextFrame(){},render(){renders++;}};
  const apply=installDistanceFog(viewer,config,{position:[-1.65,.87,-.71],scale});
  assert.deepEqual(material.uniforms.studioFogOrigin.value,config.origin.map((v,i)=>v*scale+[-1.65,.87,-.71][i]));
+ assert.equal(material.uniforms.studioFogStart.value,1.1);assert.equal(material.uniforms.studioFogFalloff.value,2.2);
+ assert.equal(material.uniforms.studioFogBlur.value,4.2);assert.equal(material.uniforms.studioFogDarkening.value,.47);assert.equal(material.uniforms.studioFogDensity.value,.52);assert.deepEqual(material.uniforms.studioFogColor.value,[0,0,0]);
  const originalVertex=material.vertexShader, originalFragment=material.fragmentShader;
  apply({...config,start:3,falloff:2,blur:8,darkening:.8,fogginess:.6,color:'#ff0000'});
  assert.equal(material.uniforms.studioFogStart.value,3);assert.equal(material.uniforms.studioFogFalloff.value,2);
@@ -41,5 +44,6 @@ for(const scale of [.75,.75*.73]) {
 }
 assert.equal(defaultCutoff().radius,10);assert.equal(defaultCutoff().feather,0);
 const script=await readFile('script.js','utf8');assert(script.includes('else installDistanceCutoff(viewer, defaultCutoff(), distanceContext)'),'approved cutoff is public');
-assert(script.includes('window.__splatFogDebug?.attach'),'fog remains private');
+assert(script.includes('else installDistanceFog(viewer, defaultFog(), distanceContext)'),'approved fog is installed publicly');
+assert(script.indexOf('else installDistanceFog') < script.indexOf('await prepareHeroReveal'),'fog is included in hidden shader warmup');
 console.log('PASS: fog export/validation, distance falloff, shader composition, compensated blur, both scene scales, idle rendering, bypass and approved public cutoff');

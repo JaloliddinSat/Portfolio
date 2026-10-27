@@ -1,9 +1,9 @@
-// Private studio only. Distances remain stable as the camera swoops and parallaxes.
+// Approved hero fog, shared with the private studio. Distances stay stable as the camera moves.
 export const defaultFog = () => ({
   version: 1, target: 'hero', asset: '/splats/Fairview.ksplat',
   pipeline: 'warm-film -> distance-fog-v1', metric: '3d-distance', originSpace: 'model',
   origin: [-.24, -.06, -.05], cutoff: { radius: 10, feather: 0 },
-  start: 2, falloff: 4, darkening: .35, blur: 3, fogginess: .25, color: '#a4acb5',
+  start: 1.1, falloff: 2.2, darkening: .47, blur: 4.2, fogginess: .52, color: '#000000',
 });
 export const FOG_CONTROLS = [
   ['start', 'Start distance', 0, 10, .1, ' units'],

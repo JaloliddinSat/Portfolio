@@ -1,4 +1,4 @@
-import { defaultFog, validFog, FOG_CONTROLS, installDistanceFog } from './splat-fog-core.mjs';
+import { defaultFog, validFog, FOG_CONTROLS, installDistanceFog } from './splat-fog-core.mjs?v=2';
 const KEY = 'portfolio-hero-fog-v1';
 let config = defaultFog();
 try { const saved = JSON.parse(localStorage.getItem(KEY)); if (validFog(saved)) config = saved; } catch {}
@@ -21,7 +21,7 @@ function update(save=true) {
   panel.querySelector('[data-export]').value=JSON.stringify(config,null,2);
   applyFog?.(config,bypass);
   if(failure) status(failure);
-  else if(applyFog) status(bypass ? 'Comparing without fog. Your 10-unit cutoff stays active.' : 'Live fog preview. Public fog settings are unchanged.');
+  else if(applyFog) status(bypass ? 'Comparing without fog. Your 10-unit cutoff stays active.' : 'Live fog preview. Public fog settings are unchanged by this preview.');
   if(save) { try { localStorage.setItem(KEY,JSON.stringify(config)); } catch {} }
 }
 function mount() {
@@ -36,7 +36,7 @@ function mount() {
     <label class="fog-compare"><input data-bypass type="checkbox"> Compare without fog</label>
     <div class="fog-actions"><button type="button" data-replay>Replay intro</button><button type="button" data-reset>Reset fog</button></div>
     <button type="button" class="fog-copy" data-copy>Copy fog settings</button><p data-status role="status" aria-live="polite">Waiting for the splat to load…</p>
-    <details><summary>Settings to share</summary><p class="fog-note">Paste these settings into chat. Drafts save only in this browser; public fog remains unchanged.</p><textarea data-export readonly aria-label="Fog settings" spellcheck="false"></textarea></details></div>`;
+    <details><summary>Settings to share</summary><p class="fog-note">Paste these settings into chat. Drafts save only in this browser; public fog remains unchanged by this preview.</p><textarea data-export readonly aria-label="Fog settings" spellcheck="false"></textarea></details></div>`;
   document.body.append(panel);
   for(const [key] of FOG_CONTROLS) panel.querySelector(`[data-control="${key}"]`).addEventListener('input',event=>{config[key]=Number(event.target.value);update();});
   panel.querySelector('[data-color]').addEventListener('input',event=>{config.color=event.target.value;update();});

@@ -210,3 +210,5 @@ After signing in at `/admin/`, open **Tune foreground & background fog** (`/?deb
 The hero now uses the approved 10-unit cutoff with zero feather on desktop and mobile. Fog preview keeps that cutoff active. **Compare without fog** bypasses only fog. **Copy fog settings** exports JSON including the baseline cutoff. Drafts persist locally and Replay intro keeps them; this studio does not save fog to public settings.
 
 Run `node tests/splat-fog.test.mjs` to verify distance falloff, shader composition, blur compensation, and mobile uniform updates.
+
+The public hero now also uses the approved black distance fog: start 1.1, falloff 2.2, darkening 0.47, blur 4.2 px, fogginess 0.52. The shared renderer applies this on desktop and mobile before shader warmup. Studio drafts and comparisons remain private.

@@ -5,7 +5,7 @@ const version = '20261024-half-screen-spawn-1';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const colorAssets = new Set(['/splat-color-debug.js', '/splat-color-debug.css']);
 const cutoffAssets = new Set(['/splat-cutoff-debug.js', '/splat-cutoff-debug.css']);
-const fogAssets = new Set(['/splat-fog-debug.js', '/splat-fog-debug.css', '/splat-fog-core.mjs']);
+const fogAssets = new Set(['/splat-fog-debug.js', '/splat-fog-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;
 
@@ -54,7 +54,7 @@ export async function onRequest(context) {
   const rewriter = new HTMLRewriter()
     .on('head', { element(element) {
       if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=2"></script>', { html: true });
-      if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=1"></script>', { html: true });
+      if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=2"></script>', { html: true });
       if (cutoffDebug) element.append('<link rel="stylesheet" href="/splat-cutoff-debug.css?v=1"><script type="module" src="/splat-cutoff-debug.js?v=2"></script>', { html: true });
     } })
     .on('html', { element(element) {
@@ -65,7 +65,7 @@ export async function onRequest(context) {
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-fog-preview-8');
+      element.setAttribute('src', '/script.js?v=20261027-public-fog-9');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
       element.setAttribute('href', '/styles.css?v=20261027-splat-fallback-6');

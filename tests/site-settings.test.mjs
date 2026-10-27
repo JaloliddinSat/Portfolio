@@ -59,7 +59,7 @@ const page=(path='/')=>middleware({env,request:new Request('https://portfolio.te
 let response=await page();assert.equal(JSON.parse(await response.text())[0][1],'0.25');assert.equal(response.headers.get('Cache-Control'),'no-store');
 assert((await (await page()).text()).includes('data-hero-camera-duration'),'camera duration reaches public pages with particles disabled');
 assert((await (await page()).text()).includes('data-hero-reveal-duration'),'cylinder duration reaches public pages independently');
-assert((await (await page()).text()).includes('20261027-fog-preview-8'),'public script reference stays current');
+assert((await (await page()).text()).includes('20261027-public-fog-9'),'public script reference stays current');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});
@@ -71,7 +71,8 @@ assert.equal((await page('/?debugSplatColor')).status,302);
 assert.equal((await page('/?debugSplatCutoff')).status,302);
 assert.equal((await page('/splat-cutoff-core.mjs')).status,200,'public cutoff runtime remains accessible');
 assert.equal((await page('/?debugSplatFog')).status,302);
-for(const path of ['/splat-fog-debug.js','/splat-fog-debug.css','/splat-fog-core.mjs']) {
+assert.equal((await page('/splat-fog-core.mjs')).status,200,'shared fog runtime is public');
+for(const path of ['/splat-fog-debug.js','/splat-fog-debug.css']) {
  assert.equal((await page(path)).status,404,'fog studio requires authentication');
  const response=await authenticatedPage(path);assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
 }
