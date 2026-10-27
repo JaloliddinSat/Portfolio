@@ -473,6 +473,9 @@ const STEPNOTE_SPLAT_CONFIG = {
 };
 
 const STEPNOTE_SPLAT_DEBUG_STORAGE_KEY = "stepNoteSplatDebugConfig";
+// The product orbit is slow enough that 30 draws/s read as smooth; halving the
+// draw rate halves the GPU time this offscreen-until-scrolled scene costs.
+const STEPNOTE_ORBIT_FPS = 30;
 
 // Production values captured with ?debugWatonomousVideo.
 const WATONOMOUS_VIDEO_CONFIG = {
@@ -976,6 +979,11 @@ const getHeroTrackEndScrollY = () => {
 
 const HERO_FRAME_SMOOTHING_MS = 90;
 const HERO_FRAME_IDLE_HOLD_MS = 250;
+// How long the hero must be motionless before it is redrawn at full resolution.
+const HERO_ADAPTIVE_RESOLUTION_SETTLE_MS = 300;
+// Slack past the configured intro/reveal before idle-stop is allowed regardless
+// of whether the animations and sorter have reported completion.
+const HERO_IDLE_STOP_SAFETY_MS = 1500;
 const HERO_FRAME_EPSILON = 0.00005;
 
 // Every hero effect shares one animation loop. Scroll events only wake the loop;
@@ -1986,13 +1994,14 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }, { defaultFog, installDistanceFog }, { createAdaptiveResolution }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=5'),
       import('./splat-camera-intro.mjs?v=4'),
       import('./splat-cutoff-core.mjs?v=2'),
       import('./splat-fog-core.mjs?v=4'),
+      import('./splat-render-pacing.mjs?v=1'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -2004,12 +2013,21 @@ const initSplat = async () => {
     splatLoadDebug.manualRendering = manualRendering;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
+    // Both modules clamp to 10s; mirror that so the idle-stop ceiling stays bounded.
+    const heroCameraIntroDurationMs = Math.min(
+      10000,
+      Number(document.documentElement.dataset.heroCameraDuration || 3.2) * 1000 || 3200,
+    );
+    const heroRevealDurationMs = Math.min(
+      10000,
+      Number(document.documentElement.dataset.heroRevealDuration || 3) * 1000 || 3000,
+    );
     const heroCameraIntro = createHeroCameraIntro({
       bodyOrigin: HERO_REVEAL.bodyOrigin,
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
       finalPose: SPLAT_CONFIG.cameraStart,
-      durationMs: Number(document.documentElement.dataset.heroCameraDuration || 3.2) * 1000,
+      durationMs: heroCameraIntroDurationMs,
       enabled: !reducedRevealMotion,
     });
     const initialCameraPosition = [...heroCameraIntro.initialPose.position];
@@ -2069,6 +2087,20 @@ const initSplat = async () => {
     splatLoadDebug.effectivePixelRatio = splatPixelRatio;
     recordSplatLoadDebug("pixel-ratio", String(splatPixelRatio));
 
+    // Motion is drawn at 1x and the ceiling returns ~300ms after input settles.
+    // A ?splatPixelRatio override pins the resolution so comparisons stay honest.
+    const heroResolution = createAdaptiveResolution({
+      ceiling: splatPixelRatio,
+      motionRatio: DEBUG_SPLAT_PIXEL_RATIO > 0 ? splatPixelRatio : 1,
+      settleMs: HERO_ADAPTIVE_RESOLUTION_SETTLE_MS,
+      apply(ratio) {
+        applySplatPixelRatio(viewer, ratio);
+        splatLoadDebug.effectivePixelRatio = ratio;
+        recordSplatLoadDebug("pixel-ratio", String(ratio), false);
+      },
+    });
+    window.__heroSplatResolution = heroResolution;
+
     const splatMesh = viewer.getSplatMesh();
     let resolveSplatTreeReady;
     const splatTreeReady = new Promise((resolve) => {
@@ -2122,7 +2154,7 @@ const initSplat = async () => {
     const heroReveal = installHeroReveal(viewer, {
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
-      durationMs: Number(document.documentElement.dataset.heroRevealDuration || 3) * 1000,
+      durationMs: heroRevealDurationMs,
       lightTheme: isLightTheme(),
       reducedMotion: reducedRevealMotion,
       onState(state) {
@@ -2200,7 +2232,8 @@ const initSplat = async () => {
     recordSplatLoadDebug("status-ready");
 
     let renderStopTimer = null;
-    let initialLoadTimer = null;
+    let idleStopEligibilityTimer = null;
+    let resolutionSettleTimer = null;
     let allowIdleStop = false;
     let splatInView = false;
     let pendingManualSort = null;
@@ -2211,11 +2244,42 @@ const initSplat = async () => {
     const pointerTarget = { x: 0, y: 0 };
     const pointerPosition = { x: 0, y: 0 };
 
-    const setPointerTarget = (x, y) => {
-      pointerTarget.x = Math.min(1, Math.max(-1, x));
-      pointerTarget.y = Math.min(1, Math.max(-1, y));
+    // Restores the sharp ceiling once motion has settled, then draws one frame
+    // so the sharp image is what remains on screen. One timer per motion burst:
+    // it re-arms for the remainder rather than resetting on every pointer event.
+    const scheduleResolutionSettle = () => {
+      if (resolutionSettleTimer !== null || !heroResolution.inMotion) {
+        return;
+      }
 
-      if (splatInView && !document.hidden) {
+      resolutionSettleTimer = setTimeout(() => {
+        resolutionSettleTimer = null;
+
+        if (heroResolution.settle(performance.now())) {
+          if (splatInView && !document.hidden) {
+            heroFrameDriver.request({ force: true });
+          }
+        } else if (heroResolution.inMotion) {
+          scheduleResolutionSettle();
+        }
+      }, Math.max(16, heroResolution.remainingMs(performance.now())));
+    };
+
+    const noteHeroMotion = () => {
+      heroResolution.noteMotion(performance.now());
+      scheduleResolutionSettle();
+    };
+
+    const setPointerTarget = (x, y) => {
+      const nextX = Math.min(1, Math.max(-1, x));
+      const nextY = Math.min(1, Math.max(-1, y));
+      const changed = nextX !== pointerTarget.x || nextY !== pointerTarget.y;
+
+      pointerTarget.x = nextX;
+      pointerTarget.y = nextY;
+
+      if (changed && splatInView && !document.hidden) {
+        noteHeroMotion();
         heroFrameDriver.request();
       }
     };
@@ -2343,11 +2407,6 @@ const initSplat = async () => {
     const stopViewer = () => {
       clearRenderStopTimer();
 
-      if (initialLoadTimer) {
-        clearTimeout(initialLoadTimer);
-        initialLoadTimer = null;
-      }
-
       if (!manualRendering && viewerRunning) {
         viewer.stop();
       }
@@ -2386,20 +2445,42 @@ const initSplat = async () => {
       }, delay);
     };
 
-    const scheduleInitialLoadGrace = () => {
-      if (allowIdleStop || initialLoadTimer) {
+    // The load pipeline already awaited the tree, the post-tree sort and the GPU
+    // warm-up, so the only work left after "ready" is the intro, the reveal and
+    // any sort they trigger. Hold the viewer awake until those report complete,
+    // with a ceiling just past the configured animations as the fallback.
+    const idleStopDeadline =
+      introStartedAt +
+      (reducedRevealMotion
+        ? 0
+        : Math.max(
+            heroCameraIntroDurationMs,
+            HERO_CAMERA_INTRO.revealLeadMs + heroRevealDurationMs,
+          )) +
+      HERO_IDLE_STOP_SAFETY_MS;
+
+    const checkIdleStopEligibility = () => {
+      idleStopEligibilityTimer = null;
+
+      if (allowIdleStop) {
         return;
       }
 
-      ensureViewerRunning();
+      const now = performance.now();
+      const settled =
+        !heroReveal.active && !heroCameraIntro.active && !viewer.sortRunning;
 
-      // The scene keeps changing for a few seconds after the first frame, so hold
-      // the viewer awake until loading settles.
-      initialLoadTimer = setTimeout(() => {
-        allowIdleStop = true;
-        initialLoadTimer = null;
-        stopViewerAfterIdle(1200);
-      }, 6500);
+      if (!settled && now < idleStopDeadline) {
+        idleStopEligibilityTimer = setTimeout(checkIdleStopEligibility, 120);
+        return;
+      }
+
+      allowIdleStop = true;
+      recordSplatLoadDebug(
+        "idle-stop-allowed",
+        settled ? "settled" : "safety-ceiling",
+      );
+      stopViewerAfterIdle(600);
     };
 
     const renderManualViewerFrame = () => {
@@ -2483,8 +2564,16 @@ const initSplat = async () => {
       const introCameraChanged = heroCameraIntro.active;
       if (heroReveal.active) requestNextFrame();
 
-      if (!force && smoothed === lastRenderedProgress && !pointerMoved && !revealChanged && !introCameraChanged) {
+      const scrollMoved = smoothed !== lastRenderedProgress;
+
+      if (!force && !scrollMoved && !pointerMoved && !revealChanged && !introCameraChanged) {
         return;
+      }
+
+      // Forced redraws (theme, resize, the post-settle sharp frame) are not
+      // motion; only a changing picture drops the hero to its motion resolution.
+      if (scrollMoved || pointerMoved || revealChanged || introCameraChanged) {
+        noteHeroMotion();
       }
 
       lastRenderedProgress = smoothed;
@@ -2534,7 +2623,6 @@ const initSplat = async () => {
 
           if (splatInView) {
             ensureViewerRunning();
-            scheduleInitialLoadGrace();
             heroFrameDriver.request({ force: true });
           } else {
             stopViewer();
@@ -2574,13 +2662,17 @@ const initSplat = async () => {
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           stopViewer();
-        } else {
-          scheduleInitialLoadGrace();
+        } else if (splatInView) {
+          // The frame driver already queued a forced frame; make sure the viewer
+          // is awake to draw it. Its idle callback parks the viewer afterwards.
+          ensureViewerRunning();
+          heroFrameDriver.request({ force: true });
         }
       });
 
       splatInView = true;
-      scheduleInitialLoadGrace();
+      ensureViewerRunning();
+      checkIdleStopEligibility();
       heroFrameDriver.request({ force: true });
     }
   } catch (error) {
@@ -3838,7 +3930,10 @@ const initStepNoteSplat = async () => {
   }
 
   try {
-    const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
+    const [GaussianSplats3D, { createFrameCap }] = await Promise.all([
+      import(SPLAT_RENDERER_URL),
+      import('./splat-render-pacing.mjs?v=1'),
+    ]);
     const isMobile = window.matchMedia("(max-width: 700px)").matches;
     let config = cloneStepNoteSplatConfig();
 
@@ -3874,7 +3969,9 @@ const initStepNoteSplat = async () => {
       // be released once the GPU textures are built.
       freeIntermediateSplatData: true,
       ignoreDevicePixelRatio: isMobile,
-      sphericalHarmonicsDegree: 2,
+      // Degree 1 keeps the first-order view-dependent tint; the degree-2 terms
+      // added per-splat texture fetches with no visible gain on this small orbit.
+      sphericalHarmonicsDegree: 1,
       renderMode: GaussianSplats3D.RenderMode.OnChange,
       sceneRevealMode: GaussianSplats3D.SceneRevealMode.Gradual,
       webXRMode: GaussianSplats3D.WebXRMode.None,
@@ -4042,6 +4139,25 @@ const initStepNoteSplat = async () => {
       stopViewer();
     };
 
+    // The orbit tween keeps real-time pacing from `loopStart`; the cap only
+    // decides which animation frames apply it. Skipped frames leave the previous
+    // image up without stopping the viewer, so the tween never stutters in time.
+    const orbitFrameCap = createFrameCap(STEPNOTE_ORBIT_FPS);
+
+    // The self-driven viewer also forces a draw when each camera step's sort
+    // finishes, which lands on the skipped frame and doubles the draw rate. While
+    // the orbit runs, admit one draw per applied step; the next step's draw picks
+    // up the finished sort. Paused or idle, the library's own logic applies, so
+    // calibration slider edits and late sorts still redraw.
+    const libraryShouldRender = viewer.shouldRender.bind(viewer);
+    let orbitDrawPending = false;
+    viewer.shouldRender = () => {
+      if (animationFrameId === null) return libraryShouldRender();
+      if (!orbitDrawPending || !libraryShouldRender()) return false;
+      orbitDrawPending = false;
+      return true;
+    };
+
     const animate = (time) => {
       animationFrameId = null;
 
@@ -4050,6 +4166,12 @@ const initStepNoteSplat = async () => {
         return;
       }
 
+      if (!orbitFrameCap.shouldStep(time)) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+
+      orbitDrawPending = true;
       const transformStart = portfolioDiagnostics ? performance.now() : 0;
       const durationMs = Math.max(1, config.loopSeconds) * 1000;
       const cycleLegs = config.pingPong ? 2 : 1;
