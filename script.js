@@ -108,7 +108,8 @@ const initGridCursorGlow = () => {
 
   const drawGlow = () => {
     updateFrame = null;
-    if (!hasPointer) return;
+    if (!hasPointer || portfolioDiagnostics?.flags.glowPaused) return;
+    const glowStarted = portfolioDiagnostics ? performance.now() : 0;
     const pointerX = pointerClientX + window.scrollX;
     const pointerY = pointerClientY + window.scrollY;
     const glowPageX = pointerX - glowRadius;
@@ -160,6 +161,7 @@ const initGridCursorGlow = () => {
     cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowViewportY}px`);
     drawGridTexture(cursorGlow, glowPageX, glowPageY, 0.42);
     cursorGlow.style.opacity = String(brightness);
+    portfolioDiagnostics?.sample("grid.glow", glowStarted);
     updateFrame = null;
   };
 
@@ -4801,7 +4803,7 @@ const initHeroMotion = () => {
   // style pass plus a transform update. Once the copy has faded out during the
   // scroll there is nothing to animate, which is exactly when the splat needs the
   // frame budget most.
-  const shouldFloat = () => heroOnScreen && heroCopyVisible && !document.hidden;
+  const shouldFloat = () => heroOnScreen && heroCopyVisible && !document.hidden && !portfolioDiagnostics?.flags.floatPaused;
 
   const floatLoop = (time) => {
     if (!shouldFloat()) {
@@ -4809,6 +4811,7 @@ const initHeroMotion = () => {
       return;
     }
 
+    const floatStarted = portfolioDiagnostics ? performance.now() : 0;
     const seconds = time / 1000;
 
     motionTargets.forEach(({ element, phase, float }) => {
@@ -4819,6 +4822,7 @@ const initHeroMotion = () => {
       element.style.setProperty("--float-rotate", `${rotate.toFixed(3)}deg`);
     });
 
+    portfolioDiagnostics?.sample("hero.float", floatStarted);
     floatFrame = requestAnimationFrame(floatLoop);
   };
 
@@ -4837,6 +4841,7 @@ const initHeroMotion = () => {
     }
   };
 
+  if (portfolioDiagnostics) document.addEventListener("portfolio:diagnostics-change", syncFloatLoop);
   onHeroCopyVisibilityChange = syncFloatLoop;
   document.addEventListener("visibilitychange", syncFloatLoop);
 

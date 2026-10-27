@@ -1,7 +1,7 @@
 import { isAuthenticated } from './_lib/admin-auth.js';
 import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js';
 
-const version = '20261024-half-screen-spawn-1';
+const version = '20261027-gpu-diagnostics-2';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
 const colorAssets = new Set(['/splat-color-debug.js', '/splat-color-debug.css']);
 const cutoffAssets = new Set(['/splat-cutoff-debug.js', '/splat-cutoff-debug.css']);
@@ -69,7 +69,7 @@ export async function onRequest(context) {
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-asymmetric-vignette-15');
+      element.setAttribute('src', '/script.js?v=20261027-performance-audit-16');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
       element.setAttribute('href', '/styles.css?v=20261027-asymmetric-vignette-9');

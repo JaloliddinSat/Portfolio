@@ -7,3 +7,13 @@ let updates=0;const viewer={update(){assert.equal(this,viewer);updates++;now+=10
 api.registerViewer('test',viewer);api.registerViewer('duplicate',viewer);assert.equal(viewer.update(),7);assert.equal(updates,1);api.flags.splatsPaused=true;viewer.update();viewer.render();assert.equal(updates,1,'splat comparison pause suppresses rendering work');
 api.flags.splatsPaused=false;viewer.update();assert.equal(updates,2);assert(handlers.visibilitychange);assert(handlers.unhandledrejection);assert.equal(callbacks.length,1,'one diagnostic animation loop');
 console.log('PASS: private diagnostic controls preserve viewer calls and isolate rendering work');
+const uniforms={studioFogEnabled:{value:1},studioFogBlur:{value:4.2},gradeEnabled:{value:1}};
+let draws=0;const renderer={render(){draws++}};
+const hero={renderer,selfDrivenModeRunning:true,update(){updates++},render(){renderer.render()},getSplatMesh(){return {material:{uniforms}}}};
+api.registerViewer('hero',hero);
+api.flags.blurDisabled=true;hero.render();assert.equal(uniforms.studioFogBlur.value,0);assert.equal(draws,1);
+api.flags.blurDisabled=false;hero.render();assert.equal(uniforms.studioFogBlur.value,4.2,'blur bypass restores selected value');
+api.flags.fogDisabled=true;api.flags.gradeDisabled=true;hero.render();assert.equal(uniforms.studioFogEnabled.value,0);assert.equal(uniforms.gradeEnabled.value,0);
+api.flags.fogDisabled=false;api.flags.gradeDisabled=false;hero.render();assert.equal(uniforms.studioFogEnabled.value,1);assert.equal(uniforms.gradeEnabled.value,1);
+const before=draws;api.flags.heroPaused=true;hero.render();assert.equal(draws,before);api.flags.heroPaused=false;hero.render();assert.equal(draws,before+1);
+console.log('PASS: private GPU workload comparisons preserve selected uniforms and isolate hero rendering without changing public settings');

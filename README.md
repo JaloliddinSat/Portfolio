@@ -228,3 +228,9 @@ The public hero now uses the selected overlay settings: dark strength 2.4×, lig
 Vignette strength applies only to the radial edge gradient. The full-frame wash was removed so the center stays transparent even at high strengths; selected timing, theme strengths, fog, and light backdrop transition remain unchanged.
 
 The selected full-frame tint is restored. A separate black screen-space vignette sits above the scene, weighted toward the left, top, and bottom with a clearer right side. It uses the intro-overlay fade (scroll 8% to the existing vignette fade end); the theme-colored scroll fade remains independent. Shared pseudo-element positioning/content is restored so both layers render.
+
+### GPU and heat diagnostics
+
+`/?debugPortfolio` now reports actual WebGL draw submissions per second, drawing-buffer size, optional asynchronous GPU timer samples, last worker sort duration, effect uniforms, video decode/drop counters in downloaded reports, and the viewer's actual running state. The UI animation tick is labeled separately from draw frequency. GPU timers use `EXT_disjoint_timer_query_webgl2` when available and never call `gl.finish`; absence of samples does not mean zero GPU work.
+
+Private comparison controls bypass blur, fog, grading, hero overlays, individual splat render/update calls, videos, floating title, and grid glow. They never save production settings. Clear measurements between comparisons, repeat the same movement, and allow several seconds of sampling. Pause recording and close the tab when finished. The debug page forces the ASCII preview on after scrolling into content, even when public ASCII is off, and adds instrumentation overhead; compare against the public page too. A one-load 1× pixel-ratio comparison link is provided. These tools cannot measure macOS temperature, fan speed, total GPU memory, or system energy.
