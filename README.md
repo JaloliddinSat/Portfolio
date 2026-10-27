@@ -224,3 +224,5 @@ Run `node tests/splat-overlay.test.mjs` and `node tests/site-settings.test.mjs`.
 The same private viewer includes **Light theme backdrop** start/end sliders and a final color picker (white by default). The backdrop interpolates from #111111 with smooth easing, affects only light theme, and is included in version 2 copied settings. Existing version 1 theme drafts migrate without losing strength or timing.
 
 The public hero now uses the selected overlay settings: dark strength 2.4×, light strength 21×, both starting at 0% scroll. In light theme, the backdrop blends from #111111 to #ffffff across the full 0–100% hero scroll cycle. Fog stays active. The admin studio resets to these public values and still keeps edits local.
+
+Vignette strength applies only to the radial edge gradient. The full-frame wash was removed so the center stays transparent even at high strengths; selected timing, theme strengths, fog, and light backdrop transition remain unchanged.
