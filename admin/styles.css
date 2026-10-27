@@ -192,6 +192,34 @@ input:focus {
   gap: 28px;
 }
 
+.admin-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.admin-toolbar .admin-home-link {
+  margin-bottom: 0;
+}
+
+.resume-section h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.resume-section .lede {
+  margin: 12px 0 24px;
+}
+
 .quiet-button {
   flex: 0 0 auto;
   padding: 8px 12px;

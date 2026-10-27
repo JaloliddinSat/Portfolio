@@ -19,7 +19,7 @@
         }
       } catch (_) {}
     </script>
-    <link rel="stylesheet" href="/admin/styles.css?v=14" />
+    <link rel="stylesheet" href="/admin/styles.css?v=15" />
   </head>
   <body>
     <main class="admin-shell">
@@ -62,14 +62,16 @@
       </section>
 
       <section class="upload-card" id="upload-view" hidden>
+        <nav class="admin-toolbar" aria-label="Admin navigation">
+          <a class="admin-home-link" href="/">← Back to portfolio</a>
+          <button class="quiet-button" id="logout-button" type="button">Sign out</button>
+        </nav>
         <div class="upload-heading">
           <div>
-            <a class="admin-home-link" href="/">← Back to portfolio</a>
             <span class="eyebrow">Portfolio admin</span>
-            <h1>Update résumé</h1>
-            <p class="lede">Drop in a PDF to replace the résumé shown across the site.</p>
+            <h1>Manage portfolio</h1>
+            <p class="lede">Manage your site features, animation settings, and résumé.</p>
           </div>
-          <button class="quiet-button" id="logout-button" type="button">Sign out</button>
         </div>
 
         <section class="site-settings" aria-labelledby="site-settings-title">
@@ -196,6 +198,9 @@
           </form>
         </section>
 
+        <section class="resume-section" aria-labelledby="resume-title">
+          <h2 id="resume-title">Update résumé</h2>
+          <p class="lede">Drop in a PDF to replace the résumé shown across the site.</p>
         <form id="upload-form">
           <label class="drop-zone" id="drop-zone" for="resume-file">
             <input id="resume-file" name="resume" type="file" accept="application/pdf,.pdf" />
@@ -247,6 +252,7 @@
             rel="noopener noreferrer"
           >View current résumé</a>
         </div>
+        </section>
       </section>
     </main>
 
