@@ -212,3 +212,5 @@ The hero now uses the approved 10-unit cutoff with zero feather on desktop and m
 Run `node tests/splat-fog.test.mjs` to verify distance falloff, shader composition, blur compensation, and mobile uniform updates.
 
 The public hero now also uses the approved black distance fog: start 1.1, falloff 2.2, darkening 0.47, blur 4.2 px, fogginess 0.52. The shared renderer applies this on desktop and mobile before shader warmup. Studio drafts and comparisons remain private.
+
+Fog fades out over smoothed hero scroll progress 0–0.08. At the start of the existing depth transition (0.08), fog color and blur are fully bypassed so the edge/scroll fade uses the unfogged splat. Scrolling back restores the selected fog.

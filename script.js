@@ -1690,6 +1690,12 @@ const installHeroDepthShader = (splatMesh) => {
       HERO_DEPTH_CONFIG.collapseEnd,
     );
 
+    // Restore the unfogged splat before the existing depth/edge transition starts.
+    // The same smoothed scroll progress restores fog smoothly when returning up.
+    if (material.uniforms.studioFogScrollStrength) {
+      material.uniforms.studioFogScrollStrength.value =
+        1 - smoothstepRange(rawProgress, 0, HERO_DEPTH_CONFIG.revealStart);
+    }
     material.uniforms.heroDepthMix.value = depthMix;
     material.uniforms.heroDepthCollapse.value = depthCollapse;
     material.uniforms.heroDepthInvert.value = isLightTheme() ? 1 : 0;
@@ -1971,7 +1977,7 @@ const initSplat = async () => {
       import('./splat-reveal.mjs?v=5'),
       import('./splat-camera-intro.mjs?v=4'),
       import('./splat-cutoff-core.mjs?v=2'),
-      import('./splat-fog-core.mjs?v=2'),
+      import('./splat-fog-core.mjs?v=3'),
     ]);
     recordSplatLoadDebug("module-import-done");
 

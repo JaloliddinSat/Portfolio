@@ -59,7 +59,7 @@ const page=(path='/')=>middleware({env,request:new Request('https://portfolio.te
 let response=await page();assert.equal(JSON.parse(await response.text())[0][1],'0.25');assert.equal(response.headers.get('Cache-Control'),'no-store');
 assert((await (await page()).text()).includes('data-hero-camera-duration'),'camera duration reaches public pages with particles disabled');
 assert((await (await page()).text()).includes('data-hero-reveal-duration'),'cylinder duration reaches public pages independently');
-assert((await (await page()).text()).includes('20261027-public-fog-9'),'public script reference stays current');
+assert((await (await page()).text()).includes('20261027-unfogged-scroll-10'),'public script reference stays current');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});

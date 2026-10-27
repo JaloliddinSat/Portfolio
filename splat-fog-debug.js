@@ -1,4 +1,4 @@
-import { defaultFog, validFog, FOG_CONTROLS, installDistanceFog } from './splat-fog-core.mjs?v=2';
+import { defaultFog, validFog, FOG_CONTROLS, installDistanceFog } from './splat-fog-core.mjs?v=3';
 const KEY = 'portfolio-hero-fog-v1';
 let config = defaultFog();
 try { const saved = JSON.parse(localStorage.getItem(KEY)); if (validFog(saved)) config = saved; } catch {}

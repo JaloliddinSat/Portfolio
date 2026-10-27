@@ -54,7 +54,7 @@ export async function onRequest(context) {
   const rewriter = new HTMLRewriter()
     .on('head', { element(element) {
       if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=2"></script>', { html: true });
-      if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=2"></script>', { html: true });
+      if (fogDebug) element.append('<link rel="stylesheet" href="/splat-fog-debug.css?v=1"><script type="module" src="/splat-fog-debug.js?v=3"></script>', { html: true });
       if (cutoffDebug) element.append('<link rel="stylesheet" href="/splat-cutoff-debug.css?v=1"><script type="module" src="/splat-cutoff-debug.js?v=2"></script>', { html: true });
     } })
     .on('html', { element(element) {
@@ -65,7 +65,7 @@ export async function onRequest(context) {
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-public-fog-9');
+      element.setAttribute('src', '/script.js?v=20261027-unfogged-scroll-10');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
       element.setAttribute('href', '/styles.css?v=20261027-splat-fallback-6');

@@ -32,6 +32,7 @@ uniform float studioFogFalloff;
 uniform float studioFogBlur;
 uniform float studioFogPixelRatio;
 uniform float studioFogEnabled;
+uniform float studioFogScrollStrength;
 varying float vStudioFog;
 `;
 const FRAGMENT_UNIFORMS = `
@@ -49,7 +50,7 @@ export function patchFogShaders(vertex, fragment) {
   return {
     vertex: VERTEX_UNIFORMS + vertex.replace(covariance, `
       float fogDistance = length((splatCenter - studioFogOrigin) / studioFogScale);
-      vStudioFog = studioFogEnabled * smoothstep(studioFogStart, studioFogStart + studioFogFalloff, fogDistance);
+      vStudioFog = studioFogEnabled * studioFogScrollStrength * smoothstep(studioFogStart, studioFogStart + studioFogFalloff, fogDistance);
       // Convolve each projected Gaussian with a screen-space Gaussian. Keep its
       // integrated opacity stable so blur doesn't turn the room into solid blobs.
       float fogSigma = studioFogBlur * studioFogPixelRatio * vStudioFog;
@@ -78,6 +79,7 @@ export function installDistanceFog(viewer, initial, {position, scale}) {
     studioFogScale: {value:scale}, studioFogPixelRatio: {value:viewer.renderer.getPixelRatio()},
     studioFogStart: {value:initial.start}, studioFogFalloff: {value:initial.falloff},
     studioFogBlur: {value:initial.blur}, studioFogEnabled: {value:1},
+    studioFogScrollStrength: {value:1},
     studioFogDarkening: {value:initial.darkening}, studioFogDensity: {value:initial.fogginess},
     studioFogColor: {value:rgb(initial.color)},
   });
