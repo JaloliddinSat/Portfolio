@@ -69,3 +69,11 @@ const script = await (await import('node:fs/promises')).readFile('script.js','ut
 assert(script.includes('progressiveLoad: false'),'both devices finish the download before revealing');
 assert(script.indexOf('await prepareHeroReveal(viewer)')<script.indexOf('heroReveal.start(introStartedAt +'),'start animation after GPU preparation');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
+
+for(const durationMs of [500,5700,10000]) {
+ const custom=fixture({durationMs});custom.reveal.start(0);
+ custom.reveal.update(durationMs/2);assert.equal(custom.material.uniforms.heroRevealProgress.value,.5);
+ custom.reveal.update(durationMs);assert.equal(custom.material.uniforms.heroRevealProgress.value,1);
+ assert.equal(custom.reveal.active,false);
+}
+console.log('PASS: independent configurable cylinder growth duration');

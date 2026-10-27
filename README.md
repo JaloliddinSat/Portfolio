@@ -131,8 +131,10 @@ colored cylinder reveal starts 250 ms later, so the camera is moving as the head
 appears. It lands at the original hero camera position and aim. Mobile transforms the overhead
 origin with the scene scale. The same readiness and hidden GPU warm-up gate both
 animations; reduced motion skips the camera move as well. Scrolling takes over
-immediately, and the normal scroll path and pointer parallax resume after landing.
-Admin’s **Hero camera movement** slider sets the A-to-B duration from 1–10 seconds.
+immediately, and the normal scroll path resumes after landing. Cursor parallax is applied to
+the current camera pose throughout the intro, reveal, and scroll path.
+Admin’s **Hero camera & reveal** controls set the A-to-B duration from 1–10
+seconds and cylinder growth duration from 0.5–10 seconds independently.
 Save, then open the preview to replay the current public settings. The value is
 stored independently of animation controls and injected into every portfolio page.
 The poster remains hidden until both the reveal and camera movement finish.

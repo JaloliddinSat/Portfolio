@@ -396,7 +396,7 @@ input:focus {
 .site-settings { margin: 0 0 28px; padding: 22px 0; border-block: 1px solid var(--line); }
 .site-settings h2 { margin: 0 0 18px; font-size: 1rem; }
 #camera-settings-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
-#hero-camera-duration { width: 100%; margin: 18px 0 8px; accent-color: var(--text); }
+#hero-camera-duration, #hero-reveal-duration { width: 100%; margin: 18px 0 8px; accent-color: var(--text); }
 .camera-speed-labels { display: flex; justify-content: space-between; margin-bottom: 18px; color: var(--muted); font-size: 0.75rem; }
 #camera-settings-fields .primary-button { width: 100%; }
 #camera-settings-fields:disabled { opacity: 0.5; }

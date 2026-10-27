@@ -57,3 +57,26 @@ for(const durationMs of [1000,6400,10000]) {
  assert.equal(custom.active,false);
 }
 console.log('PASS: visible initial motion and configurable A-to-B duration');
+
+// Exercise the actual frame callback on either side of intro completion. Both
+// must apply cursor parallax to the current pose, with no change in offset.
+const vm=await import('node:vm');
+const source=await (await import('node:fs/promises')).readFile('script.js','utf8');
+const start=source.indexOf('const renderSplatFrame =');
+const end=source.indexOf('syncHeroDepthTheme =',start);
+let calls=0,rendered=[];
+const pose={position:[1,2,3],lookAt:[4,5,6]};
+const context={performance:{now:()=>0},document:{hidden:false,documentElement:{classList:{remove(){}}}},splatInView:true,
+ updatePointerParallax:()=>false,heroReveal:{update:()=>false,active:false},
+ heroCameraIntro:{active:true,update:()=>pose},lastRenderedProgress:null,
+ easeScrollProgress:x=>x,computeScrollPosition:()=>pose,SPLAT_CONFIG:{cameraStart:pose,cameraEnd:pose},
+ applyPointerParallax:(position,lookAt)=>{calls++;return {position:position.map(v=>v+.05),lookAt};},
+ viewer:{camera:{position:{set(...values){rendered.push(values);}},lookAt(){}},forceRenderNextFrame(){}},
+ updateHeroDepthShader(){},ensureViewerRunning(){},renderManualViewerFrame(){}};
+vm.createContext(context);vm.runInContext(source.slice(start,end).replace('const renderSplatFrame =','globalThis.frame ='),context);
+context.frame({smoothed:0,delta:16,force:true,requestNextFrame(){}});
+context.heroCameraIntro.active=false;
+context.frame({smoothed:0,delta:16,force:true,requestNextFrame(){}});
+assert.equal(calls,2,'cursor parallax stays enabled during and after the intro');
+assert.deepEqual(rendered[0],rendered[1],'ending the intro cannot snap to a new parallax offset');
+console.log('PASS: continuous parallax before and after intro completion');

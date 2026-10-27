@@ -69,7 +69,8 @@ export function patchRevealFragment(shader) {
     }
     ` + anchor);
 }
-export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, lightTheme = false, reducedMotion = false, onState = () => {} } = {}) {
+export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, durationMs = HERO_REVEAL.durationMs, lightTheme = false, reducedMotion = false, onState = () => {} } = {}) {
+  durationMs = Number.isFinite(durationMs) ? Math.max(500, Math.min(10000, durationMs)) : HERO_REVEAL.durationMs;
   const material = viewer.getSplatMesh().material;
   if (!reducedMotion) {
     material.vertexShader = patchRevealShader(material.vertexShader);
@@ -90,7 +91,7 @@ export function installHeroReveal(viewer, { position = [0, 0, 0], scale = 1, lig
     },
     update(now, scrollProgress = 0) {
       if (complete || startTime === null) return false;
-      const progress = Math.max(0, Math.min(1, (now - startTime) / HERO_REVEAL.durationMs));
+      const progress = Math.max(0, Math.min(1, (now - startTime) / durationMs));
       // Let an immediate scroll take over with the existing depth transition.
       const done = progress >= 1 || scrollProgress >= 0.08;
       material.uniforms.heroRevealProgress.value = done ? 1 : progress;

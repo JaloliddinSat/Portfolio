@@ -1,6 +1,7 @@
 export const SITE_SETTINGS_KEY = 'settings/site.json';
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   heroCameraDuration: 3.2,
+  heroRevealDuration: 3,
   gridContentGlowMultiplier: 0.25,
   asciiEnabled: false,
   asciiGravityDimmingEnabled: true,
@@ -26,6 +27,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 
 const rules = {
   heroCameraDuration: { min: 1, max: 10, label: 'Hero camera duration' },
+  heroRevealDuration: { min: 0.5, max: 10, label: 'Cylinder growth duration' },
   asciiThrowCooldown: { min: 0, max: 10, label: 'Post-release force cooldown' },
   asciiLightCursorStrength: { min: 0, max: 3000, label: 'Light cursor strength' },
   asciiLightCursorRadius: { min: 0, max: 2000, label: 'Light cursor radius' },

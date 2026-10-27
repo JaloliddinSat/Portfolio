@@ -52,11 +52,12 @@ export async function onRequest(context) {
     .on('html', { element(element) {
       element.setAttribute('data-grid-content-glow-multiplier', String(settings.gridContentGlowMultiplier));
       element.setAttribute('data-hero-camera-duration', String(settings.heroCameraDuration));
+      element.setAttribute('data-hero-reveal-duration', String(settings.heroRevealDuration));
     } })
     // Keep cached page assets from pinning the camera implementation to an old
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
-      element.setAttribute('src', '/script.js?v=20261027-camera-controls-4');
+      element.setAttribute('src', '/script.js?v=20261027-continuous-parallax-5');
     } });
   if (!enabled) return rewriter.transform(response);
   return rewriter

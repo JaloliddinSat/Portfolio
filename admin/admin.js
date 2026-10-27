@@ -81,21 +81,27 @@ const cameraForm = document.querySelector("#camera-settings-form");
 const cameraFields = document.querySelector("#camera-settings-fields");
 const cameraDuration = document.querySelector("#hero-camera-duration");
 const cameraOutput = document.querySelector("#hero-camera-duration-output");
+const revealDuration = document.querySelector("#hero-reveal-duration");
+const revealOutput = document.querySelector("#hero-reveal-duration-output");
 const cameraStatus = document.querySelector("#camera-settings-status");
 let cameraDraftDirty = false;
 const updateCameraOutput = () => {
   const seconds = Number(cameraDuration.value);
   cameraOutput.textContent = `${seconds.toFixed(1)} seconds`;
+  revealOutput.textContent = `${Number(revealDuration.value).toFixed(1)} seconds`;
 };
 const renderCameraSettings = (settings) => {
-  if (!cameraDraftDirty) cameraDuration.value = settings.heroCameraDuration ?? 3.2;
+  if (!cameraDraftDirty) {
+    cameraDuration.value = settings.heroCameraDuration ?? 3.2;
+    revealDuration.value = settings.heroRevealDuration ?? 3;
+  }
   updateCameraOutput();
 };
-cameraDuration.addEventListener("input", () => {
+[cameraDuration, revealDuration].forEach(input => input.addEventListener("input", () => {
   cameraDraftDirty = true;
   updateCameraOutput();
   setStatus(cameraStatus, "Unsaved changes.");
-});
+}));
 cameraForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!cameraForm.reportValidity()) return;
@@ -104,7 +110,7 @@ cameraForm.addEventListener("submit", async (event) => {
   try {
     const saved = await request("settings", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ heroCameraDuration: Number(cameraDuration.value) }),
+      body: JSON.stringify({ heroCameraDuration: Number(cameraDuration.value), heroRevealDuration: Number(revealDuration.value) }),
     });
     cameraDraftDirty = false;
     renderCameraSettings(saved);

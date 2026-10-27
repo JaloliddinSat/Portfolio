@@ -1968,7 +1968,7 @@ const initSplat = async () => {
     const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=4'),
+      import('./splat-reveal.mjs?v=5'),
       import('./splat-camera-intro.mjs?v=4'),
     ]);
     recordSplatLoadDebug("module-import-done");
@@ -2101,6 +2101,7 @@ const initSplat = async () => {
     const heroReveal = installHeroReveal(viewer, {
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
+      durationMs: Number(document.documentElement.dataset.heroRevealDuration || 3) * 1000,
       lightTheme: isLightTheme(),
       reducedMotion: reducedRevealMotion,
       onState(state) {
@@ -2472,7 +2473,7 @@ const initSplat = async () => {
       const introPose = heroCameraIntro.update(performance.now(), scrollPose, smoothed);
       if (heroCameraIntro.active) requestNextFrame();
       else if (!heroReveal.active) document.documentElement.classList.remove("splat-reveal-pending");
-      const { position, lookAt } = heroCameraIntro.active ? introPose : applyPointerParallax(
+      const { position, lookAt } = applyPointerParallax(
         introPose.position,
         introPose.lookAt,
       );
