@@ -605,7 +605,27 @@ const splatStage = document.querySelector("#splat-stage");
 const splatError = document.querySelector("#splat-error");
 const heroScrollTrack = document.querySelector("#hero-scroll-track");
 
+const isHeroScrollLocked = () => {
+  const root = document.documentElement;
+  return (
+    root.classList.contains("splat-reveal-pending") &&
+    !root.classList.contains("splat-load-slow") &&
+    root.dataset.splatLoadState === "loading"
+  );
+};
+
+const restoreHeroScroll = () => {
+  if (location.hash) {
+    document.querySelector(location.hash)?.scrollIntoView({ block: "start" });
+    return;
+  }
+  window.scrollTo(0, 0);
+};
+
 const setStatus = (state, message = "") => {
+  if (state !== "loading" && isHeroScrollLocked()) {
+    restoreHeroScroll();
+  }
   if (splatStage) {
     splatStage.dataset.loadState = state;
     splatStage.setAttribute("aria-busy", String(state === "loading"));
@@ -650,6 +670,7 @@ const armSlowLoadWatchdog = () => {
     timer = null;
     document.removeEventListener("visibilitychange", onVisibility);
     if (splatStage?.dataset.loadState !== "loading") return;
+    restoreHeroScroll();
     document.documentElement.classList.add("splat-load-slow");
     playHeroIntro();
   };

@@ -49,9 +49,37 @@
         }
 
         var root = document.documentElement;
+        var scrollKeys = {
+          ArrowDown: 1, ArrowUp: 1, PageDown: 1, PageUp: 1, Home: 1, End: 1, " ": 1,
+        };
 
         root.classList.add("splat-reveal-pending");
         root.classList.add("hero-intro");
+        // Critical overflow lock before styles.css arrives, otherwise the first
+        // paint can still scroll. The same selector lives in styles.css.
+        var lockStyle = document.createElement("style");
+        lockStyle.textContent = 'html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]{overflow:hidden;touch-action:none;overscroll-behavior:none}';
+        document.head.appendChild(lockStyle);
+        if (!location.hash && "scrollRestoration" in history) {
+          history.scrollRestoration = "manual";
+        }
+
+        var shouldLockScroll = function () {
+          return root.classList.contains("splat-reveal-pending")
+            && !root.classList.contains("splat-load-slow")
+            && root.getAttribute("data-splat-load-state") === "loading";
+        };
+        var preventScroll = function (event) {
+          if (shouldLockScroll()) event.preventDefault();
+        };
+        window.addEventListener("wheel", preventScroll, { passive: false });
+        window.addEventListener("touchmove", preventScroll, { passive: false });
+        window.addEventListener("keydown", function (event) {
+          if (!shouldLockScroll() || !scrollKeys[event.key]) return;
+          if (event.target && event.target.closest && event.target.closest("input, textarea, select, [contenteditable]")) return;
+          event.preventDefault();
+        });
+
         window.setTimeout(function () {
           if (!document.querySelector("#splat-stage")?.dataset.revealState) {
             root.classList.remove("splat-reveal-pending");
@@ -60,7 +88,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-loading-screen" />
+    <link rel="stylesheet" href="styles.css?v=20261027-scroll-lock" />
     <script type="importmap">
       {
         "imports": {
@@ -906,6 +934,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20261027-loading-screen"></script>
+    <script type="module" src="script.js?v=20261027-scroll-lock"></script>
   </body>
 </html>

@@ -970,6 +970,22 @@ html.splat-reveal-pending:not(.splat-load-slow) .splat-loader .splat-loader-labe
   letter-spacing: 0.08em;
 }
 
+/* Document scroll lock while the full-screen loader is up. overflow:hidden
+   covers desktop; touch-action/overscroll-behavior plus the inline script's
+   non-passive wheel/touchmove listeners cover iOS, where root overflow is
+   ignored. Released by the same state change that dismisses the overlay. */
+html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"] {
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"] .splat-loader {
+  pointer-events: auto;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
 .splat-loader-spinner {
   width: 14px;
   height: 14px;
