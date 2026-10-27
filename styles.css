@@ -849,10 +849,12 @@ html[data-theme="light"] .splat-stage::after {
   background: url("/splats/Color.png?v=3") center / cover no-repeat;
 }
 
-/* Keep the full-scene poster from showing through the expanding splat reveal.
-   Restore it after completion, or on failure as the normal image fallback. */
+/* The poster is a loading/error fallback. A successfully loaded splat stays
+   transparent behind its geometry, including after the reveal finishes. */
 html.splat-reveal-pending .splat-stage,
-html.splat-reveal-pending .splat-viewer {
+html.splat-reveal-pending .splat-viewer,
+.splat-stage[data-load-state="ready"],
+.splat-stage[data-load-state="ready"] .splat-viewer {
   background-image: none;
 }
 

@@ -58,6 +58,9 @@ export async function onRequest(context) {
     // script reference during a deployment; settings already bypass page caching.
     .on('script[src^="script.js"], script[src^="/script.js"]', { element(element) {
       element.setAttribute('src', '/script.js?v=20261027-continuous-parallax-5');
+    } })
+    .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
+      element.setAttribute('href', '/styles.css?v=20261027-splat-fallback-6');
     } });
   if (!enabled) return rewriter.transform(response);
   return rewriter

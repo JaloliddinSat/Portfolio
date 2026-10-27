@@ -121,7 +121,7 @@ sort, then compile and render the graded scene and active reveal while hidden.
 GPU fences yield until that work finishes before starting the animation clock.
 The offscreen StepNote renderer initializes near its section so its scene loading
 does not compete with the hero intro; its dedicated debug mode still loads at once.
-The full-scene poster stays hidden until completion and returns on failure.
+The full-scene poster stays hidden during and after a successful reveal and returns on failure.
 Immediate scrolling completes the reveal before the depth transition takes over.
 Reduced motion and camera debug mode skip the reveal. Refresh to replay it.
 
@@ -137,7 +137,7 @@ Admin’s **Hero camera & reveal** controls set the A-to-B duration from 1–10
 seconds and cylinder growth duration from 0.5–10 seconds independently.
 Save, then open the preview to replay the current public settings. The value is
 stored independently of animation controls and injected into every portfolio page.
-The poster remains hidden until both the reveal and camera movement finish.
+The poster remains hidden after both the reveal and camera movement finish.
 Higher angles can expose stretched or sparse peripheral geometry in this capture.
 
 ### Hero splat color grading
