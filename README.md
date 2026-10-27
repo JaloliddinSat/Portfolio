@@ -104,8 +104,10 @@ The private debugger shows the last release velocity and sample count.
 
 On desktop and mobile, the Fairview hero reveals outward through 3D geometry
 over 3 seconds from a point on the torso, with a soft, noise-shaped boundary.
-The shader uses each splat's distance from that point in scene space, independent
-of camera projection. The same model-space origin follows both scene scales.
+The shader uses each splat's horizontal XZ distance from that point in scene space,
+independent of camera projection. Distance and noise ignore height, producing a
+vertical cylinder that reveals the head and body together. The same model-space
+origin follows both scene scales.
 The radius grows through the nearby body and furniture before reaching the
 capture's distant background shell. The existing frame driver keeps the mobile
 renderer awake through the final frame, then returns to its usual idle behavior.

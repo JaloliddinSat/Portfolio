@@ -1968,7 +1968,7 @@ const initSplat = async () => {
     const [GaussianSplats3D, { installSplatColorGrade }, { installHeroReveal, prepareHeroReveal }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
-      import('./splat-reveal.mjs?v=2'),
+      import('./splat-reveal.mjs?v=3'),
     ]);
     recordSplatLoadDebug("module-import-done");
 

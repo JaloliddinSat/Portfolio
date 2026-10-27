@@ -26,8 +26,10 @@ float heroRevealMask(vec3 scenePosition) {
   if (heroRevealProgress >= 1.0) return 1.0;
   if (heroRevealProgress <= 0.0) return 0.0;
   vec3 p = (scenePosition - heroRevealOrigin) / heroRevealScale;
-  float distanceFromBody = length(p);
-  vec2 noisePosition = p.xz + p.y * vec2(0.27, -0.19);
+  // Ignore height for both distance and noise: every vertical column reveals
+  // together as the irregular cylinder expands through the scene's XZ plane.
+  float distanceFromBody = length(p.xz);
+  vec2 noisePosition = p.xz;
   float noise = heroRevealNoise(noisePosition * 3.4) * 0.7 + heroRevealNoise(noisePosition * 8.1 + 17.3) * 0.3;
   float distanceField = distanceFromBody + (noise - 0.5) * (0.12 + 0.04 * min(distanceFromBody, 4.0));
   // Exponential growth spends time on the nearby body and furniture, then reaches

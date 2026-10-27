@@ -5,7 +5,9 @@ const patched = patchRevealShader(source);
 assert(patched.includes('vColor.a *= heroRevealMask(splatCenter);'));
 assert.equal((patched.match(/uniform vec2 viewport;/g)||[]).length,1);
 assert(!patched.includes('heroRevealMask(ndcCenter'), 'reveal never uses camera projection');
-assert(patched.includes('length(p)'), 'reveal measures distance in 3D');
+assert(patched.includes('length(p.xz)'), 'cylinder radius measures horizontal scene distance');
+assert(patched.includes('vec2 noisePosition = p.xz;'), 'noise boundary is identical at every height');
+assert(!patched.includes('p.y'), 'vertical position cannot delay the head or other geometry');
 assert.throws(()=>patchRevealShader('incompatible'),/does not support/);
 function fixture(options) {
   const material={vertexShader:source, uniforms:{}};
