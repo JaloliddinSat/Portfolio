@@ -87,8 +87,9 @@ export function patchRevealShader(shader) {
       float shapeAmount = max(revealAmount, revealField.z);
       basisVector1 = mix(vec2(pointRadius, 0.0), basisVector1, shapeAmount);
       basisVector2 = mix(vec2(0.0, pointRadius), basisVector2, shapeAmount);
-      // Dozens of splats overlap per pixel on the body, so the ghost stays faint.
-      float ghostAlpha = mix(keepPoint * 0.65, 0.06 + 0.2 * revealField.y, revealField.z);
+      // Dozens of splats overlap per pixel on the body, so the ghost stays very
+      // faint: it should register as a shape without competing with the colour.
+      float ghostAlpha = mix(keepPoint * 0.65, 0.018 + 0.06 * revealField.y, revealField.z);
       vColor.a *= mix(ghostAlpha, 1.0, revealAmount);
     }
     vColor.a = min(1.0, vColor.a * (1.0 + revealField.y * 0.3));
