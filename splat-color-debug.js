@@ -1,8 +1,8 @@
-import * as THREE from 'three';
-import { CHANNELS, PRESETS, defaultGrade, validGrade, identityCurve, curveAt, makeLut, makeCurves, patchGradeShader } from './splat-color-core.mjs';
+import { HERO_COLOR_GRADE, installSplatColorGrade } from './splat-color-renderer.mjs?v=1';
+import { CHANNELS, PRESETS, defaultGrade, validGrade, identityCurve, curveAt } from './splat-color-core.mjs';
 
 const STORAGE_KEY = 'portfolio-hero-color-grade-v1';
-let grade = defaultGrade();
+let grade = structuredClone(HERO_COLOR_GRADE);
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
   if (validGrade(saved)) grade = saved;
@@ -13,51 +13,16 @@ let original = false;
 let viewer;
 let material;
 let panel;
-let lutTexture;
-let curveTexture;
-let lastLut;
+let applyGrade;
 let failure;
-const texture = (data, width, height) => {
-  const result = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
-  result.minFilter = result.magFilter = THREE.LinearFilter;
-  result.wrapS = result.wrapT = THREE.ClampToEdgeWrapping;
-  result.generateMipmaps = false;
-  result.needsUpdate = true;
-  return result;
-};
 function status(message) { if (panel) panel.querySelector('[data-status]').textContent = message; }
-function paint() {
-  if (!material) return;
-  if (lastLut !== grade.lut) {
-    lutTexture.image.data.set(makeLut(grade.lut));
-    lutTexture.needsUpdate = true;
-    lastLut = grade.lut;
-  }
-  curveTexture.image.data.set(makeCurves(grade));
-  curveTexture.needsUpdate = true;
-  material.uniforms.gradeStrength.value = grade.strength;
-  material.uniforms.gradeEnabled.value = original ? 0 : 1;
-  viewer.forceRenderNextFrame();
-  // The mobile hero parks its render loop while idle. A grade edit must also
-  // render immediately, without changing its camera or restarting animation.
-  viewer.render();
-}
+function paint() { applyGrade?.(grade, original); }
 window.__splatColorDebug = {
   attach(nextViewer) {
     try {
       viewer = nextViewer;
       material = viewer.getSplatMesh().material;
-      const shader = patchGradeShader(material.fragmentShader);
-      lutTexture = texture(makeLut(grade.lut), 256, 16);
-      curveTexture = texture(makeCurves(grade), 256, 1);
-      lastLut = grade.lut;
-      Object.assign(material.uniforms, {
-        gradeLut: { value: lutTexture }, gradeCurves: { value: curveTexture },
-        gradeStrength: { value: grade.strength }, gradeEnabled: { value: original ? 0 : 1 },
-      });
-      material.fragmentShader = shader;
-      material.needsUpdate = true;
-      viewer.forceRenderNextFrame();
+      applyGrade = installSplatColorGrade(viewer, grade);
       status('Live preview ready. Changes stay in this browser.');
     } catch (error) { failure = error.message; status(failure); console.error('[SPLAT COLOR]', error); }
   },

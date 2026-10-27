@@ -1954,7 +1954,10 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const GaussianSplats3D = await import(SPLAT_RENDERER_URL);
+    const [GaussianSplats3D, { installSplatColorGrade }] = await Promise.all([
+      import(SPLAT_RENDERER_URL),
+      import('./splat-color-renderer.mjs?v=1'),
+    ]);
     recordSplatLoadDebug("module-import-done");
 
     console.log("[SPLAT] Renderer loaded:", GaussianSplats3D);
@@ -2076,7 +2079,8 @@ const initSplat = async () => {
     warmSplatCache(splatUrl);
 
     const updateHeroDepthShader = installHeroDepthShader(splatMesh);
-    window.__splatColorDebug?.attach(viewer);
+    if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
+    else installSplatColorGrade(viewer);
 
     if (manualRendering) {
       const existingTree = splatMesh.getSplatTree?.();

@@ -113,8 +113,11 @@ Drag one of nine fixed input anchors or edit its 0–255 output with the keyboar
 The draft saves only in this browser. **Copy settings** copies versioned JSON
 with the target asset, LUT, strength, and all four curves; paste it into chat to
 request a permanent grade. The expandable settings field provides a manual-copy
-fallback. The public renderer keeps its existing colors until that code change.
-Grading assets and the preview require an admin session and are served uncached.
+fallback. The public hero currently uses **Warm film at 100%** with neutral curves, selected
+from the studio. The shared grading runtime applies the same grade before the
+depth transition; the StepNote splat is unchanged.
+The studio UI and preview require an admin session and are served uncached.
+The grading math and renderer modules are public dependencies of the hero.
 
 After signing in at `/admin/`, choose **Open portfolio debug mode**. This opens
 `/?debugPortfolio` with an authenticated, private ASCII preview, regardless of

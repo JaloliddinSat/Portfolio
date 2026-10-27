@@ -3,7 +3,7 @@ import { readSiteSettings, DEFAULT_SITE_SETTINGS } from './_lib/site-settings.js
 
 const version = '20261024-half-screen-spawn-1';
 const debugAssets = new Set(['/portfolio-debug.js', '/portfolio-debug.css']);
-const colorAssets = new Set(['/splat-color-debug.js', '/splat-color-debug.css', '/splat-color-core.mjs']);
+const colorAssets = new Set(['/splat-color-debug.js', '/splat-color-debug.css']);
 const effectAssets = new Set(['/ascii-physics.js', '/ascii-physics.css']);
 const button = `<button class="ascii-toggle" id="ascii-toggle" type="button" aria-label="Turn off floating ASCII" aria-pressed="true" title="Turn off floating ASCII" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-2 18M17 3l-2 18M4 9h16M3 15h16" /></svg><span class="nav-label">ASCII</span></button>`;
 
@@ -47,7 +47,7 @@ export async function onRequest(context) {
 
   const rewriter = new HTMLRewriter()
     .on('head', { element(element) {
-      if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=1"></script>', { html: true });
+      if (colorDebug) element.append('<link rel="stylesheet" href="/splat-color-debug.css?v=1"><script type="module" src="/splat-color-debug.js?v=2"></script>', { html: true });
     } })
     .on('html', { element(element) {
       element.setAttribute('data-grid-content-glow-multiplier', String(settings.gridContentGlowMultiplier));

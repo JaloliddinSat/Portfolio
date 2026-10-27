@@ -36,3 +36,32 @@ const depth = patchGradeShader('vec3 color = mix(vColor.rgb, depthColor, heroDep
 assert(depth.includes('mix(gradeSplatColor(vColor.rgb), depthColor, heroDepthMix)'), 'grade precedes depth transition');
 assert.throws(() => patchGradeShader('incompatible'), /does not support/);
 console.log('PASS: neutral grading, independent channels, curve interpolation, LUT layout and looks, export validation, shader/depth compatibility');
+
+// Exercise the shared renderer with lightweight Three texture objects, so the
+// public default and studio edits are checked against the same exported math.
+const { readFile } = await import('node:fs/promises');
+const threeMock = 'data:text/javascript,' + encodeURIComponent('export class DataTexture { constructor(data,width,height) { this.image={data,width,height}; } } export const RGBAFormat=1,LinearFilter=2,ClampToEdgeWrapping=3;');
+const rendererSource = (await readFile(new URL('../splat-color-renderer.mjs', import.meta.url), 'utf8'))
+  .replace("'three'", JSON.stringify(threeMock))
+  .replace("'./splat-color-core.mjs'", JSON.stringify(new URL('../splat-color-core.mjs', import.meta.url).href));
+const { HERO_COLOR_GRADE, installSplatColorGrade } = await import('data:text/javascript,' + encodeURIComponent(rendererSource));
+assert.deepEqual(HERO_COLOR_GRADE, { ...defaultGrade(), lut: 'warm-film', strength: 1 }, 'public grade matches the supplied JSON');
+const material = { fragmentShader: 'vec3 color = mix(vColor.rgb, depthColor, heroDepthMix);', uniforms: {} };
+let renders=0, forced=0;
+const viewer = { getSplatMesh:()=>({material}), forceRenderNextFrame:()=>forced++, render:()=>renders++ };
+const edit = installSplatColorGrade(viewer);
+assert.deepEqual(material.uniforms.gradeLut.value.image.data, makeLut('warm-film'));
+assert.deepEqual(material.uniforms.gradeCurves.value.image.data, makeCurves(defaultGrade()));
+assert.equal(material.uniforms.gradeStrength.value,1);
+assert.equal(material.uniforms.gradeEnabled.value,1);
+const shader = material.fragmentShader;
+edit(defaultGrade(),true);
+assert.equal(material.uniforms.gradeEnabled.value,0,'studio original bypasses the public grade');
+edit({...defaultGrade(),lut:'mono',strength:.5});
+assert.equal(material.uniforms.gradeEnabled.value,1);
+assert.equal(material.uniforms.gradeStrength.value,.5);
+assert.equal(material.fragmentShader,shader,'studio edits do not stack shader transforms');
+assert.deepEqual(material.uniforms.gradeLut.value.image.data,makeLut('mono'));
+assert.equal(renders,2,'edits wake the parked mobile renderer');
+assert.equal(forced,3);
+console.log('PASS: public warm-film grade matches supplied settings; shared runtime preserves preview bypass, LUT updates, and mobile rendering');
