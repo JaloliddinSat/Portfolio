@@ -143,8 +143,8 @@ Higher angles can expose stretched or sparse peripheral geometry in this capture
 ### Private distance cutoff preview
 
 Choose **Tune splat distance cutoff** in admin to open `/?debugSplatCutoff`.
-The authenticated preview defaults to a 20-unit sphere around the body point
-with a 1.5-unit soft edge. Use the live logarithmic distance slider (1–300 units),
+The authenticated preview defaults to the approved 10-unit sphere around the body point
+with a hard edge (zero feather). Use the live logarithmic distance slider (1–300 units),
 exact numeric distance, and edge-softness control (0–5 units). Both desktop and
 mobile use the same model-space distances, independent of camera position.
 **Show full scene** bypasses cutoff for comparison; **Replay intro** reloads the
@@ -202,3 +202,11 @@ node tests/splat-reveal.test.mjs
 node tests/splat-camera-intro.test.mjs
 node tests/splat-cutoff.test.mjs
 ```
+
+### Private distance fog preview
+
+After signing in at `/admin/`, open **Tune foreground & background fog** (`/?debugSplatFog`). Adjust start distance, falloff distance, background darkening, background blur, fogginess, and fog color in real time. Distance is measured in 3D model units from the body; full effect is reached at start + falloff. Blur adds screen-space Gaussian variance with opacity compensation, approximating lens blur without a second scene render.
+
+The hero now uses the approved 10-unit cutoff with zero feather on desktop and mobile. Fog preview keeps that cutoff active. **Compare without fog** bypasses only fog. **Copy fog settings** exports JSON including the baseline cutoff. Drafts persist locally and Replay intro keeps them; this studio does not save fog to public settings.
+
+Run `node tests/splat-fog.test.mjs` to verify distance falloff, shader composition, blur compensation, and mobile uniform updates.

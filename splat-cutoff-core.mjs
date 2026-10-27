@@ -1,4 +1,4 @@
-export const defaultCutoff = () => ({ version: 1, target: 'hero', asset: '/splats/Fairview.ksplat', metric: '3d-distance', originSpace: 'model', origin: [-.24, -.06, -.05], radius: 20, feather: 1.5 });
+export const defaultCutoff = () => ({ version: 1, target: 'hero', asset: '/splats/Fairview.ksplat', metric: '3d-distance', originSpace: 'model', origin: [-.24, -.06, -.05], radius: 10, feather: 0 });
 export function validCutoff(value) {
   return value?.version === 1 && value.target === 'hero' && value.asset === '/splats/Fairview.ksplat' &&
     value.metric === '3d-distance' && value.originSpace === 'model' &&

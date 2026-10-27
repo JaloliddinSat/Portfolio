@@ -1965,11 +1965,12 @@ const initSplat = async () => {
     console.log("[SPLAT] Loading from:", splatUrl);
 
     recordSplatLoadDebug("module-import-start");
-    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }] = await Promise.all([
+    const [GaussianSplats3D, { installSplatColorGrade }, { HERO_REVEAL, installHeroReveal, prepareHeroReveal }, { HERO_CAMERA_INTRO, createHeroCameraIntro }, { defaultCutoff, installDistanceCutoff }] = await Promise.all([
       import(SPLAT_RENDERER_URL),
       import('./splat-color-renderer.mjs?v=1'),
       import('./splat-reveal.mjs?v=5'),
       import('./splat-camera-intro.mjs?v=4'),
+      import('./splat-cutoff-core.mjs?v=2'),
     ]);
     recordSplatLoadDebug("module-import-done");
 
@@ -2111,11 +2112,10 @@ const initSplat = async () => {
     });
     if (window.__splatColorDebug) window.__splatColorDebug.attach(viewer);
     else installSplatColorGrade(viewer);
-    window.__splatCutoffDebug?.attach(viewer, {
-      origin: HERO_REVEAL.bodyOrigin,
-      position: SPLAT_CONFIG.splatPosition,
-      scale: splatScale,
-    });
+    const distanceContext = { position: SPLAT_CONFIG.splatPosition, scale: splatScale };
+    if (window.__splatCutoffDebug) window.__splatCutoffDebug.attach(viewer, distanceContext);
+    else installDistanceCutoff(viewer, defaultCutoff(), distanceContext);
+    window.__splatFogDebug?.attach(viewer, distanceContext);
 
     {
       const existingTree = splatMesh.getSplatTree?.();

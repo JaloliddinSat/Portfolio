@@ -59,7 +59,7 @@ const page=(path='/')=>middleware({env,request:new Request('https://portfolio.te
 let response=await page();assert.equal(JSON.parse(await response.text())[0][1],'0.25');assert.equal(response.headers.get('Cache-Control'),'no-store');
 assert((await (await page()).text()).includes('data-hero-camera-duration'),'camera duration reaches public pages with particles disabled');
 assert((await (await page()).text()).includes('data-hero-reveal-duration'),'cylinder duration reaches public pages independently');
-assert((await (await page()).text()).includes('20261027-cutoff-preview-7'),'public script reference stays current');
+assert((await (await page()).text()).includes('20261027-fog-preview-8'),'public script reference stays current');
 assert.equal((await page('/ascii-physics.js')).status,404);assert.equal((await page('/ascii-physics.css')).status,404);
 assert.equal((await call('settings','POST',{asciiEnabled:true},cookie)).status,200);
 assert.deepEqual(await (await call('settings','GET',undefined,cookie)).json(),{...DEFAULT_SITE_SETTINGS,asciiEnabled:true});
@@ -69,7 +69,18 @@ await call('settings','POST',{asciiEnabled:false},cookie);assert.equal((await pa
 const authenticatedPage=(path)=>middleware({env,request:new Request('https://portfolio.test'+path,{headers:{Cookie:cookie}}),next:async()=>new Response(html,{headers:{'Content-Type':'text/html'}})});
 assert.equal((await page('/?debugSplatColor')).status,302);
 assert.equal((await page('/?debugSplatCutoff')).status,302);
-for(const path of ['/splat-cutoff-debug.js','/splat-cutoff-debug.css','/splat-cutoff-core.mjs']) {
+assert.equal((await page('/splat-cutoff-core.mjs')).status,200,'public cutoff runtime remains accessible');
+assert.equal((await page('/?debugSplatFog')).status,302);
+for(const path of ['/splat-fog-debug.js','/splat-fog-debug.css','/splat-fog-core.mjs']) {
+ assert.equal((await page(path)).status,404,'fog studio requires authentication');
+ const response=await authenticatedPage(path);assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
+}
+const fogResponse=await authenticatedPage('/?debugSplatFog');
+assert.equal(fogResponse.headers.get('X-Robots-Tag'),'noindex, nofollow');
+const fogMarkup=await fogResponse.text();assert(fogMarkup.includes('splat-fog-debug.js'));
+assert(!fogMarkup.includes('ascii-physics.js'));
+assert(!(await (await authenticatedPage('/')).text()).includes('splat-fog-debug'),'fog is private');
+for(const path of ['/splat-cutoff-debug.js','/splat-cutoff-debug.css']) {
  assert.equal((await page(path)).status,404,'cutoff tools require authentication');
  const response=await authenticatedPage(path);assert.equal(response.status,200);
  assert.equal(response.headers.get('Cache-Control'),'no-store');

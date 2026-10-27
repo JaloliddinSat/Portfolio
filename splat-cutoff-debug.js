@@ -1,4 +1,4 @@
-import { defaultCutoff, validCutoff, radiusToSlider, sliderToRadius, installDistanceCutoff } from './splat-cutoff-core.mjs';
+import { defaultCutoff, validCutoff, radiusToSlider, sliderToRadius, installDistanceCutoff } from './splat-cutoff-core.mjs?v=2';
 const KEY = 'portfolio-hero-distance-cutoff-v1';
 let config = defaultCutoff();
 try { const saved = JSON.parse(localStorage.getItem(KEY)); if (validCutoff(saved)) config = saved; } catch {}
