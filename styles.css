@@ -785,7 +785,7 @@ html.hero-intro.hero-intro-play .hero-copy .button + .button {
   background:
     linear-gradient(rgba(7, 10, 19, 0.08), rgba(7, 10, 19, 0.08)),
     url("/splats/Color.png?v=3") center / cover no-repeat,
-    var(--bg);
+    #111111;
 }
 
 .splat-stage::before,
@@ -874,10 +874,6 @@ html.splat-reveal-pending .splat-viewer,
   background: rgb(7 10 19);
   will-change: opacity;
   content: "";
-}
-
-html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
-  background: rgb(247 247 248);
 }
 
 .splat-viewer canvas {

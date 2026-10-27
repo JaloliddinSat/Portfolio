@@ -68,7 +68,7 @@ export async function onRequest(context) {
       element.setAttribute('src', '/script.js?v=20261027-continuous-fog-11');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
-      element.setAttribute('href', '/styles.css?v=20261027-splat-fallback-6');
+      element.setAttribute('href', '/styles.css?v=20261027-dark-splat-backdrop-7');
     } });
   if (!enabled) return rewriter.transform(response);
   return rewriter
