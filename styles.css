@@ -957,8 +957,8 @@ html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="load
 }
 
 html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-field {
-  width: 128px;
-  height: 128px;
+  width: 168px;
+  height: 168px;
 }
 
 /* Document scroll lock from the loader through the colour reveal and the
@@ -978,66 +978,48 @@ html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]
   overscroll-behavior: none;
 }
 
-/* Two depths. Near dots are larger and breathe slowly outward, as if coming
-   toward the camera. Far dots stay small and cycle faster, so the cluster
-   reads as a point cloud pulling in and receding. Positions are container
-   units, so the same field scales from the corner fallback to the full screen. */
+/* Constellation. The stars stay fixed. Each link draws on, holds, then undraws,
+   staggered so the figure keeps changing without the dots moving. */
 .splat-loader-field {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  container-type: size;
+  display: block;
+  width: 44px;
+  height: 44px;
+  overflow: visible;
 }
 
-.splat-loader-dot {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  border-radius: 50%;
-  background: currentColor;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
+.splat-loader-links line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: splat-loader-link 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.22s);
 }
 
-.splat-loader-dot.is-near {
-  width: max(3px, 6.2cqi);
-  height: max(3px, 6.2cqi);
-  animation-name: splat-loader-near;
-  animation-duration: 3.4s;
-  animation-delay: calc(var(--x) * -18ms);
+.splat-loader-stars circle {
+  fill: currentColor;
 }
 
-.splat-loader-dot.is-far {
-  width: max(1.5px, 2.4cqi);
-  height: max(1.5px, 2.4cqi);
-  animation-name: splat-loader-far;
-  animation-duration: 1.7s;
-  animation-delay: calc(var(--y) * -22ms);
-}
-
-@keyframes splat-loader-near {
+@keyframes splat-loader-link {
   0%,
+  10% {
+    opacity: 0;
+    stroke-dashoffset: 1;
+  }
+
+  36%,
+  58% {
+    opacity: 0.72;
+    stroke-dashoffset: 0;
+  }
+
+  88%,
   100% {
-    opacity: 0.38;
-    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.58cqi), calc(var(--y) * 0.58cqi)) scale(0.72);
-  }
-
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) translate(calc(var(--x) * 1cqi), calc(var(--y) * 1cqi)) scale(1.18);
-  }
-}
-
-@keyframes splat-loader-far {
-  0%,
-  100% {
-    opacity: 0.2;
-    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.82cqi), calc(var(--y) * 0.82cqi)) scale(0.55);
-  }
-
-  50% {
-    opacity: 0.62;
-    transform: translate(-50%, -50%) translate(calc(var(--x) * 1.08cqi), calc(var(--y) * 1.08cqi)) scale(1);
+    opacity: 0;
+    stroke-dashoffset: 1;
   }
 }
 
@@ -2662,10 +2644,10 @@ html[data-theme="light"] .stepnote-project img[src$="github.svg"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splat-loader-dot {
+  .splat-loader-links line {
     animation: none;
-    opacity: 0.72;
-    transform: translate(-50%, -50%) translate(calc(var(--x) * 0.86cqi), calc(var(--y) * 0.86cqi));
+    opacity: 0.55;
+    stroke-dashoffset: 0;
   }
 
   /* The inline script in index.html already declines to arm the intro, but this
