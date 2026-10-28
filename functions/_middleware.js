@@ -80,7 +80,7 @@ export async function onRequest(context) {
       element.setAttribute('src', '/script.js?v=20261027-no-autoscroll');
     } })
     .on('link[rel="stylesheet"][href^="styles.css"], link[rel="stylesheet"][href^="/styles.css"]', { element(element) {
-      element.setAttribute('href', '/styles.css?v=20261027-light-wash');
+      element.setAttribute('href', '/styles.css?v=20261027-touch-lock');
     } });
   if (!enabled) return rewriter.transform(response);
   return rewriter

@@ -115,8 +115,11 @@ assert(script.includes('if (state === "ready" && isHeroScrollLocked())'),'the in
 assert(script.includes('window.scrollTo(0, 0)'),'the intro starts at the top when there is no hash');
 assert(script.includes('else if (!heroReveal.active) releaseHeroIntroLock()'),'scroll stays locked until the camera has rested and the reveal has finished');
 const styles = await (await import('node:fs/promises')).readFile('styles.css','utf8');
-assert(/html\.splat-reveal-pending:not\(\.splat-load-slow\) \{\s*overflow: hidden;/.test(styles),'document overflow stays locked through the reveal and camera descent');
-assert(styles.includes('overflow: hidden;'),'the lock uses the standard document overflow rule');
+assert(/@media \(hover: hover\) and \(pointer: fine\) \{\s*html\.splat-reveal-pending:not\(\.splat-load-slow\) \{\s*overflow: hidden;/.test(styles),'the scrollbar is hidden through the reveal and camera descent on fine pointers only');
+assert(!/html\.splat-reveal-pending[^{]*\{[^}]*touch-action/.test(styles),'touch-action is never set on the root: iOS 18+ leaves touch scrolling broken after it is removed');
+assert(!/html\.splat-reveal-pending[^{]*\.splat-loader[^{]*\{[^}]*touch-action/.test(styles),'the loader does not set touch-action either');
+assert(!indexHtml.includes('touch-action:none'),'the inline critical style does not set touch-action on the root');
+assert(indexHtml.includes('@media (hover: hover) and (pointer: fine){html.splat-reveal-pending:not(.splat-load-slow){overflow:hidden}}'),'the inline critical style mirrors the fine-pointer overflow rule');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
 
 for(const durationMs of [500,5700,10000]) {

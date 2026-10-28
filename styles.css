@@ -981,20 +981,21 @@ html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-seq {
 }
 
 /* Document scroll lock from the loader through the colour reveal and the
-   camera descent. splat-reveal-pending stays until both have finished.
-   overflow:hidden covers desktop; touch-action/overscroll-behavior plus the
-   inline script's non-passive listeners cover iOS. The slow-load fallback
-   opts out so a long download does not trap the page. */
-html.splat-reveal-pending:not(.splat-load-slow) {
-  overflow: hidden;
-  touch-action: none;
-  overscroll-behavior: none;
+   camera descent. splat-reveal-pending stays until both have finished. The
+   inline script's non-passive wheel/touchmove/keydown listeners are the lock
+   on every platform; overflow:hidden only hides the scrollbar, and is scoped
+   to fine pointers because iOS 18+ leaves touch scrolling partially dead
+   after touch-action:none / overflow:hidden are removed from the root
+   (fancyapps/ui#789). The slow-load fallback opts out so a long download
+   does not trap the page. */
+@media (hover: hover) and (pointer: fine) {
+  html.splat-reveal-pending:not(.splat-load-slow) {
+    overflow: hidden;
+  }
 }
 
 html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"] .splat-loader {
   pointer-events: auto;
-  touch-action: none;
-  overscroll-behavior: none;
 }
 
 /* ◈───◇───◇, then the lit diamond steps to the middle, then to the right. */

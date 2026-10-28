@@ -55,10 +55,12 @@
 
         root.classList.add("splat-reveal-pending");
         root.classList.add("hero-intro");
-        // Critical overflow lock before styles.css arrives, otherwise the first
-        // paint can still scroll. The same selector lives in styles.css.
+        // Critical scrollbar hide before styles.css arrives. Fine pointers
+        // only: the listeners below are the real lock, and toggling
+        // overflow/touch-action on the root breaks later touch scrolling on
+        // iOS 18+. The same rule lives in styles.css.
         var lockStyle = document.createElement("style");
-        lockStyle.textContent = 'html.splat-reveal-pending:not(.splat-load-slow){overflow:hidden;touch-action:none;overscroll-behavior:none}';
+        lockStyle.textContent = '@media (hover: hover) and (pointer: fine){html.splat-reveal-pending:not(.splat-load-slow){overflow:hidden}}';
         document.head.appendChild(lockStyle);
         if (!location.hash && "scrollRestoration" in history) {
           history.scrollRestoration = "manual";
@@ -87,7 +89,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-light-wash" />
+    <link rel="stylesheet" href="styles.css?v=20261027-touch-lock" />
     <script type="importmap">
       {
         "imports": {
