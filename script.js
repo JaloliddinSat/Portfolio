@@ -632,11 +632,49 @@ const releaseHeroIntroLock = () => {
   }
 };
 
+const splatLoader = document.querySelector("#splat-loader");
+const splatLoaderPct = document.querySelector("#splat-loader-pct");
+// The download owns the first 90% of the loader line. The sort and shader
+// warm-up after it report no percentage, so the line holds there (with the
+// number stepped out) and only completes when the scene is ready.
+const SPLAT_LOAD_DOWNLOAD_SHARE = 0.9;
+// GaussianSplats3D's LoaderStatus enum is not exported from the build.
+const SPLAT_LOADER_STATUS_DOWNLOADING = 0;
+let splatLoadProgress = 0;
+
+const setSplatLoadProgress = (fraction, { settling = false } = {}) => {
+  if (!splatLoader) return;
+  const next = Math.min(1, Math.max(splatLoadProgress, fraction));
+
+  if (next !== splatLoadProgress) {
+    splatLoadProgress = next;
+    splatLoader.style.setProperty("--splat-load-progress", next.toFixed(4));
+    if (splatLoaderPct) {
+      splatLoaderPct.textContent = String(Math.round(next * 100));
+    }
+  }
+
+  splatLoader.classList.toggle("is-settling", settling);
+};
+
+const onSplatDownloadProgress = (percent, _label, status) => {
+  const downloading = status === SPLAT_LOADER_STATUS_DOWNLOADING;
+  const share = Math.min(100, Math.max(0, Number(percent) || 0)) / 100;
+
+  setSplatLoadProgress(
+    downloading ? share * SPLAT_LOAD_DOWNLOAD_SHARE : SPLAT_LOAD_DOWNLOAD_SHARE,
+    { settling: !downloading || share >= 1 },
+  );
+};
+
 const setStatus = (state, message = "") => {
   if (state === "ready" && isHeroScrollLocked()) {
     window.scrollTo(0, 0);
   } else if (state !== "loading" && isHeroScrollLocked()) {
     restoreHeroScroll();
+  }
+  if (state === "ready") {
+    setSplatLoadProgress(1);
   }
   if (splatStage) {
     splatStage.dataset.loadState = state;
@@ -1837,6 +1875,7 @@ const initSplat = async () => {
       scale: [splatScale, splatScale, splatScale],
       position: [...SPLAT_CONFIG.splatPosition],
       rotation: [0, 0, 0, 1],
+      onProgress: onSplatDownloadProgress,
     };
 
     if (splatUrl.toLowerCase().includes(".ksplat")) {

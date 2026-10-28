@@ -120,6 +120,13 @@ assert(!/html\.splat-reveal-pending[^{]*\{[^}]*touch-action/.test(styles),'touch
 assert(!/html\.splat-reveal-pending[^{]*\.splat-loader[^{]*\{[^}]*touch-action/.test(styles),'the loader does not set touch-action either');
 assert(!indexHtml.includes('touch-action:none'),'the inline critical style does not set touch-action on the root');
 assert(indexHtml.includes('@media (hover: hover) and (pointer: fine){html.splat-reveal-pending:not(.splat-load-slow){overflow:hidden}}'),'the inline critical style mirrors the fine-pointer overflow rule');
+assert(indexHtml.includes('<span class="splat-loader-rail" aria-hidden="true"><span class="splat-loader-fill"></span></span>'),'the loader is a hairline rail with a fill');
+assert(indexHtml.includes('<span class="splat-loader-pct" id="splat-loader-pct">0</span>'),'the loader shows the download percentage');
+assert(script.includes('onProgress: onSplatDownloadProgress'),'the hero scene reports download progress to the loader');
+assert(script.includes('const SPLAT_LOAD_DOWNLOAD_SHARE = 0.9'),'the download owns the first 90% of the line; the sort and warm-up hold there');
+assert(/if \(state === "ready"\) \{\s*setSplatLoadProgress\(1\);/.test(script),'the line completes when the scene is ready');
+assert(styles.includes('transform: scaleX(var(--splat-load-progress));'),'the fill is a compositor-only transform');
+assert(/:not\(\[data-splat-load-state="loading"\]\) \.splat-loader-rail \{\s*transform: scaleX\(0\);/.test(styles),'on ready the rail closes in on its centre, the reveal origin');
 console.log('PASS: hidden shader warm-up, GPU fence completion, fully loaded scene and delayed reveal clock');
 
 for(const durationMs of [500,5700,10000]) {

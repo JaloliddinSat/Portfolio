@@ -89,7 +89,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261027-touch-lock" />
+    <link rel="stylesheet" href="styles.css?v=20261027-loader-rail" />
     <script type="importmap">
       {
         "imports": {
@@ -108,13 +108,8 @@
       aria-live="polite"
       aria-label="Loading 3D scene"
     >
-      <span class="splat-loader-seq" aria-hidden="true">
-        <span class="splat-loader-gem" style="--i: 0"><b>◈</b><b>◇</b></span>
-        <span class="splat-loader-bar">───</span>
-        <span class="splat-loader-gem" style="--i: 1"><b>◈</b><b>◇</b></span>
-        <span class="splat-loader-bar">───</span>
-        <span class="splat-loader-gem" style="--i: 2"><b>◈</b><b>◇</b></span>
-      </span>
+      <span class="splat-loader-rail" aria-hidden="true"><span class="splat-loader-fill"></span></span>
+      <span class="splat-loader-pct" id="splat-loader-pct">0</span>
     </div>
     <header class="site-header" id="site-navigation" aria-hidden="true">
       <div class="header-controls">
@@ -942,6 +937,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20261027-no-autoscroll"></script>
+    <script type="module" src="script.js?v=20261027-loader-rail"></script>
   </body>
 </html>

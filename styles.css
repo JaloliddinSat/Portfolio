@@ -925,13 +925,15 @@ html[data-theme="light"] .splat-viewer[data-depth-effect="ready"]::before {
    fills the viewport while it loads, so a viewport-fixed corner lands in the
    same place the stage-relative one did. */
 .splat-loader {
+  --splat-load-progress: 0;
+  --splat-loader-rail: 56px;
   position: fixed;
   right: clamp(24px, 6vw, 96px);
   bottom: clamp(28px, 7vh, 72px);
   z-index: 9;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--muted);
   opacity: 1;
   pointer-events: none;
@@ -954,6 +956,7 @@ html:not([data-splat-load-state="loading"]) .splat-loader {
    fallback for reduced motion, a load that runs long (.splat-load-slow), and
    JS being unavailable, since the arming class is only set by script. */
 html.splat-reveal-pending:not(.splat-load-slow) .splat-loader {
+  --splat-loader-rail: 160px;
   position: fixed;
   inset: 0;
   z-index: 10010;
@@ -967,17 +970,34 @@ html.splat-reveal-pending:not(.splat-load-slow) .splat-loader {
   transition: none;
 }
 
+/* The rail sits on the exact viewport centre, which is where the camera intro
+   is looking at its first frame (its lookAt is the reveal's body origin), so
+   the number hangs below it without shifting it. */
+html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-pct {
+  position: absolute;
+  top: calc(50% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* On ready the curtain fades while the line closes in on its centre, so the
+   point it shrinks to is where the splat starts growing. */
 html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="loading"]) .splat-loader {
   visibility: hidden;
   opacity: 0;
   transition:
-    opacity 520ms ease,
-    visibility 0s linear 520ms;
+    opacity 520ms ease 120ms,
+    visibility 0s linear 640ms;
 }
 
-html.splat-reveal-pending:not(.splat-load-slow) .splat-loader-seq {
-  font-size: 1.35rem;
-  letter-spacing: 0.04em;
+html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="loading"]) .splat-loader-rail {
+  transform: scaleX(0);
+  transition: transform 520ms cubic-bezier(0.5, 0, 0.9, 0.4);
+}
+
+html.splat-reveal-pending:not(.splat-load-slow):not([data-splat-load-state="loading"]) .splat-loader-pct {
+  opacity: 0;
+  transition: opacity 180ms ease;
 }
 
 /* Document scroll lock from the loader through the colour reveal and the
@@ -998,47 +1018,48 @@ html.splat-reveal-pending:not(.splat-load-slow)[data-splat-load-state="loading"]
   pointer-events: auto;
 }
 
-/* ◈───◇───◇, then the lit diamond steps to the middle, then to the right. */
-.splat-loader-seq {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text);
-  font: 600 0.72rem/1 "JetBrains Mono", ui-monospace, monospace;
-  letter-spacing: 0.02em;
+/* A 1px hairline that fills with the real download percentage. The fill is a
+   scaleX transform driven by --splat-load-progress (set by script.js), so each
+   update is compositor-only while the main thread is busy with the sort. */
+.splat-loader-rail {
+  position: relative;
+  flex: none;
+  width: var(--splat-loader-rail);
+  height: 1px;
+  overflow: hidden;
+  background: var(--line);
+  transform-origin: center;
 }
 
-.splat-loader-bar {
-  opacity: 0.38;
+.splat-loader-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--text);
+  transform-origin: left center;
+  transform: scaleX(var(--splat-load-progress));
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
-.splat-loader-gem {
-  display: inline-grid;
+.splat-loader-pct {
+  color: var(--muted);
+  font: 500 0.72rem/1 "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  transition: opacity 360ms ease;
 }
 
-.splat-loader-gem b {
-  grid-area: 1 / 1;
-  font-weight: 500;
-}
-
-.splat-loader-gem b:last-child {
-  opacity: 0.38;
-}
-
-.splat-loader-gem b:first-child {
+/* Download finished; the sort and shader warm-up have no percentage, so the
+   number steps out rather than sitting on a stuck value. */
+.splat-loader.is-settling .splat-loader-pct {
   opacity: 0;
-  animation: splat-loader-gem 1.8s linear infinite;
-  animation-delay: calc(var(--i) * 0.6s);
 }
 
-@keyframes splat-loader-gem {
-  0%,
-  32% {
-    opacity: 1;
-  }
-
-  33%,
-  100% {
-    opacity: 0;
+@media (prefers-reduced-motion: reduce) {
+  .splat-loader-fill,
+  .splat-loader-rail,
+  .splat-loader-pct {
+    transition: none;
   }
 }
 
