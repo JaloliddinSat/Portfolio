@@ -2543,6 +2543,12 @@ html[data-theme="light"] .stepnote-project .tag img[src$="github.svg"] {
     display: none;
   }
 
+  /* Portrait only: drop the role line; the block is bottom-anchored, so the
+     status, name and remaining fact sit one line lower. */
+  .hero-facts .hero-fact-role {
+    display: none;
+  }
+
   .hero-actions {
     display: none;
   }
