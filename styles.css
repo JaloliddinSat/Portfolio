@@ -2689,3 +2689,62 @@ html[data-theme="light"] .stepnote-project .tag img[src$="github.svg"] {
     padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 }
+
+/* --- Sideways phones -------------------------------------------------------
+   A phone turned landscape is wide enough for the desktop layout but only
+   ~390px tall. Keep the desktop composition (copy left, subject right; script.js
+   re-aims the camera for the wider frame) and scale the hero copy to the short
+   viewport so it stays in the left half, clear of the notch. */
+
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 701px) {
+  .hero-content {
+    width: min(100% - 48px, var(--max-width));
+    padding: 12px 0 12px env(safe-area-inset-left);
+  }
+
+  .hero-copy {
+    max-width: min(46vw, 440px);
+  }
+
+  .hero-status {
+    margin-bottom: 12px;
+  }
+
+  .hero-copy h1.hero-title {
+    margin-bottom: 14px;
+    font-size: clamp(2.2rem, 12.5vh, 3.4rem);
+  }
+
+  .hero-facts {
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+
+  .hero-facts li {
+    font-size: 0.9rem;
+  }
+
+  /* One row: the buttons and icon links run slightly past the copy column. */
+  .hero-actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .hero .button {
+    height: 40px;
+    padding: 0 14px;
+  }
+
+  .hero-actions-divider {
+    margin: 0 2px;
+  }
+
+  .hero-icon-link {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hero-scroll-note {
+    display: none;
+  }
+}

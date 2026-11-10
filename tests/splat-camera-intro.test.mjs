@@ -70,7 +70,7 @@ const context={performance:{now:()=>0},document:{hidden:false,documentElement:{c
  noteHeroMotion:()=>motion++,applyPendingPixelRatio:()=>false,manualRendering:false,
  updatePointerParallax:()=>false,heroReveal:{update:()=>false,active:false},
  heroCameraIntro:{active:true,update:()=>pose},lastRenderedProgress:null,
- easeScrollProgress:x=>x,computeScrollPosition:()=>pose,SPLAT_CONFIG:{cameraStart:pose,cameraEnd:pose},heroCameraStart:pose,
+ easeScrollProgress:x=>x,computeScrollPosition:()=>pose,SPLAT_CONFIG:{cameraStart:pose,cameraEnd:pose},heroCameraStart:pose,refreshHeroCameraStart(){},
  applyPointerParallax:(position,lookAt)=>{calls++;return {position:position.map(v=>v+.05),lookAt};},
  viewer:{camera:{position:{set(...values){rendered.push(values);}},lookAt(){}},forceRenderNextFrame(){},update(){},shouldRender:()=>true,render(){rendered.push('draw');}},
  updateHeroDepthShader(){},ensureViewerRunning(){},renderManualViewerFrame(){}};
