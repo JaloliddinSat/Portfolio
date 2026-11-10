@@ -111,6 +111,113 @@ const initLineGlow = () => {
   });
 };
 
+// The hero splat's scale, render mode and shader effects are baked in at load
+// for portrait phones vs everything else, and the renderer's static mode keeps
+// scene transforms in GPU data that cannot be rescaled live. So a touch device
+// rotated across that breakpoint reloads, saving its reading position; the
+// inline script in index.html skips the intro on that load and the position is
+// restored below. Desktop windows resized across 700px are left alone.
+const ROTATE_RESTORE_KEY = "portfolioRotateRestore";
+const rotateRestore = window.__portfolioRotateRestore || null;
+
+const rotateAnchors = () => [
+  document.querySelector("#hero-scroll-track"),
+  ...document.querySelectorAll("main section[id], #contact"),
+].filter(Boolean);
+
+// Layout position, ignoring transforms: the content below the hero slides up
+// with a scroll-linked transform, so its on-screen offset depends on where the
+// page is scrolled when measured (at the top, right after a reload).
+const layoutTop = (element) => {
+  let top = 0;
+  for (let node = element; node; node = node.offsetParent) top += node.offsetTop;
+  return top;
+};
+
+const captureRotatePosition = () => {
+  const y = window.scrollY;
+  let anchor = null;
+  for (const element of rotateAnchors()) {
+    const top = layoutTop(element);
+    if (top <= y + 1) anchor = { element, top };
+  }
+  if (!anchor) return { id: null, fraction: 0 };
+  const height = Math.max(1, anchor.element.offsetHeight);
+  return {
+    id: anchor.element.id,
+    fraction: Math.min(1, Math.max(0, (y - anchor.top) / height)),
+  };
+};
+
+const restoreRotatePosition = () => {
+  if (!rotateRestore?.id) return;
+  const element = document.getElementById(rotateRestore.id);
+  if (!element) return;
+  const top = layoutTop(element);
+  // `instant`: html has scroll-behavior: smooth, and a smooth jump this long is
+  // cut short by the layout still settling.
+  window.scrollTo({
+    top: top + rotateRestore.fraction * element.offsetHeight,
+    behavior: "instant",
+  });
+};
+
+if (rotateRestore) {
+  // The reload can start while the rotation is still resizing the viewport, and
+  // the hero's height is in viewport units, so offsets keep moving for a moment
+  // (as do images and fonts). Re-apply on load and on resizes for a short while,
+  // and stop as soon as the visitor scrolls themselves.
+  let restoring = true;
+  const stopRestoring = () => {
+    restoring = false;
+    window.removeEventListener("resize", reapply);
+  };
+  const reapply = () => {
+    if (restoring) restoreRotatePosition();
+  };
+  restoreRotatePosition();
+  window.addEventListener("resize", reapply, { passive: true });
+  if (document.readyState === "complete") reapply();
+  else window.addEventListener("load", reapply, { once: true });
+  for (const type of ["touchstart", "wheel", "keydown", "pointerdown"]) {
+    window.addEventListener(type, stopRestoring, { once: true, passive: true });
+  }
+  setTimeout(() => {
+    reapply();
+    stopRestoring();
+  }, 2000);
+}
+
+if (window.matchMedia("(pointer: coarse)").matches) {
+  const orientationBreakpoint = window.matchMedia("(max-width: 700px)");
+  let reloading = false;
+  // By the time the breakpoint reports a change the page may already have been
+  // laid out (and its scroll clamped) for the new orientation, so the latest
+  // position is kept per layout and the one from the layout being left is used.
+  const isPortraitWidth = () => window.innerWidth <= 700;
+  const snapshots = { [isPortraitWidth()]: captureRotatePosition() };
+  window.addEventListener(
+    "scroll",
+    () => {
+      snapshots[isPortraitWidth()] = captureRotatePosition();
+    },
+    { passive: true },
+  );
+  orientationBreakpoint.addEventListener?.("change", () => {
+    if (reloading) return;
+    reloading = true;
+    try {
+      const previous = snapshots[!orientationBreakpoint.matches];
+      if (previous) sessionStorage.setItem(ROTATE_RESTORE_KEY, JSON.stringify(previous));
+    } catch (error) {}
+    // Otherwise the browser restores this layout's scroll offset after the
+    // reload, on top of the position restored above.
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, behavior: "instant" });
+    window.location.reload();
+  });
+}
+
 const DEBUG_SPLAT = new URLSearchParams(window.location.search).has("debugSplat");
 const DEBUG_SPLAT_PERF = new URLSearchParams(window.location.search).has("perfSplat");
 const DEBUG_VIEWPORT = new URLSearchParams(window.location.search).has(
@@ -1646,7 +1753,8 @@ const initSplat = async () => {
 
   setStatus("loading");
   armSlowLoadWatchdog();
-  const reducedRevealMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || DEBUG_SPLAT;
+  const reducedRevealMotion =
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches || DEBUG_SPLAT || Boolean(rotateRestore);
   if (!reducedRevealMotion) {
     document.documentElement.classList.add("splat-reveal-pending");
     splatStage.dataset.revealState = "pending";

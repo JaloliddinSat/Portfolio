@@ -44,6 +44,19 @@
       // reveal is 60% grown; the timer below only covers the main module never
       // initialising, restoring the poster and releasing the copy.
       (function () {
+        // A phone rotated across the portrait/landscape breakpoint reloads so
+        // the splat is built for the new orientation (script.js). That reload
+        // returns to the same spot without replaying the intro.
+        try {
+          var restore = sessionStorage.getItem("portfolioRotateRestore");
+          if (restore) {
+            sessionStorage.removeItem("portfolioRotateRestore");
+            window.__portfolioRotateRestore = JSON.parse(restore);
+            if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+            return;
+          }
+        } catch (error) {}
+
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
         }
@@ -89,7 +102,7 @@
         }, 15000);
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20261110-landscape-4" />
+    <link rel="stylesheet" href="styles.css?v=20261110-rotate-7" />
     <script type="importmap">
       {
         "imports": {
@@ -494,6 +507,6 @@
       </main>
     </div>
 
-    <script type="module" src="script.js?v=20261110-landscape-4"></script>
+    <script type="module" src="script.js?v=20261110-rotate-7"></script>
   </body>
 </html>
