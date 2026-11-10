@@ -2747,4 +2747,34 @@ html[data-theme="light"] .stepnote-project .tag img[src$="github.svg"] {
   .hero-scroll-note {
     display: none;
   }
+
+  /* Sections: the desktop 150-220px heading column, 48px gap and 84px side
+     margins left the content about half the screen. Keep only room for the
+     right-hand rail and a narrow heading column. */
+  .page-shell {
+    width: auto;
+    margin-right: 76px;
+    margin-left: max(24px, env(safe-area-inset-left));
+  }
+
+  /* The full-bleed hero centres itself with calc(50% - 50vw), which assumes
+     equal side margins; pull it back by the left margin instead. */
+  .hero-scroll-track {
+    margin-left: calc(-1 * max(24px, env(safe-area-inset-left)));
+  }
+
+  .section {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 20px;
+    padding: 56px 0;
+  }
+
+  .section-head {
+    top: 24px;
+    gap: 6px;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+  }
 }

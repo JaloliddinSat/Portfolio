@@ -522,31 +522,6 @@ const centerPoseOnPoint = (pose, point) => {
   };
 };
 
-// A sideways phone gets the desktop layout (copy left, subject right) but a much
-// wider frame. With a fixed vertical FOV the extra width pulls the subject toward
-// the centre and under the copy. Yaw the look-at so the point lands at a set
-// horizontal screen position (normalised: 0 = centre, 1 = edge) on the same side
-// the authored pose puts it.
-const HERO_CAMERA_VFOV_DEG = 50; // GaussianSplats3D's THREE_CAMERA_FOV
-const HERO_LANDSCAPE_SUBJECT_X = 0.4; // ~70% across the screen
-
-const framePoseAtScreenX = (pose, point, aspect, screenX) => {
-  const [px, , pz] = pose.position;
-  const dx = pose.lookAt[0] - px;
-  const dz = pose.lookAt[2] - pz;
-  const halfTan = Math.tan((HERO_CAMERA_VFOV_DEG * Math.PI) / 360);
-  const authored = Math.atan2(point[2] - pz, point[0] - px) - Math.atan2(dz, dx);
-  const target = Math.sign(authored) * Math.atan(screenX * halfTan * aspect);
-  const angle = authored - target;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-
-  return {
-    position: [...pose.position],
-    lookAt: [px + dx * cos - dz * sin, pose.lookAt[1], pz + dx * sin + dz * cos],
-  };
-};
-
 const cloneKeyframe = (keyframe) => ({
   position: [...keyframe.position],
   lookAt: [...keyframe.lookAt],
@@ -1709,28 +1684,13 @@ const initSplat = async () => {
     const heroBodyCenter = HERO_REVEAL.bodyOrigin.map(
       (value, index) => value * splatScale + SPLAT_CONFIG.splatPosition[index],
     );
-    // Sideways phones (short landscape) keep the desktop composition, re-aimed for
-    // their wider frame. The pose follows the live viewport so rotating the phone
-    // after load reframes instead of keeping the load-time orientation's pose.
+    // The pose follows the live viewport so rotating the phone after load picks
+    // the right one: centred in portrait, the desktop pose in landscape.
     const portraitQuery = window.matchMedia("(max-width: 700px)");
-    const shortLandscapeQuery = window.matchMedia(
-      "(orientation: landscape) and (max-height: 500px)",
-    );
-    const heroPoseForViewport = () => {
-      if (portraitQuery.matches) {
-        return centerPoseOnPoint(SPLAT_CONFIG.cameraStart, heroBodyCenter);
-      }
-      if (shortLandscapeQuery.matches) {
-        const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-        return framePoseAtScreenX(
-          SPLAT_CONFIG.cameraStart,
-          heroBodyCenter,
-          aspect,
-          HERO_LANDSCAPE_SUBJECT_X,
-        );
-      }
-      return SPLAT_CONFIG.cameraStart;
-    };
+    const heroPoseForViewport = () =>
+      portraitQuery.matches
+        ? centerPoseOnPoint(SPLAT_CONFIG.cameraStart, heroBodyCenter)
+        : SPLAT_CONFIG.cameraStart;
     let heroCameraStart = heroPoseForViewport();
     let heroCameraViewportKey = `${window.innerWidth}x${window.innerHeight}`;
     const refreshHeroCameraStart = () => {
