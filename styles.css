@@ -1842,8 +1842,8 @@ html[data-theme="light"] [data-glow-line] {
   max-width: 62ch;
   margin: 0 0 40px;
   color: var(--muted);
-  font-size: clamp(1.15rem, 1.6vw, 1.35rem);
-  line-height: 1.6;
+  font-size: clamp(1rem, 1.25vw, 1.12rem);
+  line-height: 1.65;
   letter-spacing: -0.015em;
   text-wrap: pretty;
 }
@@ -2578,7 +2578,7 @@ html[data-theme="light"] .stepnote-project .tag img[src$="github.svg"] {
 
   .about-summary {
     margin-bottom: 28px;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
   }
 
   .fact {
