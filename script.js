@@ -1,5 +1,4 @@
 import { HERO_OVERLAYS, overlayOpacity, overlayBackground, backdropColor } from './splat-overlay-core.mjs?v=5';
-import { collectContentHitboxes, isPointInContentHitboxes } from './content-hitboxes.js?v=20261024-throw-history-1';
 
 const portfolioDiagnostics = window.__portfolioDiagnostics;
 
@@ -9,191 +8,106 @@ if (year) {
   year.textContent = new Date().getFullYear();
 }
 
-const initGridCursorGlow = () => {
+// Hairline glow: the page's own divider lines (section rules, fact and skill
+// rows, the experience timeline) catch a soft highlight where the cursor is
+// closest to them. Lines declare themselves with data-glow-line="top|bottom" or,
+// for the timeline rail, "rail". Each one gets two custom properties:
+//   --glow-pos  where along the line the highlight sits (px from its start)
+//   --glow-a    how strong it is, fading with perpendicular distance
+// CSS draws the highlight, so this only reads rects and writes numbers.
+const LINE_GLOW_REACH = 140;
+
+const lineGlowAlpha = (distance, reach = LINE_GLOW_REACH) => {
+  const t = Math.max(0, 1 - Math.abs(distance) / reach);
+  return t * t;
+};
+
+const initLineGlow = () => {
   if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
     return;
   }
 
-  const content = document.querySelector('#site-content-transition');
-  const configuredMultiplier = Number(document.documentElement.dataset.gridContentGlowMultiplier ?? 0.25);
-  const contentMultiplier = Number.isFinite(configuredMultiplier) && configuredMultiplier >= 0 && configuredMultiplier <= 1
-    ? configuredMultiplier : 0.25;
-  let contentBoxes = [];
-  let hitboxesDirty = true;
-  const panelSelector = ".resume-item, .project-card";
-  const panels = document.querySelectorAll(panelSelector);
-  const cursorGlow = document.createElement("canvas");
-  const glowRadius = 100;
-  const glowSize = glowRadius * 2;
-  const gridSize = 56;
-  let pointerClientX = -200;
-  let pointerClientY = -200;
+  const lines = [...document.querySelectorAll("[data-glow-line]")];
+
+  if (!lines.length) {
+    return;
+  }
+
+  const applied = new Map();
+  let pointerX = 0;
+  let pointerY = 0;
   let hasPointer = false;
-  let updateFrame = null;
-  let activePanel = null;
+  let frame = null;
 
-  cursorGlow.className = "grid-cursor-glow";
-  cursorGlow.setAttribute("aria-hidden", "true");
-  document.body.prepend(cursorGlow);
+  const write = (line, pos, alpha) => {
+    const roundedAlpha = Math.round(alpha * 1000) / 1000;
+    const roundedPos = Math.round(pos);
+    const previous = applied.get(line);
 
-  panels.forEach((panel) => {
-    const panelGlow = document.createElement("canvas");
-    panelGlow.className = "grid-panel-glow";
-    panelGlow.setAttribute("aria-hidden", "true");
-    panel.prepend(panelGlow);
-  });
-
-  const drawGridTexture = (canvas, pageLeft, pageTop, lineAlpha) => {
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    const bitmapSize = Math.round(glowSize * pixelRatio);
-
-    if (canvas.width !== bitmapSize || canvas.height !== bitmapSize) {
-      canvas.width = bitmapSize;
-      canvas.height = bitmapSize;
-    }
-
-    const context = canvas.getContext("2d");
-
-    if (!context) {
+    if (previous && previous.alpha === roundedAlpha && (roundedAlpha === 0 || previous.pos === roundedPos)) {
       return;
     }
 
-    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    context.clearRect(0, 0, glowSize, glowSize);
-    context.strokeStyle =
-      document.documentElement.dataset.theme === "light"
-        ? `rgba(15, 15, 15, ${lineAlpha})`
-        : `rgba(255, 255, 255, ${lineAlpha})`;
-    context.lineWidth = 1;
-    context.beginPath();
+    applied.set(line, { pos: roundedPos, alpha: roundedAlpha });
+    line.style.setProperty("--glow-a", String(roundedAlpha));
 
-    const firstGridX = ((-pageLeft % gridSize) + gridSize) % gridSize;
-    const firstGridY = ((-pageTop % gridSize) + gridSize) % gridSize;
-
-    for (let x = firstGridX; x <= glowSize; x += gridSize) {
-      context.moveTo(x, 0);
-      context.lineTo(x, glowSize);
+    if (roundedAlpha > 0) {
+      line.style.setProperty("--glow-pos", `${roundedPos}px`);
     }
-
-    for (let y = firstGridY; y <= glowSize; y += gridSize) {
-      context.moveTo(0, y);
-      context.lineTo(glowSize, y);
-    }
-
-    context.stroke();
-    context.globalCompositeOperation = "destination-in";
-
-    const falloff = context.createRadialGradient(
-      glowRadius,
-      glowRadius,
-      0,
-      glowRadius,
-      glowRadius,
-      glowRadius,
-    );
-    falloff.addColorStop(0, "rgba(0, 0, 0, 1)");
-    falloff.addColorStop(0.25, "rgba(0, 0, 0, 0.7)");
-    falloff.addColorStop(0.5, "rgba(0, 0, 0, 0.4)");
-    falloff.addColorStop(0.75, "rgba(0, 0, 0, 0.25)");
-    falloff.addColorStop(1, "rgba(0, 0, 0, 0)");
-    context.fillStyle = falloff;
-    context.fillRect(0, 0, glowSize, glowSize);
-    context.globalCompositeOperation = "source-over";
   };
 
-  const hideActivePanelGlow = () => {
-    activePanel?.style.setProperty("--grid-panel-opacity", "0");
-    activePanel = null;
+  const update = () => {
+    frame = null;
+    const paused = portfolioDiagnostics?.flags.glowPaused;
+    const started = portfolioDiagnostics ? performance.now() : 0;
+
+    // Read every rect first, then write, so the property writes never force a
+    // layout between reads.
+    const measured = lines.map((line) => {
+      if (!hasPointer || paused) {
+        return [line, 0, 0];
+      }
+
+      const rect = line.getBoundingClientRect();
+      const kind = line.dataset.glowLine;
+
+      if (kind === "rail") {
+        const railX = rect.left + Number(line.dataset.glowOffset || 0);
+        const inside = pointerY >= rect.top - LINE_GLOW_REACH && pointerY <= rect.bottom + LINE_GLOW_REACH;
+
+        return [line, pointerY - rect.top, inside ? lineGlowAlpha(pointerX - railX) : 0];
+      }
+
+      const lineY = kind === "bottom" ? rect.bottom : rect.top;
+      const inside = pointerX >= rect.left - LINE_GLOW_REACH && pointerX <= rect.right + LINE_GLOW_REACH;
+
+      return [line, pointerX - rect.left, inside ? lineGlowAlpha(pointerY - lineY) : 0];
+    });
+
+    measured.forEach(([line, pos, alpha]) => write(line, pos, alpha));
+    portfolioDiagnostics?.sample("line.glow", started);
   };
 
-  const drawGlow = () => {
-    updateFrame = null;
-    if (!hasPointer || portfolioDiagnostics?.flags.glowPaused) return;
-    const glowStarted = portfolioDiagnostics ? performance.now() : 0;
-    const pointerX = pointerClientX + window.scrollX;
-    const pointerY = pointerClientY + window.scrollY;
-    const glowPageX = pointerX - glowRadius;
-    const glowPageY = pointerY - glowRadius;
-    const glowViewportX = pointerClientX - glowRadius;
-    const glowViewportY = pointerClientY - glowRadius;
-    const hoveredElement = document.elementFromPoint(pointerClientX, pointerClientY);
-    const hoveredPanel = hoveredElement instanceof Element
-      ? hoveredElement.closest(panelSelector)
-      : null;
-
-    // Cached line/card rectangles keep pointer updates cheap. Match the same
-    // local vertical origin as the collision system while the content slides.
-    const contentTop = content ? content.getBoundingClientRect().top + window.scrollY : 0;
-    if (hitboxesDirty) {
-      contentBoxes = collectContentHitboxes(content, contentTop);
-      hitboxesDirty = false;
-    }
-    const localY = pointerY - contentTop;
-    const overContent = isPointInContentHitboxes(contentBoxes, pointerX, localY);
-    const brightness = overContent ? contentMultiplier : 1;
-
-    if (hoveredPanel !== activePanel) {
-      hideActivePanelGlow();
-      activePanel = hoveredPanel;
-    }
-
-    if (activePanel) {
-      const rect = activePanel.getBoundingClientRect();
-
-      activePanel.style.setProperty(
-        "--grid-panel-translate-x",
-        `${pointerClientX - rect.left - glowRadius}px`,
-      );
-      activePanel.style.setProperty(
-        "--grid-panel-translate-y",
-        `${pointerClientY - rect.top - glowRadius}px`,
-      );
-      activePanel.style.setProperty("--grid-panel-opacity", String(brightness));
-      drawGridTexture(
-        activePanel.querySelector(".grid-panel-glow"),
-        glowPageX,
-        glowPageY,
-        0.055,
-      );
-    }
-
-    cursorGlow.style.setProperty("--grid-glow-translate-x", `${glowViewportX}px`);
-    cursorGlow.style.setProperty("--grid-glow-translate-y", `${glowViewportY}px`);
-    drawGridTexture(cursorGlow, glowPageX, glowPageY, 0.42);
-    cursorGlow.style.opacity = String(brightness);
-    portfolioDiagnostics?.sample("grid.glow", glowStarted);
-    updateFrame = null;
-  };
-
-  const requestGlowUpdate = () => {
-    if (!hasPointer) {
-      return;
-    }
-
-    if (updateFrame === null) {
-      updateFrame = requestAnimationFrame(drawGlow);
+  const request = () => {
+    if (frame === null) {
+      frame = requestAnimationFrame(update);
     }
   };
 
   window.addEventListener("pointermove", (event) => {
-    pointerClientX = event.clientX;
-    pointerClientY = event.clientY;
+    pointerX = event.clientX;
+    pointerY = event.clientY;
     hasPointer = true;
-    requestGlowUpdate();
+    request();
   }, { passive: true });
 
-  window.addEventListener("scroll", requestGlowUpdate, { passive: true });
-  const invalidateHitboxes = () => { hitboxesDirty = true; requestGlowUpdate(); };
-  window.addEventListener("resize", invalidateHitboxes, { passive: true });
-  window.addEventListener("load", invalidateHitboxes);
-  if (content) new ResizeObserver(invalidateHitboxes).observe(content);
-  document.fonts?.ready.then(invalidateHitboxes);
-  document.addEventListener("portfolio:hero-frame", requestGlowUpdate);
+  window.addEventListener("scroll", () => {
+    if (hasPointer) request();
+  }, { passive: true });
 
   document.documentElement.addEventListener("pointerleave", () => {
     hasPointer = false;
-    cursorGlow.style.opacity = "0";
-    hideActivePanelGlow();
+    request();
   });
 };
 
@@ -4582,77 +4496,6 @@ const initMobileDockNavigation = () => {
   mobileQuery.addEventListener?.("change", updateActiveLink);
 };
 
-const initDesktopSidebar = () => {
-  const sidebar = document.querySelector(".site-header");
-  const desktopQuery = window.matchMedia("(min-width: 701px)");
-  const HOVER_EXPAND_MS = 2000;
-
-  if (!sidebar) {
-    return;
-  }
-
-  let expanded = false;
-  let hoverTimer = null;
-  let pointerInside = false;
-
-  const applyState = () => {
-    const desktopExpanded = desktopQuery.matches && expanded && pointerInside;
-
-    sidebar.classList.toggle("is-expanded", desktopExpanded);
-  };
-
-  const clearHoverTimer = () => {
-    window.clearTimeout(hoverTimer);
-    hoverTimer = null;
-  };
-
-  const collapse = () => {
-    clearHoverTimer();
-    expanded = false;
-    applyState();
-  };
-
-  sidebar.addEventListener("pointerenter", (event) => {
-    if (!desktopQuery.matches || event.pointerType !== "mouse") {
-      return;
-    }
-
-    pointerInside = true;
-    clearHoverTimer();
-    hoverTimer = window.setTimeout(() => {
-      if (!pointerInside) {
-        return;
-      }
-
-      expanded = true;
-      applyState();
-    }, HOVER_EXPAND_MS);
-  });
-
-  sidebar.addEventListener("pointerleave", () => {
-    pointerInside = false;
-
-    if (!desktopQuery.matches) {
-      return;
-    }
-
-    collapse();
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && desktopQuery.matches && expanded) {
-      collapse();
-    }
-  });
-
-  desktopQuery.addEventListener("change", () => {
-    pointerInside = false;
-    collapse();
-  });
-
-  applyState();
-};
-
 const initThemeToggle = () => {
   const toggle = document.querySelector("#theme-toggle");
   const toggleLabel = toggle?.querySelector("[data-theme-toggle-label]");
@@ -5362,12 +5205,11 @@ initViewportDebug();
 initSplatLoadDebug();
 initHeroScrollTransition();
 initHeroAboutTransition();
-initDesktopSidebar();
 initThemeToggle();
 initMobileDockNavigation();
 initHeroActionLinks();
 initHeroMotion();
-initGridCursorGlow();
+initLineGlow();
 initStepNoteProject();
 initWatonomousVideo();
 initProjectShowcaseVideos();
