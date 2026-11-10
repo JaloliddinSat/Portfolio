@@ -504,6 +504,24 @@ const computeScrollPosition = (
   return { position, lookAt, lookAtProgress };
 };
 
+// Phones crop the wide hero frame to a narrow column, which leaves the subject
+// right of centre. Yaw the resting look-at about the vertical axis so the given
+// point lands on the screen's vertical centre line. Camera position, height and
+// pitch are unchanged, so only the final framing moves.
+const centerPoseOnPoint = (pose, point) => {
+  const [px, , pz] = pose.position;
+  const dx = pose.lookAt[0] - px;
+  const dz = pose.lookAt[2] - pz;
+  const angle = Math.atan2(point[2] - pz, point[0] - px) - Math.atan2(dz, dx);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  return {
+    position: [...pose.position],
+    lookAt: [px + dx * cos - dz * sin, pose.lookAt[1], pz + dx * sin + dz * cos],
+  };
+};
+
 const cloneKeyframe = (keyframe) => ({
   position: [...keyframe.position],
   lookAt: [...keyframe.lookAt],
@@ -1660,6 +1678,15 @@ const initSplat = async () => {
     splatLoadDebug.manualRendering = manualRendering;
 
     const splatScale = isMobile ? SPLAT_CONFIG.splatScale * 0.73 : SPLAT_CONFIG.splatScale;
+    // Desktop keeps the authored resting pose (subject right, copy left). Phones
+    // centre the subject: the intro lands on, and scrolling starts from, a pose
+    // turned toward the body.
+    const heroBodyCenter = HERO_REVEAL.bodyOrigin.map(
+      (value, index) => value * splatScale + SPLAT_CONFIG.splatPosition[index],
+    );
+    const heroCameraStart = isMobile
+      ? centerPoseOnPoint(SPLAT_CONFIG.cameraStart, heroBodyCenter)
+      : SPLAT_CONFIG.cameraStart;
     // Both modules clamp to 10s; mirror that so the idle-stop ceiling stays bounded.
     const heroCameraIntroDurationMs = Math.min(
       10000,
@@ -1673,7 +1700,7 @@ const initSplat = async () => {
       bodyOrigin: HERO_REVEAL.bodyOrigin,
       position: SPLAT_CONFIG.splatPosition,
       scale: splatScale,
-      finalPose: SPLAT_CONFIG.cameraStart,
+      finalPose: heroCameraStart,
       durationMs: heroCameraIntroDurationMs,
       enabled: !reducedRevealMotion,
     });
@@ -2247,7 +2274,7 @@ const initSplat = async () => {
       const progress = easeScrollProgress(smoothed);
       const scrollPose = computeScrollPosition(
         progress,
-        SPLAT_CONFIG.cameraStart,
+        heroCameraStart,
         SPLAT_CONFIG.cameraEnd,
         SPLAT_CONFIG.lookAtTiming ?? 1,
       );
